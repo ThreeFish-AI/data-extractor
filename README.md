@@ -102,6 +102,8 @@ uv run python -m scrapy_mcp.server
 
 在您的 MCP client (如 Claude Desktop) 中添加服务器配置：
 
+#### 方式一：直接命令方式
+
 ```json
 {
   "mcpServers": {
@@ -112,6 +114,59 @@ uv run python -m scrapy_mcp.server
   }
 }
 ```
+
+#### 方式二：通过 uv 启动（推荐）
+
+```json
+{
+  "mcpServers": {
+    "scrapy-mcp": {
+      "command": "uv",
+      "args": ["run", "scrapy-mcp"],
+      "cwd": "/path/to/scrapy-mcp"
+    }
+  }
+}
+```
+
+#### 方式三：从 GitHub 仓库直接安装和运行
+
+```json
+{
+  "mcpServers": {
+    "scrapy-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "git+https://github.com/your-username/scrapy-mcp-server.git",
+        "scrapy-mcp"
+      ]
+    }
+  }
+}
+```
+
+#### 方式四：Python 模块方式（使用 uv）
+
+```json
+{
+  "mcpServers": {
+    "scrapy-mcp": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "scrapy_mcp.server"],
+      "cwd": "/path/to/scrapy-mcp"
+    }
+  }
+}
+```
+
+**注意事项：**
+
+- 将 `/path/to/scrapy-mcp` 替换为项目的实际路径
+- 将 `your-username` 替换为您的 GitHub 用户名
+- 推荐使用方式二（uv 启动），具有更好的依赖管理和性能
+- 方式三适合直接从 GitHub 仓库运行，无需本地克隆
 
 ## 🛠️ 可用工具
 
