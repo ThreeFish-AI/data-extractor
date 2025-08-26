@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "scrapy-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git",
+        "scrapy-mcp"
+      ]
+    }
+  }
+}
