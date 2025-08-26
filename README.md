@@ -34,7 +34,17 @@
 git clone <repository-url>
 cd scrapy-mcp
 
-# 安装依赖
+# 快速设置（推荐）
+./scripts/setup.sh
+
+# 或手动安装
+# 使用 uv 安装依赖
+uv sync
+
+# 安装包括开发依赖
+uv sync --extra dev
+
+# 或者使用传统方式
 pip install -e .
 
 # 或者使用开发模式
@@ -78,8 +88,14 @@ SCRAPY_MCP_REQUEST_TIMEOUT=30
 # 使用命令行
 scrapy-mcp
 
+# 使用 uv 运行（推荐）
+uv run scrapy-mcp
+
 # 或者使用Python
 python -m scrapy_mcp.server
+
+# 使用 uv 运行 Python 模块
+uv run python -m scrapy_mcp.server
 ```
 
 ### MCP Client 配置

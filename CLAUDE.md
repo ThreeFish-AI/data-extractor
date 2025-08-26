@@ -11,11 +11,17 @@ This is a comprehensive web scraping MCP (Model Context Protocol) server built o
 ### Setup and Installation
 
 ```bash
-# Install package in development mode
-pip install -e .
+# Quick setup using provided script (recommended)
+./scripts/setup.sh
+
+# Manual setup with uv
+uv sync
 
 # Install with development dependencies
-pip install -e ".[dev]"
+uv sync --extra dev
+
+# Alternative: Install package in development mode
+uv pip install -e .
 
 # Copy environment configuration
 cp .env.example .env
@@ -27,30 +33,45 @@ cp .env.example .env
 # Start the MCP server
 scrapy-mcp
 
-# Or run directly with Python
-python -m scrapy_mcp.server
+# Run using uv
+uv run scrapy-mcp
+
+# Or run directly with Python using uv
+uv run python -m scrapy_mcp.server
 
 # Run with custom configuration
 SCRAPY_MCP_ENABLE_JAVASCRIPT=true scrapy-mcp
+
+# Run with environment variables using uv
+uv run --env SCRAPY_MCP_ENABLE_JAVASCRIPT=true scrapy-mcp
 ```
 
 ### Code Quality and Testing
 
 ```bash
-# Format code with Black
-black scrapy_mcp/ examples/
+# Format code with Black (using uv)
+uv run black scrapy_mcp/ examples/
 
-# Lint with flake8
-flake8 scrapy_mcp/
+# Lint with flake8 (using uv)
+uv run flake8 scrapy_mcp/
 
-# Type checking with mypy
-mypy scrapy_mcp/
+# Type checking with mypy (using uv)
+uv run mypy scrapy_mcp/
 
 # Run tests (when available)
-pytest
+uv run pytest
 
 # Run async tests specifically
-pytest -m asyncio
+uv run pytest -m asyncio
+
+# Add new dependencies
+uv add <package-name>
+
+# Add development dependencies
+uv add --dev <package-name>
+
+# Update dependencies
+uv lock --upgrade
 ```
 
 ## Architecture Overview
