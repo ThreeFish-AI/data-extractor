@@ -35,7 +35,7 @@ uv provides several advantages over pip:
 If you're setting up the project fresh:
 
 ```bash
-git clone <repository-url>
+git clone git@github.com:ThreeFish-AI/scrapy-mcp.git
 cd scrapy-mcp
 ./scripts/setup.sh
 ```

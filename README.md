@@ -31,7 +31,7 @@
 
 ```bash
 # 克隆仓库
-git clone <repository-url>
+git clone git@github.com:ThreeFish-AI/scrapy-mcp.git
 cd scrapy-mcp
 
 # 快速设置（推荐）
@@ -123,7 +123,7 @@ uv run python -m scrapy_mcp.server
     "scrapy-mcp": {
       "command": "uv",
       "args": ["run", "scrapy-mcp"],
-      "cwd": "/path/to/scrapy-mcp"
+      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/scrapy-mcp"
     }
   }
 }
@@ -139,7 +139,7 @@ uv run python -m scrapy_mcp.server
       "args": [
         "run",
         "--with",
-        "git+https://github.com/your-username/scrapy-mcp-server.git",
+        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git",
         "scrapy-mcp"
       ]
     }
@@ -155,7 +155,7 @@ uv run python -m scrapy_mcp.server
     "scrapy-mcp": {
       "command": "uv",
       "args": ["run", "python", "-m", "scrapy_mcp.server"],
-      "cwd": "/path/to/scrapy-mcp"
+      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/scrapy-mcp"
     }
   }
 }
@@ -163,8 +163,10 @@ uv run python -m scrapy_mcp.server
 
 **注意事项：**
 
-- 将 `/path/to/scrapy-mcp` 替换为项目的实际路径
-- 将 `your-username` 替换为您的 GitHub 用户名
+- 将路径替换为您的项目实际路径（示例路径：`/Users/cm.huang/Documents/workspace/projects/aurelius/scrapy-mcp`）
+- GitHub 仓库地址：`git@github.com:ThreeFish-AI/scrapy-mcp.git`
+- HTTPS 仓库地址：`https://github.com/ThreeFish-AI/scrapy-mcp.git`
+- 项目目录名：`scrapy-mcp`
 - 推荐使用方式二（uv 启动），具有更好的依赖管理和性能
 - 方式三适合直接从 GitHub 仓库运行，无需本地克隆
 
