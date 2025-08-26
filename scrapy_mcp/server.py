@@ -15,16 +15,22 @@ from .scraper import WebScraper
 from .advanced_features import AntiDetectionScraper, FormHandler
 from .config import settings
 from .utils import (
-    timing_decorator, URLValidator, TextCleaner, ConfigValidator,
-    ErrorHandler, rate_limiter, retry_manager, cache_manager, metrics_collector
+    timing_decorator,
+    URLValidator,
+    TextCleaner,
+    ConfigValidator,
+    ErrorHandler,
+    rate_limiter,
+    retry_manager,
+    cache_manager,
+    metrics_collector,
 )
 
 logger = logging.getLogger(__name__)
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 app = FastMCP(settings.server_name, version=settings.server_version)
@@ -34,11 +40,18 @@ anti_detection_scraper = AntiDetectionScraper()
 
 class ScrapeRequest(BaseModel):
     """Request model for scraping operations."""
+
     url: str = Field(..., description="URL to scrape")
-    method: str = Field(default="auto", description="Scraping method: auto, simple, scrapy, selenium")
-    extract_config: Optional[Dict[str, Any]] = Field(default=None, description="Configuration for data extraction")
-    wait_for_element: Optional[str] = Field(default=None, description="CSS selector to wait for (Selenium only)")
-    
+    method: str = Field(
+        default="auto", description="Scraping method: auto, simple, scrapy, selenium"
+    )
+    extract_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Configuration for data extraction"
+    )
+    wait_for_element: Optional[str] = Field(
+        default=None, description="CSS selector to wait for (Selenium only)"
+    )
+
     @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
@@ -46,7 +59,7 @@ class ScrapeRequest(BaseModel):
         if not parsed.scheme or not parsed.netloc:
             raise ValueError("Invalid URL format")
         return v
-    
+
     @field_validator("method")
     def validate_method(cls, v):
         """Validate scraping method."""
@@ -57,22 +70,27 @@ class ScrapeRequest(BaseModel):
 
 class MultipleScrapeRequest(BaseModel):
     """Request model for scraping multiple URLs."""
+
     urls: List[str] = Field(..., description="List of URLs to scrape")
-    method: str = Field(default="auto", description="Scraping method: auto, simple, scrapy, selenium")
-    extract_config: Optional[Dict[str, Any]] = Field(default=None, description="Configuration for data extraction")
-    
+    method: str = Field(
+        default="auto", description="Scraping method: auto, simple, scrapy, selenium"
+    )
+    extract_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Configuration for data extraction"
+    )
+
     @field_validator("urls")
     def validate_urls(cls, v):
         """Validate URLs format."""
         if not v:
             raise ValueError("URLs list cannot be empty")
-        
+
         for url in v:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 raise ValueError(f"Invalid URL format: {url}")
         return v
-    
+
     @field_validator("method")
     def validate_method(cls, v):
         """Validate scraping method."""
@@ -83,11 +101,18 @@ class MultipleScrapeRequest(BaseModel):
 
 class ExtractLinksRequest(BaseModel):
     """Request model for extracting links from a page."""
+
     url: str = Field(..., description="URL to extract links from")
-    filter_domains: Optional[List[str]] = Field(default=None, description="Only include links from these domains")
-    exclude_domains: Optional[List[str]] = Field(default=None, description="Exclude links from these domains")
-    internal_only: bool = Field(default=False, description="Only extract internal links")
-    
+    filter_domains: Optional[List[str]] = Field(
+        default=None, description="Only include links from these domains"
+    )
+    exclude_domains: Optional[List[str]] = Field(
+        default=None, description="Exclude links from these domains"
+    )
+    internal_only: bool = Field(
+        default=False, description="Only extract internal links"
+    )
+
     @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
@@ -98,186 +123,220 @@ class ExtractLinksRequest(BaseModel):
 
 
 @app.tool()
-async def scrape_webpage(request: ScrapeRequest) -> Dict[str, Any]:
+async def scrape_webpage(
+    url: str,
+    method: str = "auto",
+    extract_config: Optional[Dict[str, Any]] = None,
+    wait_for_element: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Scrape a single webpage and extract its content.
-    
+
+    Args:
+        url: URL to scrape
+        method: Scraping method: auto, simple, scrapy, selenium (default: auto)
+        extract_config: Configuration for data extraction (optional)
+        wait_for_element: CSS selector to wait for - Selenium only (optional)
+
     This tool can scrape web pages using different methods:
     - auto: Automatically choose the best method
     - simple: Fast HTTP requests (no JavaScript)
     - scrapy: Robust scraping with Scrapy framework
     - selenium: Full browser rendering (supports JavaScript)
-    
+
     You can specify extraction rules to get specific data from the page.
     """
     try:
-        logger.info(f"Scraping webpage: {request.url} with method: {request.method}")
-        
+        # Validate inputs
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return {"success": False, "error": "Invalid URL format", "url": url}
+
+        if method not in ["auto", "simple", "scrapy", "selenium"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: auto, simple, scrapy, selenium",
+                "url": url,
+            }
+
+        logger.info(f"Scraping webpage: {url} with method: {method}")
+
         result = await web_scraper.scrape_url(
-            url=request.url,
-            method=request.method,
-            extract_config=request.extract_config,
-            wait_for_element=request.wait_for_element
+            url=url,
+            method=method,
+            extract_config=extract_config,
+            wait_for_element=wait_for_element,
         )
-        
-        return {
-            "success": True,
-            "data": result,
-            "method_used": request.method
-        }
-        
+
+        return {"success": True, "data": result, "method_used": method}
+
     except Exception as e:
-        logger.error(f"Error scraping webpage {request.url}: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "url": request.url
-        }
+        logger.error(f"Error scraping webpage {url}: {str(e)}")
+        return {"success": False, "error": str(e), "url": url}
 
 
 @app.tool()
-async def scrape_multiple_webpages(request: MultipleScrapeRequest) -> Dict[str, Any]:
+async def scrape_multiple_webpages(
+    urls: List[str],
+    method: str = "auto",
+    extract_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """
     Scrape multiple webpages concurrently.
-    
+
+    Args:
+        urls: List of URLs to scrape
+        method: Scraping method: auto, simple, scrapy, selenium (default: auto)
+        extract_config: Configuration for data extraction (optional)
+
     This tool allows you to scrape multiple URLs at once, which is much faster
     than scraping them one by one. All URLs will be processed concurrently.
     """
     try:
-        logger.info(f"Scraping {len(request.urls)} webpages with method: {request.method}")
-        
+        # Validate inputs
+        if not urls:
+            return {"success": False, "error": "URLs list cannot be empty"}
+
+        for url in urls:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return {"success": False, "error": f"Invalid URL format: {url}"}
+
+        if method not in ["auto", "simple", "scrapy", "selenium"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: auto, simple, scrapy, selenium",
+            }
+
+        logger.info(f"Scraping {len(urls)} webpages with method: {method}")
+
         results = await web_scraper.scrape_multiple_urls(
-            urls=request.urls,
-            method=request.method,
-            extract_config=request.extract_config
+            urls=urls, method=method, extract_config=extract_config
         )
-        
+
         successful_results = [r for r in results if "error" not in r]
         failed_results = [r for r in results if "error" in r]
-        
+
         return {
             "success": True,
             "data": results,
             "summary": {
-                "total": len(request.urls),
+                "total": len(urls),
                 "successful": len(successful_results),
-                "failed": len(failed_results)
+                "failed": len(failed_results),
             },
-            "method_used": request.method
+            "method_used": method,
         }
-        
+
     except Exception as e:
         logger.error(f"Error scraping multiple webpages: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "urls": request.urls
-        }
+        return {"success": False, "error": str(e), "urls": urls}
 
 
 @app.tool()
-async def extract_links(request: ExtractLinksRequest) -> Dict[str, Any]:
+async def extract_links(
+    url: str,
+    filter_domains: Optional[List[str]] = None,
+    exclude_domains: Optional[List[str]] = None,
+    internal_only: bool = False,
+) -> Dict[str, Any]:
     """
     Extract all links from a webpage.
-    
+
+    Args:
+        url: URL to extract links from
+        filter_domains: Only include links from these domains (optional)
+        exclude_domains: Exclude links from these domains (optional)
+        internal_only: Only extract internal links (default: False)
+
     This tool is specialized for link extraction and can filter links by domain,
     extract only internal links, or exclude specific domains.
     """
     try:
-        logger.info(f"Extracting links from: {request.url}")
-        
+        # Validate URL
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return {"success": False, "error": "Invalid URL format", "url": url}
+
+        logger.info(f"Extracting links from: {url}")
+
         # Scrape the page to get links
         scrape_result = await web_scraper.scrape_url(
-            url=request.url,
-            method="simple"  # Use simple method for link extraction
+            url=url, method="simple"  # Use simple method for link extraction
         )
-        
+
         if "error" in scrape_result:
-            return {
-                "success": False,
-                "error": scrape_result["error"],
-                "url": request.url
-            }
-        
+            return {"success": False, "error": scrape_result["error"], "url": url}
+
         # Extract and filter links
         all_links = scrape_result.get("content", {}).get("links", [])
-        base_domain = urlparse(request.url).netloc
-        
+        base_domain = urlparse(url).netloc
+
         filtered_links = []
         for link in all_links:
             link_url = link.get("url", "")
             if not link_url:
                 continue
-            
+
             link_domain = urlparse(link_url).netloc
-            
+
             # Apply filters
-            if request.internal_only and link_domain != base_domain:
+            if internal_only and link_domain != base_domain:
                 continue
-            
-            if request.filter_domains and link_domain not in request.filter_domains:
+
+            if filter_domains and link_domain not in filter_domains:
                 continue
-            
-            if request.exclude_domains and link_domain in request.exclude_domains:
+
+            if exclude_domains and link_domain in exclude_domains:
                 continue
-            
-            filtered_links.append({
-                "url": link_url,
-                "text": link.get("text", "").strip(),
-                "domain": link_domain,
-                "is_internal": link_domain == base_domain
-            })
-        
+
+            filtered_links.append(
+                {
+                    "url": link_url,
+                    "text": link.get("text", "").strip(),
+                    "domain": link_domain,
+                    "is_internal": link_domain == base_domain,
+                }
+            )
+
         return {
             "success": True,
             "data": {
-                "base_url": request.url,
+                "base_url": url,
                 "base_domain": base_domain,
                 "links": filtered_links,
                 "total_found": len(all_links),
-                "total_filtered": len(filtered_links)
-            }
+                "total_filtered": len(filtered_links),
+            },
         }
-        
+
     except Exception as e:
-        logger.error(f"Error extracting links from {request.url}: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "url": request.url
-        }
+        logger.error(f"Error extracting links from {url}: {str(e)}")
+        return {"success": False, "error": str(e), "url": url}
 
 
 @app.tool()
 async def get_page_info(url: str) -> Dict[str, Any]:
     """
     Get basic information about a webpage (title, description, status).
-    
+
     This is a lightweight tool for quickly checking page accessibility and
     getting basic metadata without full content extraction.
     """
     try:
         logger.info(f"Getting page info for: {url}")
-        
+
         # Validate URL
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
-            return {
-                "success": False,
-                "error": "Invalid URL format",
-                "url": url
-            }
-        
+            return {"success": False, "error": "Invalid URL format", "url": url}
+
         # Use simple scraper for quick info
         result = await web_scraper.simple_scraper.scrape(url, extract_config={})
-        
+
         if "error" in result:
-            return {
-                "success": False,
-                "error": result["error"],
-                "url": url
-            }
-        
+            return {"success": False, "error": result["error"], "url": url}
+
         return {
             "success": True,
             "data": {
@@ -285,87 +344,84 @@ async def get_page_info(url: str) -> Dict[str, Any]:
                 "status_code": result.get("status_code"),
                 "title": result.get("title"),
                 "meta_description": result.get("meta_description"),
-                "domain": urlparse(result.get("url", url)).netloc
-            }
+                "domain": urlparse(result.get("url", url)).netloc,
+            },
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting page info for {url}: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "url": url
-        }
+        return {"success": False, "error": str(e), "url": url}
 
 
 @app.tool()
 async def check_robots_txt(url: str) -> Dict[str, Any]:
     """
     Check the robots.txt file for a domain to understand crawling permissions.
-    
+
     This tool helps ensure ethical scraping by checking the robots.txt file
     of a website to see what crawling rules are in place.
     """
     try:
         logger.info(f"Checking robots.txt for: {url}")
-        
+
         # Parse URL to get base domain
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
-            return {
-                "success": False,
-                "error": "Invalid URL format",
-                "url": url
-            }
-        
+            return {"success": False, "error": "Invalid URL format", "url": url}
+
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
-        
+
         # Scrape robots.txt
         result = await web_scraper.simple_scraper.scrape(robots_url, extract_config={})
-        
+
         if "error" in result:
             return {
                 "success": False,
                 "error": f"Could not fetch robots.txt: {result['error']}",
-                "url": robots_url
+                "url": robots_url,
             }
-        
+
         robots_content = result.get("content", {}).get("text", "")
-        
+
         return {
             "success": True,
             "data": {
                 "robots_url": robots_url,
                 "content": robots_content,
                 "base_domain": parsed.netloc,
-                "has_content": bool(robots_content.strip())
-            }
+                "has_content": bool(robots_content.strip()),
+            },
         }
-        
+
     except Exception as e:
         logger.error(f"Error checking robots.txt for {url}: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "url": url
-        }
+        return {"success": False, "error": str(e), "url": url}
 
 
 class StealthScrapeRequest(BaseModel):
     """Request model for stealth scraping operations."""
+
     url: str = Field(..., description="URL to scrape using stealth techniques")
-    method: str = Field(default="selenium", description="Stealth method: selenium or playwright")
-    extract_config: Optional[Dict[str, Any]] = Field(default=None, description="Configuration for data extraction")
-    wait_for_element: Optional[str] = Field(default=None, description="CSS selector to wait for")
-    scroll_page: bool = Field(default=False, description="Whether to scroll page to load dynamic content")
-    
+    method: str = Field(
+        default="selenium", description="Stealth method: selenium or playwright"
+    )
+    extract_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Configuration for data extraction"
+    )
+    wait_for_element: Optional[str] = Field(
+        default=None, description="CSS selector to wait for"
+    )
+    scroll_page: bool = Field(
+        default=False, description="Whether to scroll page to load dynamic content"
+    )
+
     @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
         if not URLValidator.is_valid_url(v):
             raise ValueError("Invalid URL format")
         return URLValidator.normalize_url(v)
-    
+
     @field_validator("method")
     def validate_method(cls, v):
         """Validate stealth method."""
@@ -376,20 +432,29 @@ class StealthScrapeRequest(BaseModel):
 
 class FormRequest(BaseModel):
     """Request model for form interaction operations."""
+
     url: str = Field(..., description="URL of the page containing the form")
-    form_data: Dict[str, Any] = Field(..., description="Form field data (selector: value pairs)")
+    form_data: Dict[str, Any] = Field(
+        ..., description="Form field data (selector: value pairs)"
+    )
     submit: bool = Field(default=False, description="Whether to submit the form")
-    submit_button_selector: Optional[str] = Field(default=None, description="Selector for submit button")
-    method: str = Field(default="selenium", description="Method to use: selenium or playwright")
-    wait_for_element: Optional[str] = Field(default=None, description="Element to wait for before filling form")
-    
+    submit_button_selector: Optional[str] = Field(
+        default=None, description="Selector for submit button"
+    )
+    method: str = Field(
+        default="selenium", description="Method to use: selenium or playwright"
+    )
+    wait_for_element: Optional[str] = Field(
+        default=None, description="Element to wait for before filling form"
+    )
+
     @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
         if not URLValidator.is_valid_url(v):
             raise ValueError("Invalid URL format")
         return URLValidator.normalize_url(v)
-    
+
     @field_validator("method")
     def validate_method(cls, v):
         """Validate method."""
@@ -400,220 +465,307 @@ class FormRequest(BaseModel):
 
 @app.tool()
 @timing_decorator
-async def scrape_with_stealth(request: StealthScrapeRequest) -> Dict[str, Any]:
+async def scrape_with_stealth(
+    url: str,
+    method: str = "selenium",
+    extract_config: Optional[Dict[str, Any]] = None,
+    wait_for_element: Optional[str] = None,
+    scroll_page: bool = False,
+) -> Dict[str, Any]:
     """
     Scrape a webpage using advanced stealth techniques to avoid detection.
-    
+
+    Args:
+        url: URL to scrape using stealth techniques
+        method: Stealth method: selenium or playwright (default: selenium)
+        extract_config: Configuration for data extraction (optional)
+        wait_for_element: CSS selector to wait for (optional)
+        scroll_page: Whether to scroll page to load dynamic content (default: False)
+
     This tool uses sophisticated anti-detection methods including:
     - Undetected browser automation
     - Randomized behavior patterns
     - Human-like interactions
     - Advanced evasion techniques
-    
+
     Use this for websites with strong anti-bot protection.
     """
     try:
+        from .utils import URLValidator
+
+        # Validate inputs
+        if not URLValidator.is_valid_url(url):
+            return {"success": False, "error": "Invalid URL format", "url": url}
+
+        if method not in ["selenium", "playwright"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: selenium, playwright",
+                "url": url,
+            }
+
         start_time = time.time()
-        logger.info(f"Stealth scraping: {request.url} with method: {request.method}")
-        
+        logger.info(f"Stealth scraping: {url} with method: {method}")
+
         # Apply rate limiting
         await rate_limiter.wait()
-        
+
+        # Normalize URL
+        normalized_url = URLValidator.normalize_url(url)
+
         # Check cache first
         cache_key_data = {
-            "extract_config": request.extract_config,
-            "wait_for_element": request.wait_for_element,
-            "scroll_page": request.scroll_page
+            "extract_config": extract_config,
+            "wait_for_element": wait_for_element,
+            "scroll_page": scroll_page,
         }
-        cached_result = cache_manager.get(request.url, f"stealth_{request.method}", cache_key_data)
+        cached_result = cache_manager.get(
+            normalized_url, f"stealth_{method}", cache_key_data
+        )
         if cached_result:
-            logger.info(f"Returning cached result for {request.url}")
+            logger.info(f"Returning cached result for {normalized_url}")
             cached_result["from_cache"] = True
             return cached_result
-        
+
         # Validate and normalize extract config
-        if request.extract_config:
-            request.extract_config = ConfigValidator.validate_extract_config(request.extract_config)
-        
+        if extract_config:
+            extract_config = ConfigValidator.validate_extract_config(extract_config)
+
         # Perform stealth scraping with retry
         result = await retry_manager.retry_async(
             anti_detection_scraper.scrape_with_stealth,
-            url=request.url,
-            method=request.method,
-            extract_config=request.extract_config,
-            wait_for_element=request.wait_for_element,
-            scroll_page=request.scroll_page
+            url=normalized_url,
+            method=method,
+            extract_config=extract_config,
+            wait_for_element=wait_for_element,
+            scroll_page=scroll_page,
         )
-        
+
         duration_ms = int((time.time() - start_time) * 1000)
         success = "error" not in result
-        
+
         if success:
             # Clean text content if present
             if "content" in result and "text" in result["content"]:
-                result["content"]["text"] = TextCleaner.clean_text(result["content"]["text"])
-            
+                result["content"]["text"] = TextCleaner.clean_text(
+                    result["content"]["text"]
+                )
+
             # Cache successful result
-            cache_manager.set(request.url, f"stealth_{request.method}", result, cache_key_data)
-            
-            metrics_collector.record_request(request.url, True, duration_ms, f"stealth_{request.method}")
-            
+            cache_manager.set(
+                normalized_url, f"stealth_{method}", result, cache_key_data
+            )
+
+            metrics_collector.record_request(
+                normalized_url, True, duration_ms, f"stealth_{method}"
+            )
+
             return {
                 "success": True,
                 "data": result,
-                "method_used": f"stealth_{request.method}",
+                "method_used": f"stealth_{method}",
                 "duration_ms": duration_ms,
-                "from_cache": False
+                "from_cache": False,
             }
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "Unknown error")),
-                request.url,
-                f"stealth_{request.method}"
+                normalized_url,
+                f"stealth_{method}",
             )
             metrics_collector.record_request(
-                request.url, False, duration_ms, f"stealth_{request.method}",
-                error_response["error"]["category"]
+                normalized_url,
+                False,
+                duration_ms,
+                f"stealth_{method}",
+                error_response["error"]["category"],
             )
             return error_response
-            
+
     except Exception as e:
-        duration_ms = int((time.time() - start_time) * 1000) if 'start_time' in locals() else 0
-        error_response = ErrorHandler.handle_scraping_error(e, request.url, f"stealth_{request.method}")
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
+        )
+        error_response = ErrorHandler.handle_scraping_error(e, url, f"stealth_{method}")
         metrics_collector.record_request(
-            request.url, False, duration_ms, f"stealth_{request.method}",
-            error_response["error"]["category"]
+            url,
+            False,
+            duration_ms,
+            f"stealth_{method}",
+            error_response["error"]["category"],
         )
         return error_response
 
 
 @app.tool()
 @timing_decorator
-async def fill_and_submit_form(request: FormRequest) -> Dict[str, Any]:
+async def fill_and_submit_form(
+    url: str,
+    form_data: Dict[str, Any],
+    submit: bool = False,
+    submit_button_selector: Optional[str] = None,
+    method: str = "selenium",
+    wait_for_element: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Fill and optionally submit a form on a webpage.
-    
+
+    Args:
+        url: URL of the page containing the form
+        form_data: Form field data (selector: value pairs)
+        submit: Whether to submit the form (default: False)
+        submit_button_selector: Selector for submit button (optional)
+        method: Method to use: selenium or playwright (default: selenium)
+        wait_for_element: Element to wait for before filling form (optional)
+
     This tool can handle various form elements including:
     - Text inputs
     - Checkboxes and radio buttons
     - Dropdown selects
     - File uploads
     - Form submission
-    
+
     Useful for interacting with search forms, contact forms, login forms, etc.
     """
     try:
+        from .utils import URLValidator
+
+        # Validate inputs
+        if not URLValidator.is_valid_url(url):
+            return {"success": False, "error": "Invalid URL format", "url": url}
+
+        if method not in ["selenium", "playwright"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: selenium, playwright",
+                "url": url,
+            }
+
         start_time = time.time()
-        logger.info(f"Form interaction for: {request.url}")
-        
+        logger.info(f"Form interaction for: {url}")
+
         # Apply rate limiting
         await rate_limiter.wait()
-        
+
         # Setup browser based on method
-        if request.method == "selenium":
+        if method == "selenium":
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options as ChromeOptions
-            
+
             options = ChromeOptions()
             if settings.browser_headless:
                 options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
-            
+
             driver = webdriver.Chrome(options=options)
             try:
-                driver.get(request.url)
-                
+                driver.get(url)
+
                 # Wait for element if specified
-                if request.wait_for_element:
+                if wait_for_element:
                     from selenium.webdriver.common.by import By
                     from selenium.webdriver.support.ui import WebDriverWait
                     from selenium.webdriver.support import expected_conditions as EC
-                    
+
                     WebDriverWait(driver, settings.browser_timeout).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, request.wait_for_element))
+                        EC.presence_of_element_located(
+                            (By.CSS_SELECTOR, wait_for_element)
+                        )
                     )
-                
+
                 # Fill and submit form
                 form_handler = FormHandler(driver)
                 result = await form_handler.fill_form(
-                    form_data=request.form_data,
-                    submit=request.submit,
-                    submit_button_selector=request.submit_button_selector
+                    form_data=form_data,
+                    submit=submit,
+                    submit_button_selector=submit_button_selector,
                 )
-                
+
                 # Get final page info
                 final_url = driver.current_url
                 final_title = driver.title
-                
+
             finally:
                 driver.quit()
-        
-        elif request.method == "playwright":
+
+        elif method == "playwright":
             from playwright.async_api import async_playwright
-            
+
             playwright = await async_playwright().start()
             try:
-                browser = await playwright.chromium.launch(headless=settings.browser_headless)
+                browser = await playwright.chromium.launch(
+                    headless=settings.browser_headless
+                )
                 context = await browser.new_context()
                 page = await context.new_page()
-                
-                await page.goto(request.url, timeout=60000)
-                
+
+                await page.goto(url, timeout=60000)
+
                 # Wait for element if specified
-                if request.wait_for_element:
-                    await page.wait_for_selector(request.wait_for_element, timeout=settings.browser_timeout * 1000)
-                
+                if wait_for_element:
+                    await page.wait_for_selector(
+                        wait_for_element, timeout=settings.browser_timeout * 1000
+                    )
+
                 # Fill and submit form
                 form_handler = FormHandler(page)
                 result = await form_handler.fill_form(
-                    form_data=request.form_data,
-                    submit=request.submit,
-                    submit_button_selector=request.submit_button_selector
+                    form_data=form_data,
+                    submit=submit,
+                    submit_button_selector=submit_button_selector,
                 )
-                
+
                 # Get final page info
                 final_url = page.url
                 final_title = await page.title()
-                
+
             finally:
                 await browser.close()
                 await playwright.stop()
-        
+
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         if result.get("success"):
-            metrics_collector.record_request(request.url, True, duration_ms, f"form_{request.method}")
-            
+            metrics_collector.record_request(url, True, duration_ms, f"form_{method}")
+
             return {
                 "success": True,
                 "data": {
                     "form_results": result,
                     "final_url": final_url,
                     "final_title": final_title,
-                    "original_url": request.url
+                    "original_url": url,
                 },
-                "method_used": f"form_{request.method}",
-                "duration_ms": duration_ms
+                "method_used": f"form_{method}",
+                "duration_ms": duration_ms,
             }
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "Form interaction failed")),
-                request.url,
-                f"form_{request.method}"
+                url,
+                f"form_{method}",
             )
             metrics_collector.record_request(
-                request.url, False, duration_ms, f"form_{request.method}",
-                error_response["error"]["category"]
+                url,
+                False,
+                duration_ms,
+                f"form_{method}",
+                error_response["error"]["category"],
             )
             return error_response
-            
+
     except Exception as e:
-        duration_ms = int((time.time() - start_time) * 1000) if 'start_time' in locals() else 0
-        error_response = ErrorHandler.handle_scraping_error(e, request.url, f"form_{request.method}")
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
+        )
+        error_response = ErrorHandler.handle_scraping_error(e, url, f"form_{method}")
         metrics_collector.record_request(
-            request.url, False, duration_ms, f"form_{request.method}",
-            error_response["error"]["category"]
+            url,
+            False,
+            duration_ms,
+            f"form_{method}",
+            error_response["error"]["category"],
         )
         return error_response
 
@@ -622,7 +774,7 @@ async def fill_and_submit_form(request: FormRequest) -> Dict[str, Any]:
 async def get_server_metrics() -> Dict[str, Any]:
     """
     Get server performance metrics and statistics.
-    
+
     Returns information about:
     - Request counts and success rates
     - Performance metrics
@@ -633,7 +785,7 @@ async def get_server_metrics() -> Dict[str, Any]:
     try:
         metrics = metrics_collector.get_stats()
         cache_stats = cache_manager.stats()
-        
+
         return {
             "success": True,
             "data": {
@@ -644,117 +796,112 @@ async def get_server_metrics() -> Dict[str, Any]:
                     "version": settings.server_version,
                     "javascript_support": settings.enable_javascript,
                     "proxy_enabled": settings.use_proxy,
-                    "random_user_agent": settings.use_random_user_agent
+                    "random_user_agent": settings.use_random_user_agent,
                 },
-                "timestamp": datetime.now().isoformat()
-            }
+                "timestamp": datetime.now().isoformat(),
+            },
         }
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 @app.tool()
 async def clear_cache() -> Dict[str, Any]:
     """
     Clear the scraping results cache.
-    
+
     This removes all cached scraping results, forcing fresh requests
     for all subsequent scraping operations.
     """
     try:
         cache_manager.clear()
-        return {
-            "success": True,
-            "message": "Cache cleared successfully"
-        }
+        return {"success": True, "message": "Cache cleared successfully"}
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 @app.tool()
 async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str, Any]:
     """
     Extract structured data from a webpage using advanced techniques.
-    
+
     Automatically detects and extracts:
     - Contact information (emails, phone numbers)
     - Social media links
     - Addresses
     - Prices and product information
     - Article content
-    
+
     data_type can be: all, contact, social, content, products, or addresses
     """
     try:
         logger.info(f"Extracting structured data from: {url}")
-        
+
         # Apply rate limiting
         await rate_limiter.wait()
-        
+
         # Validate URL
         if not URLValidator.is_valid_url(url):
-            return {
-                "success": False,
-                "error": "Invalid URL format"
-            }
-        
+            return {"success": False, "error": "Invalid URL format"}
+
         normalized_url = URLValidator.normalize_url(url)
-        
+
         # Scrape page content
         scrape_result = await web_scraper.scrape_url(
-            url=normalized_url,
-            method="simple"
+            url=normalized_url, method="simple"
         )
-        
+
         if "error" in scrape_result:
             return {
                 "success": False,
                 "error": scrape_result["error"],
-                "url": normalized_url
+                "url": normalized_url,
             }
-        
+
         content = scrape_result.get("content", {})
         text_content = content.get("text", "")
         links = content.get("links", [])
-        
+
         extracted_data = {}
-        
+
         # Extract contact information
         if data_type in ["all", "contact"]:
             extracted_data["contact"] = {
                 "emails": TextCleaner.extract_emails(text_content),
-                "phone_numbers": TextCleaner.extract_phone_numbers(text_content)
+                "phone_numbers": TextCleaner.extract_phone_numbers(text_content),
             }
-        
+
         # Extract social media links
         if data_type in ["all", "social"]:
             social_domains = [
-                "facebook.com", "twitter.com", "instagram.com", "linkedin.com",
-                "youtube.com", "tiktok.com", "pinterest.com", "snapchat.com"
+                "facebook.com",
+                "twitter.com",
+                "instagram.com",
+                "linkedin.com",
+                "youtube.com",
+                "tiktok.com",
+                "pinterest.com",
+                "snapchat.com",
             ]
-            
+
             social_links = []
             for link in links:
                 link_url = link.get("url", "")
                 domain = URLValidator.extract_domain(link_url)
-                
+
                 for social_domain in social_domains:
                     if social_domain in domain:
-                        social_links.append({
-                            "platform": social_domain.split(".")[0],
-                            "url": link_url,
-                            "text": link.get("text", "")
-                        })
+                        social_links.append(
+                            {
+                                "platform": social_domain.split(".")[0],
+                                "url": link_url,
+                                "text": link.get("text", ""),
+                            }
+                        )
                         break
-            
+
             extracted_data["social_media"] = social_links
-        
+
         # Extract basic content structure
         if data_type in ["all", "content"]:
             extracted_data["content"] = {
@@ -762,32 +909,32 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
                 "meta_description": scrape_result.get("meta_description"),
                 "text_length": len(text_content),
                 "link_count": len(links),
-                "domain": URLValidator.extract_domain(normalized_url)
+                "domain": URLValidator.extract_domain(normalized_url),
             }
-        
+
         return {
             "success": True,
             "data": extracted_data,
             "url": normalized_url,
-            "data_type": data_type
+            "data_type": data_type,
         }
-        
+
     except Exception as e:
         logger.error(f"Error extracting structured data from {url}: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "url": url
-        }
+        return {"success": False, "error": str(e), "url": url}
 
 
 def main():
     """Run the MCP server."""
     print(f"Starting {settings.server_name} v{settings.server_version}")
-    print(f"JavaScript support: {'Enabled' if settings.enable_javascript else 'Disabled'}")
-    print(f"Random User-Agent: {'Enabled' if settings.use_random_user_agent else 'Disabled'}")
+    print(
+        f"JavaScript support: {'Enabled' if settings.enable_javascript else 'Disabled'}"
+    )
+    print(
+        f"Random User-Agent: {'Enabled' if settings.use_random_user_agent else 'Disabled'}"
+    )
     print(f"Proxy: {'Enabled' if settings.use_proxy else 'Disabled'}")
-    
+
     app.run()
 
 
