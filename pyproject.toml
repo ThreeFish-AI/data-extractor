@@ -9,7 +9,7 @@ description = "A robust web scraping MCP server based on Scrapy and FastMCP"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    {name = "Claude", email = "claude@example.com"}
+    {name = "Aurelius", email = "aureliusshu@gmail.com"}
 ]
 keywords = ["mcp", "scraping", "scrapy", "web-crawler"]
 classifiers = [
