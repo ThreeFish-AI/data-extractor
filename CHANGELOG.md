@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Resolved all dependency compatibility issues with modern Python versions
+- Fixed Pydantic v2 compatibility issues:
+  - Added `pydantic-settings` dependency for BaseSettings
+  - Updated configuration syntax to use `model_config` instead of `Config` class
+  - Migrated from `@validator` to `@field_validator` decorators
+  - Added proper environment variable prefix handling
 
 ## [0.1.0] - 2024-08-26
 

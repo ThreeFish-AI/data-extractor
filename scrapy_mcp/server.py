@@ -9,7 +9,7 @@ from urllib.parse import urlparse, urljoin
 from datetime import datetime
 
 from fastmcp import FastMCP
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .scraper import WebScraper
 from .advanced_features import AntiDetectionScraper, FormHandler
@@ -39,7 +39,7 @@ class ScrapeRequest(BaseModel):
     extract_config: Optional[Dict[str, Any]] = Field(default=None, description="Configuration for data extraction")
     wait_for_element: Optional[str] = Field(default=None, description="CSS selector to wait for (Selenium only)")
     
-    @validator("url")
+    @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
         parsed = urlparse(v)
@@ -47,7 +47,7 @@ class ScrapeRequest(BaseModel):
             raise ValueError("Invalid URL format")
         return v
     
-    @validator("method")
+    @field_validator("method")
     def validate_method(cls, v):
         """Validate scraping method."""
         if v not in ["auto", "simple", "scrapy", "selenium"]:
@@ -61,7 +61,7 @@ class MultipleScrapeRequest(BaseModel):
     method: str = Field(default="auto", description="Scraping method: auto, simple, scrapy, selenium")
     extract_config: Optional[Dict[str, Any]] = Field(default=None, description="Configuration for data extraction")
     
-    @validator("urls")
+    @field_validator("urls")
     def validate_urls(cls, v):
         """Validate URLs format."""
         if not v:
@@ -73,7 +73,7 @@ class MultipleScrapeRequest(BaseModel):
                 raise ValueError(f"Invalid URL format: {url}")
         return v
     
-    @validator("method")
+    @field_validator("method")
     def validate_method(cls, v):
         """Validate scraping method."""
         if v not in ["auto", "simple", "scrapy", "selenium"]:
@@ -88,7 +88,7 @@ class ExtractLinksRequest(BaseModel):
     exclude_domains: Optional[List[str]] = Field(default=None, description="Exclude links from these domains")
     internal_only: bool = Field(default=False, description="Only extract internal links")
     
-    @validator("url")
+    @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
         parsed = urlparse(v)
@@ -359,14 +359,14 @@ class StealthScrapeRequest(BaseModel):
     wait_for_element: Optional[str] = Field(default=None, description="CSS selector to wait for")
     scroll_page: bool = Field(default=False, description="Whether to scroll page to load dynamic content")
     
-    @validator("url")
+    @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
         if not URLValidator.is_valid_url(v):
             raise ValueError("Invalid URL format")
         return URLValidator.normalize_url(v)
     
-    @validator("method")
+    @field_validator("method")
     def validate_method(cls, v):
         """Validate stealth method."""
         if v not in ["selenium", "playwright"]:
@@ -383,14 +383,14 @@ class FormRequest(BaseModel):
     method: str = Field(default="selenium", description="Method to use: selenium or playwright")
     wait_for_element: Optional[str] = Field(default=None, description="Element to wait for before filling form")
     
-    @validator("url")
+    @field_validator("url")
     def validate_url(cls, v):
         """Validate URL format."""
         if not URLValidator.is_valid_url(v):
             raise ValueError("Invalid URL format")
         return URLValidator.normalize_url(v)
     
-    @validator("method")
+    @field_validator("method")
     def validate_method(cls, v):
         """Validate method."""
         if v not in ["selenium", "playwright"]:
