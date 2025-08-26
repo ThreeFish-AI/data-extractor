@@ -8,9 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **BREAKING**: Updated minimum Python requirement to 3.12+ for modern language features and better performance
+- Updated all dependencies to latest versions compatible with Python 3.12+:
+  - aiohttp>=3.9.0, lxml>=5.0.0, requests>=2.32.0, selenium>=4.20.0
+  - playwright>=1.45.0, pydantic>=2.8.0, httpx>=0.27.0, twisted>=24.7.0
+- Updated development dependencies: pytest>=8.0.0, black>=24.0.0, mypy>=1.10.0
 - Migrated package management from pip to uv for improved performance and dependency resolution
 - Updated installation and development commands to use uv
 - Enhanced pyproject.toml with uv-specific configuration
+- Updated tool configurations (Black, MyPy) to target Python 3.12
+- Added Python version validation to setup script
+
+### Fixed
+- Resolved all dependency compatibility issues with modern Python versions
 
 ## [0.1.0] - 2024-08-26
 

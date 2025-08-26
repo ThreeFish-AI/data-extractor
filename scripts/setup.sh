@@ -5,6 +5,19 @@ set -e
 
 echo "🚀 Setting up Scrapy MCP Server with uv..."
 
+# Check Python version
+PYTHON_VERSION=$(python --version 2>&1 | awk '{print $2}')
+PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
+PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
+
+if [[ $PYTHON_MAJOR -lt 3 ]] || [[ $PYTHON_MAJOR -eq 3 && $PYTHON_MINOR -lt 12 ]]; then
+    echo "❌ Python 3.12+ is required. Current version: $PYTHON_VERSION"
+    echo "   Please upgrade Python or use a virtual environment with Python 3.12+"
+    exit 1
+fi
+
+echo "✅ Python $PYTHON_VERSION found"
+
 # Check if uv is installed
 if ! command -v uv &> /dev/null; then
     echo "❌ uv is not installed. Please install uv first:"

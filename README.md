@@ -2,6 +2,8 @@
 
 一个基于 Scrapy 和 FastMCP 构建的强大、稳定的网页爬取 MCP Server，专为商业环境中的长期使用而设计。
 
+**系统要求**: Python 3.12 或更高版本
+
 ## 🚀 特性
 
 ### 核心功能
@@ -30,6 +32,9 @@
 ## 📦 安装
 
 ```bash
+# 确认 Python 版本 (需要 3.12+)
+python --version
+
 # 克隆仓库
 git clone git@github.com:ThreeFish-AI/scrapy-mcp.git
 cd scrapy-mcp
