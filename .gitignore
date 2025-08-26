@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environments (uv and others)
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Scrapy/Spider logs and data
+*.log
+*.jl
+scrapy.log
+
+# Browser automation
+chromedriver*
+geckodriver*
+*.crx
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Cache directories
+.cache/
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+.scrapy/
