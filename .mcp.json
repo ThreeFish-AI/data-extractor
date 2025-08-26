@@ -8,6 +8,10 @@
         "git+https://github.com/ThreeFish-AI/scrapy-mcp.git",
         "scrapy-mcp"
       ]
+    },
+    "time": {
+      "command": "uvx",
+      "args": ["mcp-server-time"]
     }
   }
 }

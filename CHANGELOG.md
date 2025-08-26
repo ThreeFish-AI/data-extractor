@@ -5,117 +5,50 @@ All notable changes to the Scrapy MCP Server project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## v0.1.0
 
-### Changed
-- **BREAKING**: Updated minimum Python requirement to 3.12+ for modern language features and better performance
-- Updated all dependencies to latest versions compatible with Python 3.12+:
+#### Released on 2025/08/26
+
+[New features and improvements]
+
+- 初始发布：Scrapy MCP Server 核心能力与工具集
+  - 多种抓取方式：Requests/BeautifulSoup、Scrapy、Selenium、Playwright
+  - 反检测能力：Undetected Chrome、随机 UA、人类行为模拟、隐身抓取
+  - 表单交互：自动识别输入/复选/下拉，支持提交
+  - 企业级能力：限流、指数退避重试、缓存、错误分类与监控、性能指标
+  - 并发处理与高性能异步架构
+- MCP 工具：
+  - `scrape_webpage`、`scrape_multiple_webpages`、`scrape_with_stealth`、`fill_and_submit_form`
+  - `extract_links`、`extract_structured_data`、`get_page_info`、`check_robots_txt`
+  - `get_server_metrics`、`clear_cache`
+- 配置与可扩展性：
+  - 环境变量与前缀支持、灵活的抽取配置、代理与 UA 定制
+  - 模块化设计、完整日志、类型标注，易于扩展与调试
+- 改进：
+  - 迁移包管理到 uv；增强 `pyproject.toml` 的 uv 配置
+
+[Bug fixes]
+
+- 解决现代 Python 版本的依赖兼容性问题
+- Pydantic v2 兼容性修复：
+  - 新增 `pydantic-settings` 依赖用于 `BaseSettings`
+  - 使用 `model_config` 替代 `Config` 配置方式
+  - 从 `@validator` 迁移到 `@field_validator`
+  - 正确处理环境变量前缀
+
+[Documentation, Tests and Build]
+
+- 更新安装与开发命令以使用 uv，新增 Python 版本校验脚本
+- 将 Black/MyPy 等工具配置目标更新为 Python 3.12
+- 完善 README、示例与高级抽取配置文档
+- 依赖清单（核心运行时）：
   - aiohttp>=3.9.0, lxml>=5.0.0, requests>=2.32.0, selenium>=4.20.0
   - playwright>=1.45.0, pydantic>=2.8.0, httpx>=0.27.0, twisted>=24.7.0
-- Updated development dependencies: pytest>=8.0.0, black>=24.0.0, mypy>=1.10.0
-- Migrated package management from pip to uv for improved performance and dependency resolution
-- Updated installation and development commands to use uv
-- Enhanced pyproject.toml with uv-specific configuration
-- Updated tool configurations (Black, MyPy) to target Python 3.12
-- Added Python version validation to setup script
+- 开发与质量工具：pytest>=8.0.0, black>=24.0.0, mypy>=1.10.0
 
-### Fixed
-- Resolved all dependency compatibility issues with modern Python versions
-- Fixed Pydantic v2 compatibility issues:
-  - Added `pydantic-settings` dependency for BaseSettings
-  - Updated configuration syntax to use `model_config` instead of `Config` class
-  - Migrated from `@validator` to `@field_validator` decorators
-  - Added proper environment variable prefix handling
+[Dependency Upgrades]
 
-## [0.1.0] - 2024-08-26
-
-### Added
-
-- Initial release of Scrapy MCP Server
-- Core scraping functionality using multiple methods:
-  - Simple HTTP requests with requests/BeautifulSoup
-  - Scrapy framework integration
-  - Selenium browser automation
-  - Playwright support
-- Advanced anti-detection features:
-  - Undetected Chrome driver support
-  - Randomized user agents
-  - Human-like behavior simulation
-  - Stealth scraping capabilities
-- Form interaction capabilities:
-  - Automatic form field detection
-  - Support for text inputs, checkboxes, dropdowns
-  - Form submission handling
-- Enterprise-grade features:
-  - Request rate limiting
-  - Intelligent retry mechanisms with exponential backoff
-  - Result caching system
-  - Comprehensive error handling and categorization
-  - Performance metrics and monitoring
-- MCP Tools:
-  - `scrape_webpage` - Basic webpage scraping
-  - `scrape_multiple_webpages` - Concurrent multi-URL scraping
-  - `scrape_with_stealth` - Anti-detection scraping
-  - `fill_and_submit_form` - Form interaction
-  - `extract_links` - Specialized link extraction
-  - `extract_structured_data` - Automatic data structure detection
-  - `get_page_info` - Quick page metadata retrieval
-  - `check_robots_txt` - Robots.txt compliance checking
-  - `get_server_metrics` - Performance monitoring
-  - `clear_cache` - Cache management
-- Configuration system:
-  - Environment variable support
-  - Flexible extraction configurations
-  - Proxy and user-agent customization
-- Documentation:
-  - Comprehensive README with usage examples
-  - Advanced extraction configuration examples
-  - Basic usage demonstrations
-  - Installation and setup guides
-
-### Features
-
-- **Multi-Method Scraping**: Automatically choose between simple HTTP, Scrapy, Selenium, or Playwright based on requirements
-- **Anti-Bot Detection**: Advanced stealth techniques to bypass common anti-scraping measures
-- **Concurrent Processing**: Efficient handling of multiple URLs simultaneously
-- **Smart Caching**: In-memory caching with TTL to improve performance and reduce server load
-- **Error Resilience**: Comprehensive retry logic with categorized error handling
-- **Form Automation**: Full support for form filling and submission across different input types
-- **Data Extraction**: Flexible, configuration-driven data extraction system
-- **Performance Monitoring**: Built-in metrics collection and reporting
-- **Proxy Support**: Optional proxy configuration for enhanced anonymity
-- **Rate Limiting**: Configurable request rate limiting to respect server resources
-
-### Technical Details
-
-- Built on FastMCP framework for MCP protocol compliance
-- Asynchronous architecture for high performance
-- Modular design for easy extension and customization
-- Type hints throughout for better code quality
-- Comprehensive logging for debugging and monitoring
-- Docker-ready configuration (planned for future release)
-
-### Dependencies
-
-- fastmcp>=0.2.0
-- scrapy>=2.11.0
-- selenium>=4.15.0
-- playwright>=1.40.0
-- undetected-chromedriver>=3.5.0
-- And other supporting libraries (see requirements.txt)
-
-### Known Issues
-
-- Chrome/Chromium browser required for Selenium and stealth features
-- Some anti-bot protections may still detect automation (continuously improving)
-- Large concurrent requests may require memory optimization
-
-### Future Plans
-
-- Docker containerization
-- Additional browser engine support
-- Enhanced anti-detection techniques
-- Machine learning-based content extraction
-- Distributed scraping support
-- GraphQL and API integration
-- WebSocket support for real-time scraping
+- 最低 Python 版本提升至 3.12+
+- 升级运行时依赖以兼容 Python 3.12（见上）
+- 升级开发依赖：pytest、black、mypy
+- 包管理迁移至 uv，提升安装与解析性能
