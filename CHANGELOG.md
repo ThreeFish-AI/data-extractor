@@ -5,6 +5,20 @@ All notable changes to the Scrapy MCP Server project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.1
+
+#### Released on 2025/xx/xx
+
+[New features and improvements]
+
+[Bug fixes]
+
+[Documentation, Tests and Build]
+
+- 新增 `Github Repo@Tag` 的 MCP Client 配置方式；
+
+[Dependency Upgrades]
+
 ## v0.1.0
 
 #### Released on 2025/08/26
