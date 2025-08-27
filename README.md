@@ -152,7 +152,45 @@ uv run python -m scrapy_mcp.server
 }
 ```
 
-#### 方式四：Python 模块方式（使用 uv）
+#### 方式四：指定 Git Tag 版本（推荐用于生产环境）
+
+通过指定 git tag 可以确保使用特定版本，提高稳定性：
+
+```json
+{
+  "mcpServers": {
+    "scrapy-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git@v0.1.0",
+        "scrapy-mcp"
+      ]
+    }
+  }
+}
+```
+
+也可以指定其他标签或分支：
+
+```json
+{
+  "mcpServers": {
+    "scrapy-mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git@main",
+        "scrapy-mcp"
+      ]
+    }
+  }
+}
+```
+
+#### 方式五：Python 模块方式（使用 uv）
 
 ```json
 {
