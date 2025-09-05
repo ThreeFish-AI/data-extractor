@@ -627,6 +627,63 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
+## 📋 版本管理
+
+### 项目版本维护
+
+项目使用语义化版本控制（Semantic Versioning），版本号格式为 `MAJOR.MINOR.PATCH`：
+
+- **MAJOR**: 重大不兼容变更
+- **MINOR**: 新功能增加，向后兼容
+- **PATCH**: 错误修复，向后兼容
+
+### 版本升级步骤
+
+1. **更新版本号**
+   ```bash
+   # 编辑 pyproject.toml 中的 version 字段
+   vim pyproject.toml
+   ```
+
+2. **更新变更日志**
+   ```bash
+   # 在 CHANGELOG.md 中记录变更内容
+   vim CHANGELOG.md
+   ```
+
+3. **更新 README 版本信息**
+   ```bash
+   # 更新 README.md 中的"当前最新稳定版本"
+   vim README.md
+   ```
+
+4. **提交版本变更**
+   ```bash
+   git add pyproject.toml CHANGELOG.md README.md
+   git commit -m "chore(release): bump version to vX.Y.Z"
+   git tag -a vX.Y.Z -m "Release version X.Y.Z"
+   git push && git push --tags
+   ```
+
+5. **构建和发布**
+   ```bash
+   # 使用 uv 构建包
+   uv build
+   
+   # 发布到 PyPI（如需要）
+   uv publish
+   ```
+
+### 版本检查
+
+```bash
+# 检查当前版本
+python -c "import extractor; print(extractor.__version__)"
+
+# 或使用 uv
+uv run python -c "from extractor import __version__; print(__version__)"
+```
+
 ## 🔧 配置
 
 创建 `.env` 文件来自定义配置：
@@ -742,7 +799,7 @@ uv run python -m extractor.server
 - 将 `cwd` 路径替换为您的项目实际路径
 - GitHub 仓库地址：`https://github.com/ThreeFish-AI/data-extractor.git`
 - 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
-- 当前最新稳定版本：v0.1.1
+- 当前最新稳定版本：v0.1.2
 
 ## 🛠️ 可用工具
 
