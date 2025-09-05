@@ -37,6 +37,8 @@ dependencies = [
     "twisted>=24.7.0",
     "ruff>=0.12.12",
     "markdownify>=1.2.0",
+    "pypdf2>=3.0.1",
+    "pymupdf>=1.26.4",
 ]
 
 [project.optional-dependencies]

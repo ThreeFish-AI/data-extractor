@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 from .scraper import WebScraper
 from .advanced_features import AntiDetectionScraper, FormHandler
 from .markdown_converter import MarkdownConverter
+from .pdf_processor import PDFProcessor
 from .config import settings
 from .utils import (
     timing_decorator,
@@ -36,6 +37,7 @@ app = FastMCP(settings.server_name, version=settings.server_version)
 web_scraper = WebScraper()
 anti_detection_scraper = AntiDetectionScraper()
 markdown_converter = MarkdownConverter()
+pdf_processor = PDFProcessor()
 
 
 class ScrapeRequest(BaseModel):
@@ -535,6 +537,103 @@ class BatchConvertToMarkdownRequest(BaseModel):
         if v not in ["auto", "simple", "scrapy", "selenium"]:
             raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
         return v
+
+
+class PDFToMarkdownRequest(BaseModel):
+    """Request model for converting PDF to Markdown."""
+
+    pdf_source: str = Field(..., description="PDF URL or local file path")
+    method: str = Field(
+        default="auto", description="Extraction method: auto, pymupdf, pypdf2"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include PDF metadata in result"
+    )
+    page_range: Optional[List[int]] = Field(
+        default=None, description="Page range [start, end] for partial extraction"
+    )
+    output_format: str = Field(
+        default="markdown", description="Output format: markdown, text"
+    )
+
+    @field_validator("method")
+    def validate_method(cls, v: str) -> str:
+        """Validate extraction method."""
+        if v not in ["auto", "pymupdf", "pypdf2"]:
+            raise ValueError("Method must be one of: auto, pymupdf, pypdf2")
+        return v
+
+    @field_validator("output_format")
+    def validate_output_format(cls, v: str) -> str:
+        """Validate output format."""
+        if v not in ["markdown", "text"]:
+            raise ValueError("Output format must be one of: markdown, text")
+        return v
+
+    @field_validator("page_range")
+    def validate_page_range(cls, v: Optional[List[int]]) -> Optional[tuple]:
+        """Validate and convert page range."""
+        if v is None:
+            return None
+        if len(v) != 2:
+            raise ValueError("Page range must contain exactly 2 elements: [start, end]")
+        if v[0] < 0 or v[1] < 0:
+            raise ValueError("Page numbers must be non-negative")
+        if v[0] >= v[1]:
+            raise ValueError("Start page must be less than end page")
+        return tuple(v)
+
+
+class BatchPDFToMarkdownRequest(BaseModel):
+    """Request model for batch converting PDFs to Markdown."""
+
+    pdf_sources: List[str] = Field(..., description="List of PDF URLs or local file paths")
+    method: str = Field(
+        default="auto", description="Extraction method: auto, pymupdf, pypdf2"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include PDF metadata in results"
+    )
+    page_range: Optional[List[int]] = Field(
+        default=None, description="Page range [start, end] for all PDFs"
+    )
+    output_format: str = Field(
+        default="markdown", description="Output format: markdown, text"
+    )
+
+    @field_validator("pdf_sources")
+    def validate_pdf_sources(cls, v: List[str]) -> List[str]:
+        """Validate PDF sources."""
+        if not v:
+            raise ValueError("PDF sources list cannot be empty")
+        return v
+
+    @field_validator("method")
+    def validate_method(cls, v: str) -> str:
+        """Validate extraction method."""
+        if v not in ["auto", "pymupdf", "pypdf2"]:
+            raise ValueError("Method must be one of: auto, pymupdf, pypdf2")
+        return v
+
+    @field_validator("output_format")
+    def validate_output_format(cls, v: str) -> str:
+        """Validate output format."""
+        if v not in ["markdown", "text"]:
+            raise ValueError("Output format must be one of: markdown, text")
+        return v
+
+    @field_validator("page_range")
+    def validate_page_range(cls, v: Optional[List[int]]) -> Optional[tuple]:
+        """Validate and convert page range."""
+        if v is None:
+            return None
+        if len(v) != 2:
+            raise ValueError("Page range must contain exactly 2 elements: [start, end]")
+        if v[0] < 0 or v[1] < 0:
+            raise ValueError("Page numbers must be non-negative")
+        if v[0] >= v[1]:
+            raise ValueError("Start page must be less than end page")
+        return tuple(v)
 
 
 @app.tool()
@@ -1228,6 +1327,259 @@ async def batch_convert_webpages_to_markdown(
             "urls": urls,
             "method_used": f"batch_markdown_{method}",
             "duration_ms": duration_ms,
+        }
+
+
+@app.tool()
+@timing_decorator
+async def convert_pdf_to_markdown(
+    pdf_source: str,
+    method: str = "auto",
+    include_metadata: bool = True,
+    page_range: Optional[List[int]] = None,
+    output_format: str = "markdown"
+) -> Dict[str, Any]:
+    """
+    Convert a PDF document to Markdown format.
+
+    Args:
+        pdf_source: PDF URL or local file path
+        method: Extraction method: auto, pymupdf, pypdf2 (default: auto)
+        include_metadata: Include PDF metadata in result (default: True)
+        page_range: Page range [start, end] for partial extraction (optional)
+        output_format: Output format: markdown, text (default: markdown)
+
+    This tool can process PDF files from URLs or local file paths:
+    - auto: Automatically choose the best extraction method
+    - pymupdf: Use PyMuPDF (fitz) library for extraction
+    - pypdf2: Use PyPDF2 library for extraction
+
+    Features:
+    - Support for PDF URLs and local file paths
+    - Partial page extraction with page range
+    - Metadata extraction (title, author, etc.)
+    - Text cleaning and Markdown formatting
+    - Multiple extraction methods for reliability
+    """
+    try:
+        # Validate inputs
+        if method not in ["auto", "pymupdf", "pypdf2"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: auto, pymupdf, pypdf2",
+                "pdf_source": pdf_source
+            }
+
+        if output_format not in ["markdown", "text"]:
+            return {
+                "success": False,
+                "error": "Output format must be one of: markdown, text",
+                "pdf_source": pdf_source
+            }
+
+        # Convert page_range list to tuple if provided
+        page_range_tuple = None
+        if page_range:
+            if len(page_range) != 2:
+                return {
+                    "success": False,
+                    "error": "Page range must contain exactly 2 elements: [start, end]",
+                    "pdf_source": pdf_source
+                }
+            if page_range[0] < 0 or page_range[1] < 0:
+                return {
+                    "success": False,
+                    "error": "Page numbers must be non-negative",
+                    "pdf_source": pdf_source
+                }
+            if page_range[0] >= page_range[1]:
+                return {
+                    "success": False,
+                    "error": "Start page must be less than end page",
+                    "pdf_source": pdf_source
+                }
+            page_range_tuple = tuple(page_range)
+
+        start_time = time.time()
+        logger.info(f"Converting PDF to {output_format}: {pdf_source} with method: {method}")
+
+        # Apply rate limiting
+        await rate_limiter.wait()
+
+        # Process PDF
+        result = await pdf_processor.process_pdf(
+            pdf_source=pdf_source,
+            method=method,
+            include_metadata=include_metadata,
+            page_range=page_range_tuple,
+            output_format=output_format
+        )
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        if result.get("success"):
+            metrics_collector.record_request(
+                pdf_source, True, duration_ms, f"pdf_{method}"
+            )
+
+            return {
+                "success": True,
+                "data": result,
+                "method_used": f"pdf_{method}",
+                "duration_ms": duration_ms
+            }
+        else:
+            error_response = ErrorHandler.handle_scraping_error(
+                Exception(result.get("error", "PDF conversion failed")),
+                pdf_source,
+                f"pdf_{method}",
+            )
+            metrics_collector.record_request(
+                pdf_source,
+                False,
+                duration_ms,
+                f"pdf_{method}",
+                error_response["error"]["category"],
+            )
+            return error_response
+
+    except Exception as e:
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
+        )
+        error_response = ErrorHandler.handle_scraping_error(e, pdf_source, f"pdf_{method}")
+        metrics_collector.record_request(
+            pdf_source,
+            False,
+            duration_ms,
+            f"pdf_{method}",
+            error_response["error"]["category"],
+        )
+        return error_response
+
+
+@app.tool()
+@timing_decorator
+async def batch_convert_pdfs_to_markdown(
+    pdf_sources: List[str],
+    method: str = "auto",
+    include_metadata: bool = True,
+    page_range: Optional[List[int]] = None,
+    output_format: str = "markdown"
+) -> Dict[str, Any]:
+    """
+    Convert multiple PDF documents to Markdown format concurrently.
+
+    Args:
+        pdf_sources: List of PDF URLs or local file paths
+        method: Extraction method: auto, pymupdf, pypdf2 (default: auto)
+        include_metadata: Include PDF metadata in results (default: True)
+        page_range: Page range [start, end] for all PDFs (optional)
+        output_format: Output format: markdown, text (default: markdown)
+
+    This tool provides batch processing for converting multiple PDFs to Markdown.
+    It processes all PDFs concurrently for better performance.
+
+    Features:
+    - Concurrent processing of multiple PDFs
+    - Support for both URLs and local file paths
+    - Consistent extraction settings across all PDFs
+    - Detailed summary statistics
+    - Error handling for individual failures
+    - Same conversion options as single PDF tool
+    """
+    try:
+        # Validate inputs
+        if not pdf_sources:
+            return {"success": False, "error": "PDF sources list cannot be empty"}
+
+        if method not in ["auto", "pymupdf", "pypdf2"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: auto, pymupdf, pypdf2"
+            }
+
+        if output_format not in ["markdown", "text"]:
+            return {
+                "success": False,
+                "error": "Output format must be one of: markdown, text"
+            }
+
+        # Convert page_range list to tuple if provided
+        page_range_tuple = None
+        if page_range:
+            if len(page_range) != 2:
+                return {
+                    "success": False,
+                    "error": "Page range must contain exactly 2 elements: [start, end]"
+                }
+            if page_range[0] < 0 or page_range[1] < 0:
+                return {
+                    "success": False,
+                    "error": "Page numbers must be non-negative"
+                }
+            if page_range[0] >= page_range[1]:
+                return {
+                    "success": False,
+                    "error": "Start page must be less than end page"
+                }
+            page_range_tuple = tuple(page_range)
+
+        start_time = time.time()
+        logger.info(
+            f"Batch converting {len(pdf_sources)} PDFs to {output_format} with method: {method}"
+        )
+
+        # Process all PDFs
+        result = await pdf_processor.batch_process_pdfs(
+            pdf_sources=pdf_sources,
+            method=method,
+            include_metadata=include_metadata,
+            page_range=page_range_tuple,
+            output_format=output_format
+        )
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # Record metrics for each PDF
+        for i, pdf_source in enumerate(pdf_sources):
+            pdf_result = (
+                result["results"][i]
+                if i < len(result["results"])
+                else {"success": False}
+            )
+            success = pdf_result.get("success", False)
+            metrics_collector.record_request(
+                pdf_source, success, duration_ms // len(pdf_sources), f"batch_pdf_{method}"
+            )
+
+        if result.get("success"):
+            return {
+                "success": True,
+                "data": result,
+                "method_used": f"batch_pdf_{method}",
+                "duration_ms": duration_ms
+            }
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Batch PDF conversion failed"),
+                "data": result.get("results", []),
+                "method_used": f"batch_pdf_{method}",
+                "duration_ms": duration_ms
+            }
+
+    except Exception as e:
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
+        )
+        logger.error(f"Error in batch PDF conversion: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "pdf_sources": pdf_sources,
+            "method_used": f"batch_pdf_{method}",
+            "duration_ms": duration_ms
         }
 
 
