@@ -49,10 +49,11 @@
 ```
 data-extractor/
 ├── extractor/                          # 核心引擎模块
-│   ├── __init__.py                     # 包初始化
-│   ├── server.py                       # FastMCP 服务器与 10 个 MCP 工具
+│   ├── __init__.py                     # 包初始化 (v0.1.3)
+│   ├── server.py                       # FastMCP 服务器与 12 个 MCP 工具
 │   ├── scraper.py                      # WebScraper 核心抓取引擎
 │   ├── advanced_features.py            # 反检测与表单自动化
+│   ├── markdown_converter.py           # Markdown 转换引擎 (8种格式化选项)
 │   ├── config.py                       # 配置管理 (DataExtractorSettings)
 │   └── utils.py                        # 企业级工具集 (限流、重试、缓存等)
 ├── examples/                           # 使用示例
@@ -72,13 +73,21 @@ data-extractor/
 │   └── conftest.py                      # pytest 配置和共享 fixtures
 ├── scripts/
 │   └── setup.sh                        # 快速安装脚本
-├── TESTING.md                          # 测试文档 (67KB)
-├── TEST_RESULTS.md                     # 测试执行报告
-├── CHANGELOG.md                        # 版本变更日志
+├── .claude/                            # Claude Code 配置
+│   └── settings.local.json             # IDE 本地设置
+├── .vscode/                            # VS Code 配置
+│   └── settings.json                   # 编辑器设置
+├── TESTING.md                          # 测试文档 (30KB)
+├── TEST_RESULTS.md                     # 测试执行报告 (9KB)
+├── CHANGELOG.md                        # 版本变更日志 (17KB)
 ├── CLAUDE.md                           # Claude Code 项目指导
+├── .prompts.md                         # 项目里程碑和任务清单
 ├── .env.example                        # 环境变量配置示例
+├── .mcp.json                           # MCP 服务器配置
+├── .gitignore                          # Git 忽略规则
+├── mypy.ini                            # 类型检查配置
 ├── pyproject.toml                      # 项目配置和依赖管理
-└── uv.lock                             # 依赖锁定文件
+└── uv.lock                             # 依赖锁定文件 (311KB)
 ```
 
 ### 已完成的里程碑 ✅
