@@ -761,7 +761,7 @@ uv run python -m extractor.server
     "data-extractor": {
       "command": "uv",
       "args": ["run", "data-extractor"],
-      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/attention/research/tools/data-extractor"
+      "cwd": "/path/to/your/data-extractor"
     }
   }
 }
