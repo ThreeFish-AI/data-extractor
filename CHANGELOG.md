@@ -34,6 +34,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **pyproject.toml**: 确保测试依赖 `pytest>=8.0.0` 和 `pytest-asyncio>=0.23.0` 配置正确
 - **scripts/setup.sh**: 代码格式化工具从 `black` 替换为 `ruff format`，提升格式化速度和一致性
 
+### 修复
+
+- **类型检查完整性改进**
+  - pyproject.toml: 新增 `types-requests>=2.32.4.20250809` 类型存根包依赖
+  - extractor/utils.py: 完善核心工具类型注解，修复 `Callable` 类型提示和异常处理逻辑
+  - extractor/scraper.py: 修复抓取引擎类型注解，添加 BeautifulSoup 属性安全检查
+  - extractor/advanced_features.py: 完善反检测和表单处理功能类型注解
+  - extractor/server.py: 修复 MCP 服务器验证器函数类型注解
+  - mypy.ini: 新增类型检查配置文件，支持第三方库类型忽略策略
+
 ### 整理
 
 - **测试架构标准化**
