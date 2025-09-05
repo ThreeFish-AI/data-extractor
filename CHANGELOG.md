@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 #### Released on 2025/09/06
 
+重大更新：为「页面转 Markdown 文档」功能新增高级格式化能力，提供 8 种可配置的格式化选项，包括表格对齐、代码语言检测、智能排版等功能，显著提升 Markdown 转换质量。本版本新增 17 个测试用例，测试覆盖率 100%，确保功能稳定可靠。
+
 ### 新增
 
 - **Markdown 转换工具集**
@@ -28,10 +30,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - 智能内容区域提取算法，支持最小内容长度检查（200 字符阈值）
   - HTML 预处理流水线：注释移除、标签清理、URL 转换、空元素清理
   - Markdown 后处理优化：空行清理、列表格式化、内容修剪
+- **高级 Markdown 格式化功能**
+  - **8 种可配置格式化选项**，支持选择性启用/禁用
+    - format_tables: 表格自动对齐和格式标准化
+    - detect_code_language: 代码块语言自动检测（支持 JavaScript、Python、HTML、SQL、JSON 等 10+ 语言）
+    - format_quotes: 引用块格式优化和间距统一
+    - enhance_images: 图片 alt 文本自动生成和增强（从文件名提取友好描述）
+    - optimize_links: 链接格式优化和跨行修复
+    - format_lists: 列表标记统一化和间距规范
+    - format_headings: 标题层级和间距自动优化
+    - apply_typography: 智能排版增强（智能引号、em 破折号、空格清理）
+  - **配置化设计**: formatting_options 参数支持，默认全部启用，支持运行时动态配置
+  - **格式化方法实现**: 8 个专用格式化方法 (\_format_tables, \_format_code_blocks 等)
+  - **MCP 工具集成**: convert_webpage_to_markdown 和 batch_convert_webpages_to_markdown 均支持 formatting_options 参数
 - **完整测试覆盖体系**
-  - tests/unit/test_markdown_converter.py: MarkdownConverter 单元测试（33 个测试用例）
-    - 初始化和配置测试、HTML 预处理测试、转换功能测试
-    - 后处理测试、内容提取测试、批量转换测试
+  - tests/unit/test_markdown_converter.py: MarkdownConverter 单元测试（50 个测试用例）
+    - 原有功能测试（33 个）：初始化和配置测试、HTML 预处理测试、转换功能测试、后处理测试、内容提取测试、批量转换测试
+    - **高级格式化功能测试（17 个新增）**: TestAdvancedFormattingFeatures 测试类
+      - 表格格式化测试：基础格式化、对齐识别、分隔符优化
+      - 代码块增强测试：语言自动检测、格式标准化
+      - 引用块、图片描述、链接格式、列表格式、标题优化测试
+      - 排版增强测试：智能引号、破折号转换、空格清理
+      - 配置管理测试：选择性启用/禁用、配置传递、默认行为
+      - 集成测试：单页转换、批量转换、错误处理
   - tests/integration/test_mcp_tools.py: 新增 Markdown 工具集成测试
     - 工具注册验证、参数模式检查
     - 更新工具总数从 10 个扩展到 12 个 MCP 工具
@@ -43,10 +64,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - 工具表格更新：新增 convert_webpage_to_markdown 和 batch_convert_webpages_to_markdown
   - 新增工具详情章节：参数说明、功能特性、使用示例、返回格式
   - 完整的 JSON 请求和响应示例，支持自定义转换选项
+  - **高级格式化功能文档**：新增 formatting_options 参数详细说明
+    - 8 种格式化选项完整描述和默认值说明
+    - 高级功能特性列表：表格对齐、代码检测、排版优化等
+    - 更新示例 JSON 配置，包含 formatting_options 使用示例
 - **TESTING.md**: 更新测试文档结构和覆盖说明
   - 测试目录结构更新：新增 test_markdown_converter.py 单元测试文件
   - MCP 工具测试覆盖从 10 个扩展到 12 个工具
   - 新增 Markdown 转换器测试章节：7 个主要测试类别详细说明
+  - **高级格式化功能测试文档**：新增第 8 个测试类别 TestAdvancedFormattingFeatures
+    - 详细的格式化功能测试说明：表格、代码、引用、图片、链接、列表、标题、排版
+    - 配置管理和集成测试的完整测试策略
+    - 边界情况和性能测试的测试方法
 
 ### 修复
 
@@ -55,6 +84,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - 修复 wrap_width=0 导致的 "invalid width" 错误，改为 wrap=False 禁用换行
   - 修复 BeautifulSoup 废弃方法：findAll → find_all，消除 DeprecationWarning
   - 优化内容提取测试断言：调整为更现实的内容长度和验证逻辑
+- **高级格式化功能修复**
+  - 修复标题格式化过度清理空行问题：调整 \_format_headings 方法保留必要的空白行
+  - 修复智能引号正则表达式语法错误：纠正引号替换的转义字符
+  - 修复 BeautifulSoup 类型检查问题：添加 hasattr 检查确保方法可用性
+  - 优化空行处理逻辑：确保基础清理与高级格式化的兼容性
 
 ## v0.1.2
 

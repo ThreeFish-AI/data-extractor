@@ -427,6 +427,15 @@ uv run python -m extractor.server
 - `include_metadata`: 是否包含页面元数据 (默认 true)
 - `custom_options`: 自定义 Markdown 转换选项 (可选)
 - `wait_for_element`: 等待的 CSS 选择器 (Selenium 专用)
+- `formatting_options`: 高级格式化选项，包含以下配置:
+  - `format_tables`: 表格对齐格式化 (默认 true)
+  - `detect_code_language`: 自动检测代码语言 (默认 true)
+  - `format_quotes`: 引用块格式化 (默认 true)
+  - `enhance_images`: 图片描述增强 (默认 true)
+  - `optimize_links`: 链接格式优化 (默认 true)
+  - `format_lists`: 列表格式化 (默认 true)
+  - `format_headings`: 标题格式化和间距 (默认 true)
+  - `apply_typography`: 排版优化 (智能引号、破折号等，默认 true)
 
 **功能特性:**
 
@@ -435,6 +444,15 @@ uv run python -m extractor.server
 - **URL 转换**: 将相对 URL 转换为绝对 URL
 - **格式优化**: 清理多余空白行，优化 Markdown 格式
 - **元数据丰富**: 包含标题、描述、字数统计等信息
+- **高级格式化**: 提供 8 种可配置的格式化选项
+  - 表格自动对齐和格式化
+  - 代码块语言自动检测 (支持 Python、JavaScript、HTML、SQL 等)
+  - 引用块格式优化
+  - 图片描述自动生成和增强
+  - 链接格式优化和去重
+  - 列表格式统一化
+  - 标题层级和间距优化
+  - 排版增强 (智能引号、em 破折号、空格清理)
 
 **示例:**
 
@@ -448,6 +466,12 @@ uv run python -m extractor.server
     "heading_style": "ATX",
     "bullets": "-",
     "wrap": false
+  },
+  "formatting_options": {
+    "format_tables": true,
+    "detect_code_language": true,
+    "enhance_images": true,
+    "apply_typography": false
   }
 }
 ```
@@ -482,6 +506,7 @@ uv run python -m extractor.server
 - `extract_main_content`: 是否仅提取主要内容区域 (默认 true)
 - `include_metadata`: 是否包含页面元数据 (默认 true)
 - `custom_options`: 自定义 Markdown 转换选项 (可选)
+- `formatting_options`: 高级格式化选项 (与单页转换相同配置)
 
 **功能特性:**
 

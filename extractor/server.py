@@ -1007,6 +1007,7 @@ async def convert_webpage_to_markdown(
     include_metadata: bool = True,
     custom_options: Optional[Dict[str, Any]] = None,
     wait_for_element: Optional[str] = None,
+    formatting_options: Optional[Dict[str, bool]] = None,
 ) -> Dict[str, Any]:
     """
     Scrape a webpage and convert it to Markdown format.
@@ -1018,6 +1019,7 @@ async def convert_webpage_to_markdown(
         include_metadata: Include page metadata in result (default: True)
         custom_options: Custom markdownify options (optional)
         wait_for_element: CSS selector to wait for - Selenium only (optional)
+        formatting_options: Advanced formatting options like table alignment, code detection, etc.
 
     This tool combines web scraping with Markdown conversion to provide clean,
     readable text format suitable for documentation, analysis, or storage.
@@ -1069,12 +1071,15 @@ async def convert_webpage_to_markdown(
             extract_main_content=extract_main_content,
             include_metadata=include_metadata,
             custom_options=custom_options,
+            formatting_options=formatting_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         if conversion_result.get("success"):
-            metrics_collector.record_request(url, True, duration_ms, f"markdown_{method}")
+            metrics_collector.record_request(
+                url, True, duration_ms, f"markdown_{method}"
+            )
 
             result = {
                 "success": True,
@@ -1103,7 +1108,9 @@ async def convert_webpage_to_markdown(
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(e, url, f"markdown_{method}")
+        error_response = ErrorHandler.handle_scraping_error(
+            e, url, f"markdown_{method}"
+        )
         metrics_collector.record_request(
             url,
             False,
@@ -1122,6 +1129,7 @@ async def batch_convert_webpages_to_markdown(
     extract_main_content: bool = True,
     include_metadata: bool = True,
     custom_options: Optional[Dict[str, Any]] = None,
+    formatting_options: Optional[Dict[str, bool]] = None,
 ) -> Dict[str, Any]:
     """
     Scrape multiple webpages and convert them to Markdown format.
@@ -1132,6 +1140,7 @@ async def batch_convert_webpages_to_markdown(
         extract_main_content: Extract main content area only (default: True)
         include_metadata: Include page metadata in results (default: True)
         custom_options: Custom markdownify options (optional)
+        formatting_options: Advanced formatting options like table alignment, code detection, etc.
 
     This tool provides batch processing for converting multiple webpages to Markdown.
     It processes all URLs concurrently for better performance.
@@ -1160,7 +1169,9 @@ async def batch_convert_webpages_to_markdown(
             }
 
         start_time = time.time()
-        logger.info(f"Batch converting {len(urls)} webpages to Markdown with method: {method}")
+        logger.info(
+            f"Batch converting {len(urls)} webpages to Markdown with method: {method}"
+        )
 
         # Scrape all URLs first
         scrape_results = await web_scraper.scrape_multiple_urls(
@@ -1173,15 +1184,22 @@ async def batch_convert_webpages_to_markdown(
             extract_main_content=extract_main_content,
             include_metadata=include_metadata,
             custom_options=custom_options,
+            formatting_options=formatting_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         # Record metrics for each URL
         for i, url in enumerate(urls):
-            result = conversion_result["results"][i] if i < len(conversion_result["results"]) else {"success": False}
+            result = (
+                conversion_result["results"][i]
+                if i < len(conversion_result["results"])
+                else {"success": False}
+            )
             success = result.get("success", False)
-            metrics_collector.record_request(url, success, duration_ms // len(urls), f"batch_markdown_{method}")
+            metrics_collector.record_request(
+                url, success, duration_ms // len(urls), f"batch_markdown_{method}"
+            )
 
         if conversion_result.get("success"):
             return {

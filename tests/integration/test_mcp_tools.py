@@ -170,18 +170,18 @@ class TestMarkdownConversionIntegration:
     async def test_markdown_tools_registration(self):
         """Test that the new Markdown conversion tools are properly registered."""
         tools = await app.get_tools()
-        
+
         # Test that the new Markdown conversion tools are registered
         assert "convert_webpage_to_markdown" in tools
         assert "batch_convert_webpages_to_markdown" in tools
-        
+
         # Test convert_webpage_to_markdown tool properties
         convert_tool = tools["convert_webpage_to_markdown"]
         assert convert_tool.name == "convert_webpage_to_markdown"
         assert "Markdown" in convert_tool.description
         assert "webpage" in convert_tool.description.lower()
-        
-        # Test batch_convert_webpages_to_markdown tool properties  
+
+        # Test batch_convert_webpages_to_markdown tool properties
         batch_tool = tools["batch_convert_webpages_to_markdown"]
         assert batch_tool.name == "batch_convert_webpages_to_markdown"
         assert "batch" in batch_tool.description.lower()
@@ -191,11 +191,11 @@ class TestMarkdownConversionIntegration:
     async def test_markdown_tools_parameters(self):
         """Test that the new tools have correct parameter schemas."""
         tools = await app.get_tools()
-        
+
         # Test convert_webpage_to_markdown parameters
         convert_tool = tools["convert_webpage_to_markdown"]
-        assert hasattr(convert_tool, 'schema')
-        
+        assert hasattr(convert_tool, "schema")
+
         # Test batch_convert_webpages_to_markdown parameters
         batch_tool = tools["batch_convert_webpages_to_markdown"]
-        assert hasattr(batch_tool, 'schema')
+        assert hasattr(batch_tool, "schema")
