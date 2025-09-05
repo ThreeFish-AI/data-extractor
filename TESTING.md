@@ -8,17 +8,17 @@
 
 ```
 tests/
-├── __init__.py                 # 测试包初始化
-├── conftest.py                 # Pytest 配置和共享 fixtures
-├── unit/                       # 单元测试
+├── __init__.py                     # 测试包初始化
+├── conftest.py                     # Pytest 配置和共享 fixtures
+├── unit/                           # 单元测试
 │   ├── __init__.py
-│   ├── test_scraper.py         # WebScraper 核心引擎测试
-│   ├── test_advanced_features.py # 高级功能测试 (反检测、表单处理)
-│   └── test_utils.py           # 工具类测试 (限流、重试、缓存等)
-├── integration/                # 集成测试
+│   ├── test_scraper.py             # WebScraper 核心引擎测试
+│   ├── test_advanced_features.py   # 高级功能测试 (反检测、表单处理)
+│   └── test_utils.py               # 工具类测试 (限流、重试、缓存等)
+├── integration/                    # 集成测试
 │   ├── __init__.py
-│   └── test_mcp_tools.py       # 10个 MCP 工具集成测试
-└── fixtures/                   # 测试数据和固定装置
+│   └── test_mcp_tools.py           # 10 个 MCP 工具集成测试
+└── fixtures/                       # 测试数据和固定装置
 ```
 
 ### 测试分类
