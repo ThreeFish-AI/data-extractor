@@ -1,6 +1,6 @@
 # Migration Guide: pip to uv
 
-This guide helps you migrate from pip-based package management to uv for the Scrapy MCP Server.
+This guide helps you migrate from pip-based package management to uv for the Data Extractor.
 
 ## What Changed
 
@@ -36,7 +36,7 @@ If you're setting up the project fresh:
 
 ```bash
 git clone git@github.com:ThreeFish-AI/scrapy-mcp.git
-cd scrapy-mcp
+cd data-extractor
 ./scripts/setup.sh
 ```
 
@@ -59,7 +59,7 @@ uv sync --extra dev
 source .venv/bin/activate  # uv creates .venv by default
 
 # 5. Test that everything works
-uv run scrapy-mcp --help
+uv run data-extractor --help
 ```
 
 ## New Commands
@@ -72,10 +72,10 @@ Replace your old pip commands with these uv equivalents:
 |-----------|----------|
 | `pip install -e .` | `uv sync` |
 | `pip install -e ".[dev]"` | `uv sync --extra dev` |
-| `python -m scrapy_mcp.server` | `uv run scrapy-mcp` |
-| `black scrapy_mcp/` | `uv run black scrapy_mcp/` |
+| `python -m extractor.server` | `uv run data-extractor` |
+| `black extractor/` | `uv run black extractor/` |
 | `pytest` | `uv run pytest` |
-| `mypy scrapy_mcp/` | `uv run mypy scrapy_mcp/` |
+| `mypy extractor/` | `uv run mypy extractor/` |
 
 ### Dependency Management
 
@@ -144,7 +144,7 @@ uv sync --extra dev
 
 Make sure you're using uv run:
 ```bash
-uv run python -c "import scrapy_mcp"
+uv run python -c "import extractor"
 ```
 
 ### Legacy pip compatibility

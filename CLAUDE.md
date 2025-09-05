@@ -20,9 +20,6 @@ uv sync
 # Install with development dependencies
 uv sync --extra dev
 
-# Alternative: Install package in development mode
-uv pip install -e .
-
 # Copy environment configuration
 cp .env.example .env
 ```
@@ -30,44 +27,33 @@ cp .env.example .env
 ### Running the Server
 
 ```bash
-# Start the MCP server
-scrapy-mcp
+# Start the MCP server (primary command)
+uv run data-extractor
 
-# Run using uv
-uv run scrapy-mcp
+# Alternative: Run as Python module
+uv run python -m extractor.server
 
-# Or run directly with Python using uv
-uv run python -m scrapy_mcp.server
-
-# Run with custom configuration
-SCRAPY_MCP_ENABLE_JAVASCRIPT=true scrapy-mcp
-
-# Run with environment variables using uv
-uv run --env SCRAPY_MCP_ENABLE_JAVASCRIPT=true scrapy-mcp
+# Run with environment variables
+uv run --env SCRAPY_MCP_ENABLE_JAVASCRIPT=true data-extractor
 ```
 
 ### Code Quality and Testing
 
 ```bash
-# Format code with Black (using uv)
-uv run black scrapy_mcp/ examples/
+# Format code with Black
+uv run black extractor/ examples/
 
-# Lint with flake8 (using uv)
-uv run flake8 scrapy_mcp/
+# Lint with flake8
+uv run flake8 extractor/
 
-# Type checking with mypy (using uv)
-uv run mypy scrapy_mcp/
+# Type checking with mypy
+uv run mypy extractor/
 
-# Run tests (when available)
+# Run tests
 uv run pytest
 
-# Run async tests specifically
-uv run pytest -m asyncio
-
-# Add new dependencies
+# Add dependencies
 uv add <package-name>
-
-# Add development dependencies
 uv add --dev <package-name>
 
 # Update dependencies
@@ -76,54 +62,41 @@ uv lock --upgrade
 
 ## Architecture Overview
 
-### Core Components
+### Core Module Structure
 
-**scrapy_mcp/server.py** - Main FastMCP server with 10 MCP tools:
+The system is built with a layered architecture centered around method auto-selection and enterprise-grade utilities:
 
-- `scrape_webpage` - Basic scraping with method auto-selection
-- `scrape_multiple_webpages` - Concurrent multi-URL scraping
-- `scrape_with_stealth` - Anti-detection scraping using undetected browsers
-- `fill_and_submit_form` - Form automation with Selenium/Playwright
-- `extract_links` - Specialized link extraction with filtering
-- `extract_structured_data` - Automatic detection of contact info, social links
-- `get_page_info` - Quick page metadata retrieval
-- `check_robots_txt` - Ethical scraping compliance checker
-- `get_server_metrics` - Performance monitoring and statistics
-- `clear_cache` - Cache management
+**extractor/server.py** - FastMCP server with 10 MCP tools using `@app.tool()` decorators. Each tool follows a pattern: Pydantic request models → method selection → error handling → metrics collection.
 
-**scrapy_mcp/scraper.py** - Core scraping engine with multiple strategies:
+**extractor/scraper.py** - Multi-strategy scraping engine with automatic method selection:
 
-- `SimpleScraper` - Fast HTTP requests with BeautifulSoup
-- `ScrapyWrapper` - Scrapy framework integration for large-scale scraping
-- `SeleniumScraper` - Browser automation for JavaScript-heavy sites
-- `WebScraper` - Main orchestrator that auto-selects appropriate method
+- `WebScraper.scrape_url()` orchestrates method selection based on requirements
+- Supports Simple HTTP, Scrapy framework, Selenium browser automation
+- Method selection logic considers JavaScript detection and anti-bot protection needs
 
-**scrapy_mcp/advanced_features.py** - Anti-detection and form handling:
+**extractor/advanced_features.py** - Stealth capabilities and form automation:
 
-- `AntiDetectionScraper` - Stealth techniques using undetected-chromedriver and Playwright
-- `FormHandler` - Handles various form elements (text, dropdowns, checkboxes, file uploads)
+- `AntiDetectionScraper` using undetected-chromedriver and Playwright
+- `FormHandler` for complex form interactions (dropdowns, checkboxes, file uploads)
 
-**scrapy_mcp/utils.py** - Enterprise utilities:
+**extractor/utils.py** - Enterprise utilities with async support:
 
-- `RateLimiter` - Request throttling to prevent server overload
-- `RetryManager` - Exponential backoff retry logic
-- `CacheManager` - In-memory caching with TTL
-- `MetricsCollector` - Performance tracking and statistics
-- `ErrorHandler` - Centralized error categorization and handling
+- `RateLimiter`, `RetryManager`, `CacheManager`, `MetricsCollector`, `ErrorHandler`
+- All utilities follow patterns for async support, error handling, and metrics
 
-**scrapy_mcp/config.py** - Configuration management using Pydantic BaseSettings with environment variable support for all aspects (concurrency, delays, browser settings, proxy configuration).
+**extractor/config.py** - Pydantic BaseSettings with automatic environment variable mapping using `SCRAPY_MCP_` prefix.
 
 ### Key Design Patterns
 
-**Method Auto-Selection**: The `WebScraper` class intelligently chooses between simple HTTP, Scrapy, Selenium, or stealth methods based on requirements (JavaScript detection, anti-bot protection needs).
+**Method Auto-Selection**: `WebScraper` intelligently chooses scraping methods based on JavaScript requirements, anti-bot protection, and performance needs.
 
-**Layered Error Handling**: Errors are caught at multiple levels, categorized (timeout, connection, anti-bot, etc.), and handled with appropriate retry strategies.
+**Layered Error Handling**: Errors are caught at multiple levels, categorized (timeout, connection, anti-bot), and handled with appropriate retry strategies.
 
-**Enterprise Features**: Built-in rate limiting, caching, metrics collection, and proxy support for production deployment.
+**Enterprise Features**: Built-in rate limiting, caching with TTL, comprehensive metrics collection, and proxy support for production deployment.
 
 ## Configuration System
 
-The server uses environment variables for configuration (see .env.example):
+Environment variables use `SCRAPY_MCP_` prefix (see .env.example):
 
 **Critical Settings:**
 
@@ -134,41 +107,41 @@ The server uses environment variables for configuration (see .env.example):
 
 ## Data Extraction Configuration
 
-The system uses flexible extraction configs that support:
+Flexible extraction configs support simple CSS selectors and complex attribute extraction:
 
-- Simple CSS selectors: `{"title": "h1"}`
-- Complex configurations: `{"products": {"selector": ".product", "multiple": true, "attr": "text"}}`
-- Attribute extraction: text content, href links, src images, custom attributes
+- Simple: `{"title": "h1"}`
+- Complex: `{"products": {"selector": ".product", "multiple": true, "attr": "text"}}`
+- Attributes: text content, href links, src images, custom attributes
 
-See `examples/extraction_configs.py` for comprehensive examples covering e-commerce, news, job listings, real estate, and other common scenarios.
+See `examples/extraction_configs.py` for comprehensive examples covering e-commerce, news, job listings, and real estate scenarios.
 
 ## Working with the Codebase
 
-**Adding New MCP Tools**: Add to `server.py` using the `@app.tool()` decorator. Follow the pattern of existing tools with Pydantic request models, error handling, and metrics collection.
+**Adding New MCP Tools**: Add to `server.py` using `@app.tool()` decorator. Follow existing pattern: Pydantic request model → error handling → metrics collection.
 
-**Extending Scraping Methods**: Modify `scraper.py` classes. The `WebScraper.scrape_url()` method orchestrates method selection.
+**Extending Scraping Methods**: Modify `scraper.py` classes. The `WebScraper.scrape_url()` method orchestrates method selection logic.
 
 **Adding Anti-Detection Features**: Extend `AntiDetectionScraper` in `advanced_features.py`. Consider browser stealth options, behavior simulation, and proxy rotation.
 
-**Configuration Changes**: Add new settings to `ScrapyMCPSettings` in `config.py`. Use Pydantic Field with env variable mapping.
+**Configuration Changes**: Add settings to `ScrapyMCPSettings` in `config.py` using Pydantic Field with environment variable mapping.
 
-**Utility Functions**: Add reusable utilities to `utils.py`. Follow existing patterns for async support, error handling, and metrics.
-
-## Browser Dependencies
-
-The project requires Chrome/Chromium browser for Selenium and stealth features. Playwright downloads its own browser binaries. Consider these when deploying or containerizing.
+**Utility Functions**: Add to `utils.py` following existing patterns for async support, error handling, and metrics integration.
 
 ## Performance Considerations
 
-- The server uses asyncio for concurrent operations
+- Server uses asyncio for concurrent operations
 - Scrapy runs on Twisted reactor (single-threaded event loop)
 - Browser automation (Selenium/Playwright) is resource-intensive
 - Caching significantly improves repeated request performance
 - Rate limiting prevents overwhelming target servers
 
+## Browser Dependencies
+
+Requires Chrome/Chromium browser for Selenium and stealth features. Playwright downloads its own browser binaries automatically.
+
 ## Security Notes
 
-- Stealth features help avoid detection but should be used ethically
-- Always check robots.txt using the provided tool
-- Proxy support available but ensure HTTPS proxies for security
-- No sensitive data logging - credentials should be handled carefully
+- Stealth features should be used ethically
+- Always check robots.txt using provided tool
+- Proxy support available but ensure HTTPS proxies
+- No sensitive data logging - handle credentials carefully

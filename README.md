@@ -1,4 +1,4 @@
-# Scrapy MCP Server
+# Data Extractor
 
 一个基于 Scrapy 和 FastMCP 构建的强大、稳定的网页爬取 MCP Server，专为商业环境中的长期使用而设计。
 
@@ -36,8 +36,8 @@
 python --version
 
 # 克隆仓库
-git clone git@github.com:ThreeFish-AI/scrapy-mcp.git
-cd scrapy-mcp
+git clone git@github.com:ThreeFish-AI/data-extractor.git
+cd data-extractor
 
 # 快速设置（推荐）
 ./scripts/setup.sh
@@ -62,7 +62,7 @@ pip install -e ".[dev]"
 
 ```bash
 # 服务器设置
-SCRAPY_MCP_SERVER_NAME=scrapy-mcp-server
+SCRAPY_MCP_SERVER_NAME=data-extractor
 SCRAPY_MCP_SERVER_VERSION=0.1.0
 
 # 并发和延迟设置
@@ -91,16 +91,16 @@ SCRAPY_MCP_REQUEST_TIMEOUT=30
 
 ```bash
 # 使用命令行
-scrapy-mcp
+data-extractor
 
 # 使用 uv 运行（推荐）
-uv run scrapy-mcp
+uv run data-extractor
 
 # 或者使用Python
-python -m scrapy_mcp.server
+python -m extractor.server
 
 # 使用 uv 运行 Python 模块
-uv run python -m scrapy_mcp.server
+uv run python -m extractor.server
 ```
 
 ### MCP Client 配置
@@ -112,8 +112,8 @@ uv run python -m scrapy_mcp.server
 ```json
 {
   "mcpServers": {
-    "scrapy-mcp": {
-      "command": "scrapy-mcp",
+    "data-extractor": {
+      "command": "data-extractor",
       "args": []
     }
   }
@@ -125,10 +125,10 @@ uv run python -m scrapy_mcp.server
 ```json
 {
   "mcpServers": {
-    "scrapy-mcp": {
+    "data-extractor": {
       "command": "uv",
-      "args": ["run", "scrapy-mcp"],
-      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/scrapy-mcp"
+      "args": ["run", "data-extractor"],
+      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/attention/research/tools/data-extractor"
     }
   }
 }
@@ -145,7 +145,7 @@ uv run python -m scrapy_mcp.server
         "run",
         "--with",
         "git+https://github.com/ThreeFish-AI/scrapy-mcp.git",
-        "scrapy-mcp"
+        "data-extractor"
       ]
     }
   }
@@ -165,7 +165,7 @@ uv run python -m scrapy_mcp.server
         "run",
         "--with",
         "git+https://github.com/ThreeFish-AI/scrapy-mcp.git@v0.1.0",
-        "scrapy-mcp"
+        "data-extractor"
       ]
     }
   }
@@ -183,7 +183,7 @@ uv run python -m scrapy_mcp.server
         "run",
         "--with",
         "git+https://github.com/ThreeFish-AI/scrapy-mcp.git@main",
-        "scrapy-mcp"
+        "data-extractor"
       ]
     }
   }
@@ -197,8 +197,8 @@ uv run python -m scrapy_mcp.server
   "mcpServers": {
     "scrapy-mcp": {
       "command": "uv",
-      "args": ["run", "python", "-m", "scrapy_mcp.server"],
-      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/scrapy-mcp"
+      "args": ["run", "python", "-m", "extractor.server"],
+      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/attention/research/tools/data-extractor"
     }
   }
 }
@@ -206,10 +206,10 @@ uv run python -m scrapy_mcp.server
 
 **注意事项：**
 
-- 将路径替换为您的项目实际路径（示例路径：`/Users/cm.huang/Documents/workspace/projects/aurelius/scrapy-mcp`）
+- 将路径替换为您的项目实际路径（示例路径：`/Users/cm.huang/Documents/workspace/projects/aurelius/attention/research/tools/data-extractor`）
 - GitHub 仓库地址：`git@github.com:ThreeFish-AI/scrapy-mcp.git`
 - HTTPS 仓库地址：`https://github.com/ThreeFish-AI/scrapy-mcp.git`
-- 项目目录名：`scrapy-mcp`
+- 项目目录名：`data-extractor`
 - 推荐使用方式二（uv 启动），具有更好的依赖管理和性能
 - 方式三适合直接从 GitHub 仓库运行，无需本地克隆
 

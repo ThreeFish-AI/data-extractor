@@ -1,12 +1,12 @@
 {
   "mcpServers": {
-    "scrapy-mcp": {
+    "data-extractor": {
       "command": "uv",
       "args": [
         "run",
         "--with",
-        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git@v0.1.0",
-        "scrapy-mcp"
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.0",
+        "data-extractor"
       ]
     },
     "time": {

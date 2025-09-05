@@ -1,4 +1,4 @@
-"""Scrapy MCP Server - A robust web scraping MCP server."""
+"""Data Extractor MCP Server - A robust web scraping MCP server."""
 
 __version__ = "0.1.0"
 __author__ = "Aurelius"

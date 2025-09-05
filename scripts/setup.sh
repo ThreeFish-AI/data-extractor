@@ -1,9 +1,9 @@
 #!/bin/bash
-# Setup script for Scrapy MCP Server with uv
+# Setup script for Data Extractor with uv
 
 set -e
 
-echo "🚀 Setting up Scrapy MCP Server with uv..."
+echo "🚀 Setting up Data Extractor with uv..."
 
 # Check Python version
 PYTHON_VERSION=$(python --version 2>&1 | awk '{print $2}')
@@ -56,9 +56,9 @@ echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
 echo "1. Edit .env file with your configuration"
-echo "2. Run: uv run scrapy-mcp"
+echo "2. Run: uv run data-extractor"
 echo ""
 echo "For development:"
-echo "- Format code: uv run black scrapy_mcp/ examples/"
+echo "- Format code: uv run black extractor/ examples/"
 echo "- Run tests: uv run pytest"
-echo "- Type check: uv run mypy scrapy_mcp/"
+echo "- Type check: uv run mypy extractor/"
