@@ -1,8 +1,23 @@
 # Data Extractor
 
-一个基于 Scrapy 和 FastMCP 构建的强大、稳定的网页爬取 MCP Server，专为商业环境中的长期使用而设计。
+一个基于 Scrapy 和 FastMCP 构建的强大、稳定的网页爬取与数据提取 MCP Server，专为商业环境中的长期使用而设计。
 
 **系统要求**: Python 3.12 或更高版本
+
+## 📋 版本历史
+
+### v0.1.1 (2025-09-05)
+
+- **核心重构**: 包名从 `scrapy_mcp` 重构为 `extractor`，提升项目结构清晰度
+- **命令更新**: 项目入口命令统一为 `data-extractor`
+- **文档完善**: 更新所有配置示例和安装说明
+
+### v0.1.0 (2025-08-26)
+
+- **初始发布**: 完整的网页爬取 MCP Server 实现
+- **核心功能**: 10 个专业爬取工具，支持多种场景
+- **企业特性**: 速率限制、智能重试、缓存机制
+- **技术栈**: 迁移至 uv 包管理，增强开发体验
 
 ## 🚀 特性
 
@@ -36,7 +51,7 @@
 python --version
 
 # 克隆仓库
-git clone git@github.com:ThreeFish-AI/data-extractor.git
+git clone https://github.com/ThreeFish-AI/data-extractor.git
 cd data-extractor
 
 # 快速设置（推荐）
@@ -134,17 +149,17 @@ uv run python -m extractor.server
 }
 ```
 
-#### 方式三：从 GitHub 仓库直接安装和运行
+#### 方式三：从 GitHub 仓库直接安装和运行（推荐用于生产环境）
 
 ```json
 {
   "mcpServers": {
-    "scrapy-mcp": {
+    "data-extractor": {
       "command": "uv",
       "args": [
         "run",
         "--with",
-        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.1",
         "data-extractor"
       ]
     }
@@ -152,53 +167,15 @@ uv run python -m extractor.server
 }
 ```
 
-#### 方式四：指定 Git Tag 版本（推荐用于生产环境）
-
-通过指定 git tag 可以确保使用特定版本，提高稳定性：
+#### 方式四：Python 模块方式（本地开发）
 
 ```json
 {
   "mcpServers": {
-    "scrapy-mcp": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git@v0.1.0",
-        "data-extractor"
-      ]
-    }
-  }
-}
-```
-
-也可以指定其他标签或分支：
-
-```json
-{
-  "mcpServers": {
-    "scrapy-mcp": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "git+https://github.com/ThreeFish-AI/scrapy-mcp.git@main",
-        "data-extractor"
-      ]
-    }
-  }
-}
-```
-
-#### 方式五：Python 模块方式（使用 uv）
-
-```json
-{
-  "mcpServers": {
-    "scrapy-mcp": {
+    "data-extractor": {
       "command": "uv",
       "args": ["run", "python", "-m", "extractor.server"],
-      "cwd": "/Users/cm.huang/Documents/workspace/projects/aurelius/attention/research/tools/data-extractor"
+      "cwd": "/path/to/your/data-extractor"
     }
   }
 }
@@ -206,12 +183,10 @@ uv run python -m extractor.server
 
 **注意事项：**
 
-- 将路径替换为您的项目实际路径（示例路径：`/Users/cm.huang/Documents/workspace/projects/aurelius/attention/research/tools/data-extractor`）
-- GitHub 仓库地址：`git@github.com:ThreeFish-AI/scrapy-mcp.git`
-- HTTPS 仓库地址：`https://github.com/ThreeFish-AI/scrapy-mcp.git`
-- 项目目录名：`data-extractor`
-- 推荐使用方式二（uv 启动），具有更好的依赖管理和性能
-- 方式三适合直接从 GitHub 仓库运行，无需本地克隆
+- 将 `cwd` 路径替换为您的项目实际路径
+- GitHub 仓库地址：`https://github.com/ThreeFish-AI/data-extractor.git`
+- 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
+- 当前最新稳定版本：v0.1.1
 
 ## 🛠️ 可用工具
 
