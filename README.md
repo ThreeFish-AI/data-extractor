@@ -2,9 +2,565 @@
 
 一个基于 Scrapy 和 FastMCP 构建的强大、稳定的网页爬取与数据提取 MCP Server，专为商业环境中的长期使用而设计。
 
-**系统要求**: Python 3.12 或更高版本
+## 📁 项目目录结构
+
+```
+data-extractor/
+├── extractor/                          # 核心引擎模块
+│   ├── __init__.py                     # 包初始化
+│   ├── server.py                       # FastMCP 服务器与 10 个 MCP 工具
+│   ├── scraper.py                      # WebScraper 核心抓取引擎
+│   ├── advanced_features.py            # 反检测与表单自动化
+│   ├── config.py                       # 配置管理 (DataExtractorSettings)
+│   └── utils.py                        # 企业级工具集 (限流、重试、缓存等)
+├── examples/                           # 使用示例
+│   ├── basic_usage.py                  # 基础用法示例
+│   └── extraction_configs.py           # 数据提取配置示例
+├── tests/                              # 完整测试体系
+│   ├── unit/                           # 单元测试
+│   │   ├── test_scraper_simple.py      # WebScraper 基础测试
+│   │   ├── test_utils_basic.py         # 工具类测试
+│   │   └── test_advanced_features.py   # 高级功能测试
+│   ├── integration/                    # 集成测试
+│   │   └── test_mcp_tools.py           # 10 个 MCP 工具测试
+│   └── conftest.py                     # pytest 配置和 fixtures
+├── scripts/
+│   └── setup.sh                        # 快速安装脚本
+├── TESTING.md                          # 测试文档 (67KB)
+├── TEST_RESULTS.md                     # 测试执行报告
+├── CHANGELOG.md                        # 版本变更日志
+├── CLAUDE.md                           # Claude Code 项目指导
+├── .env.example                        # 环境变量配置示例
+├── pyproject.toml                      # 项目配置和依赖管理
+└── uv.lock                             # 依赖锁定文件
+```
+
+## 🏗️ 架构设计
+
+### DataExtractor 核心引擎层
+
+DataExtractor 核心引擎采用分层架构设计，提供稳定可靠的网页抓取能力：
+
+#### 1. WebScraper 主控制器 (`extractor/scraper.py`)
+
+**设计理念**: 统一接口，智能方法选择
+
+```python
+class WebScraper:
+    """主控制器，协调各种抓取方法"""
+
+    def __init__(self):
+        self.scrapy_wrapper = ScrapyWrapper()      # Scrapy 框架封装
+        self.selenium_scraper = SeleniumScraper()  # 浏览器自动化
+        self.simple_scraper = SimpleScraper()      # HTTP 请求
+
+    async def scrape_url(self, url: str, method: str = "auto",
+                         extract_config: Optional[Dict] = None) -> Dict:
+        """智能选择最适合的抓取方法"""
+```
+
+**核心特性**:
+
+- **方法自选**: 根据 JavaScript 需求和反检测要求自动选择 simple/scrapy/selenium
+- **统一接口**: 所有抓取方法通过统一的 `scrape_url()` 接口调用
+- **并发支持**: `scrape_multiple_urls()` 实现高效批量处理
+- **配置化提取**: 支持 CSS 选择器、属性提取、多元素批量获取
+
+#### 2. 高级功能模块 (`extractor/advanced_features.py`)
+
+**AntiDetectionScraper 反检测引擎**:
+
+```python
+class AntiDetectionScraper:
+    """反检测专用抓取器"""
+
+    async def scrape_with_stealth(self, url: str, method: str = "selenium"):
+        """使用反检测技术抓取"""
+        # 支持 undetected-chromedriver 和 Playwright 双引擎
+        # 自动注入隐身脚本，模拟人类行为
+```
+
+**FormHandler 表单自动化**:
+
+```python
+class FormHandler:
+    """智能表单处理器"""
+
+    async def fill_and_submit_form(self, url: str, form_data: Dict):
+        """自动识别表单元素类型并填写"""
+        # 支持 input/select/textarea/checkbox/radio 等所有元素
+        # 智能等待和提交策略
+```
+
+#### 3. 企业级工具集 (`extractor/utils.py`)
+
+**核心工具类**:
+
+- **RateLimiter**: 请求频率控制，防止服务器过载
+- **RetryManager**: 指数退避重试，智能错误恢复
+- **CacheManager**: 内存缓存系统，提升重复请求性能
+- **MetricsCollector**: 性能指标收集，支持实时监控
+- **ErrorHandler**: 错误分类处理，区分网络/超时/反爬等异常
+
+**使用示例**:
+
+```python
+from extractor.utils import rate_limiter, retry_manager, cache_manager
+
+# 限流控制
+await rate_limiter.wait()
+
+# 智能重试
+result = await retry_manager.retry_async(scrape_function)
+
+# 缓存管理
+cache_manager.set(url, result, ttl=3600)
+```
+
+#### 4. 配置管理系统 (`extractor/config.py`)
+
+**DataExtractorSettings 配置类**:
+
+```python
+class DataExtractorSettings(BaseSettings):
+    """Pydantic 配置管理"""
+
+    # 服务器配置
+    server_name: str = "Data Extractor MCP Server"
+    concurrent_requests: int = 16
+
+    # 浏览器配置
+    enable_javascript: bool = False
+    browser_timeout: int = 30
+
+    # 反检测配置
+    use_random_user_agent: bool = False
+
+    model_config = SettingsConfigDict(
+        env_prefix="DATA_EXTRACTOR_",  # 环境变量前缀
+        env_file=".env"
+    )
+```
+
+### DataExtractor MCP 工具集
+
+MCP (Model Context Protocol) 工具集基于 FastMCP 框架，提供 10 个专业级网页抓取工具：
+
+#### 1. 服务器架构 (`extractor/server.py`)
+
+**FastMCP 服务器设计**:
+
+```python
+from fastmcp import FastMCP
+
+app = FastMCP(settings.server_name, version=settings.server_version)
+web_scraper = WebScraper()
+anti_detection_scraper = AntiDetectionScraper()
+
+@app.tool()
+async def scrape_webpage(url: str, method: str = "auto",
+                        extract_config: Optional[Dict] = None) -> Dict:
+    """MCP 工具装饰器，自动处理输入验证和错误处理"""
+```
+
+#### 2. 10 个核心 MCP 工具
+
+| 工具名称                     | 功能描述       | 使用场景                         |
+| ---------------------------- | -------------- | -------------------------------- |
+| **scrape_webpage**           | 单页面抓取     | 基础数据提取，支持配置化选择器   |
+| **scrape_multiple_webpages** | 批量页面抓取   | 并发处理多个 URL，提升效率       |
+| **scrape_with_stealth**      | 反检测抓取     | 应对反爬虫保护的高难度网站       |
+| **fill_and_submit_form**     | 表单自动化     | 登录表单、联系表单等交互操作     |
+| **extract_links**            | 专业链接提取   | 网站地图生成，链接分析           |
+| **extract_structured_data**  | 结构化数据提取 | JSON-LD、微数据、Open Graph 解析 |
+| **get_page_info**            | 页面信息获取   | 快速获取标题、状态码、元数据     |
+| **check_robots_txt**         | 爬虫规则检查   | 遵守网站爬取规范，合规性检查     |
+| **get_server_metrics**       | 性能指标监控   | 服务器状态监控，性能调优         |
+| **clear_cache**              | 缓存管理       | 释放内存，清理过期数据           |
+
+#### 3. 核心工具详细实现
+
+**scrape_webpage - 基础抓取工具**:
+
+```python
+@app.tool()
+async def scrape_webpage(url: str, method: str = "auto",
+                        extract_config: Optional[Dict] = None,
+                        wait_for_element: Optional[str] = None) -> Dict:
+    """
+    支持的数据提取配置:
+    {
+        "title": "h1",                          # 简单选择器
+        "products": {                           # 高级配置
+            "selector": ".product",
+            "multiple": true,
+            "attr": "text"
+        },
+        "links": {
+            "selector": "a",
+            "multiple": true,
+            "attr": "href"
+        }
+    }
+    """
+```
+
+**scrape_with_stealth - 反检测工具**:
+
+```python
+@app.tool()
+async def scrape_with_stealth(url: str, method: str = "selenium",
+                             extract_config: Optional[Dict] = None) -> Dict:
+    """
+    反检测技术:
+    - undetected-chromedriver: 绕过 Selenium 检测
+    - Playwright stealth: 原生反检测支持
+    - 随机 User-Agent: 降低识别风险
+    - 人类行为模拟: 鼠标移动、页面滚动
+    """
+```
+
+**fill_and_submit_form - 表单自动化**:
+
+```python
+@app.tool()
+async def fill_and_submit_form(url: str, form_data: Dict,
+                              submit: bool = False) -> Dict:
+    """
+    智能表单处理:
+    - 自动识别 input/select/textarea/checkbox 元素
+    - 支持复杂表单验证和提交
+    - 等待页面响应和重定向处理
+    """
+```
+
+## 🚀 实现方式与使用指南
+
+### DataExtractor 核心引擎使用方式
+
+#### 1. 直接使用核心引擎
+
+```python
+from extractor.scraper import WebScraper
+from extractor.advanced_features import AntiDetectionScraper, FormHandler
+
+# 基础抓取
+scraper = WebScraper()
+result = await scraper.scrape_url("https://example.com", method="simple")
+
+# 反检测抓取
+stealth_scraper = AntiDetectionScraper()
+result = await stealth_scraper.scrape_with_stealth("https://protected-site.com")
+
+# 表单自动化
+form_handler = FormHandler()
+result = await form_handler.fill_and_submit_form(
+    "https://example.com/contact",
+    {"input[name='email']": "test@example.com"}
+)
+```
+
+#### 2. 配置化数据提取
+
+```python
+# 简单配置
+extract_config = {
+    "title": "h1",
+    "content": ".article-content"
+}
+
+# 高级配置
+extract_config = {
+    "products": {
+        "selector": ".product-item",
+        "multiple": True,
+        "attr": "text"
+    },
+    "prices": {
+        "selector": ".price",
+        "multiple": True,
+        "attr": "data-price"
+    },
+    "images": {
+        "selector": "img.product-image",
+        "multiple": True,
+        "attr": "src"
+    }
+}
+
+result = await scraper.scrape_url(url, extract_config=extract_config)
+```
+
+#### 3. 企业级功能集成
+
+```python
+from extractor.utils import (
+    rate_limiter, retry_manager, cache_manager,
+    metrics_collector, error_handler
+)
+
+# 集成完整功能的抓取流程
+async def enterprise_scrape(url: str):
+    # 检查缓存
+    cached_result = cache_manager.get(url)
+    if cached_result:
+        return cached_result
+
+    # 速率限制
+    await rate_limiter.wait()
+
+    # 重试机制
+    try:
+        result = await retry_manager.retry_async(
+            scraper.scrape_url, url, method="auto"
+        )
+
+        # 记录指标
+        metrics_collector.record_request("GET", True, 1500, "scraper")
+
+        # 缓存结果
+        cache_manager.set(url, result, ttl=3600)
+
+        return result
+
+    except Exception as e:
+        error_handler.handle_error(e, "enterprise_scrape")
+        raise
+```
+
+### DataExtractor MCP 工具集使用方式
+
+#### 1. MCP Client 集成
+
+**通过 Claude Desktop 使用**:
+
+1. 启动 Data Extractor MCP 服务器
+2. 在 Claude Desktop 中配置服务器连接
+3. 直接调用 MCP 工具进行网页抓取
+
+**示例对话**:
+
+```
+用户: 帮我抓取 https://news.ycombinator.com 的标题和链接
+
+Claude: 我来使用 scrape_webpage 工具为您抓取 Hacker News 的内容
+
+工具调用: scrape_webpage
+参数: {
+  "url": "https://news.ycombinator.com",
+  "extract_config": {
+    "titles": {
+      "selector": ".titleline > a",
+      "multiple": true,
+      "attr": "text"
+    },
+    "links": {
+      "selector": ".titleline > a",
+      "multiple": true,
+      "attr": "href"
+    }
+  }
+}
+```
+
+#### 2. 编程方式调用 MCP 工具
+
+```python
+# 通过 MCP 协议调用工具
+import asyncio
+from extractor.server import (
+    scrape_webpage, scrape_multiple_webpages,
+    scrape_with_stealth, fill_and_submit_form
+)
+
+# 基础页面抓取
+async def basic_scraping_example():
+    result = await scrape_webpage(
+        url="https://example.com",
+        method="auto",
+        extract_config={
+            "title": "h1",
+            "content": ".main-content"
+        }
+    )
+    print(f"页面标题: {result['data']['extracted_data']['title']}")
+
+# 批量抓取
+async def batch_scraping_example():
+    urls = [
+        "https://site1.com",
+        "https://site2.com",
+        "https://site3.com"
+    ]
+
+    results = await scrape_multiple_webpages(
+        urls=urls,
+        method="simple",
+        extract_config={"title": "h1"}
+    )
+
+    for result in results['data']:
+        print(f"URL: {result['url']}, 标题: {result.get('title', 'N/A')}")
+
+# 反检测抓取
+async def stealth_scraping_example():
+    result = await scrape_with_stealth(
+        url="https://protected-website.com",
+        method="playwright",
+        extract_config={
+            "content": ".protected-content",
+            "data": "[data-value]"
+        }
+    )
+    return result
+
+# 表单自动化
+async def form_automation_example():
+    result = await fill_and_submit_form(
+        url="https://example.com/contact",
+        form_data={
+            "input[name='name']": "John Doe",
+            "input[name='email']": "john@example.com",
+            "textarea[name='message']": "Hello from Data Extractor!"
+        },
+        submit=True,
+        submit_button_selector="button[type='submit']"
+    )
+    return result
+```
+
+#### 3. 高级使用场景
+
+**电商数据抓取**:
+
+```python
+async def ecommerce_scraping():
+    # 抓取产品列表
+    products_result = await scrape_webpage(
+        url="https://shop.example.com/products",
+        extract_config={
+            "products": {
+                "selector": ".product-card",
+                "multiple": True,
+                "attr": "text"
+            },
+            "prices": {
+                "selector": ".price",
+                "multiple": True,
+                "attr": "text"
+            },
+            "product_links": {
+                "selector": ".product-card a",
+                "multiple": True,
+                "attr": "href"
+            }
+        }
+    )
+
+    # 批量抓取产品详情
+    product_urls = products_result['data']['extracted_data']['product_links']
+    details = await scrape_multiple_webpages(
+        urls=product_urls[:10],  # 限制前10个产品
+        extract_config={
+            "description": ".product-description",
+            "specifications": ".specs-table",
+            "images": {
+                "selector": ".product-images img",
+                "multiple": True,
+                "attr": "src"
+            }
+        }
+    )
+
+    return {
+        "products_overview": products_result,
+        "product_details": details
+    }
+```
+
+**新闻监控系统**:
+
+```python
+async def news_monitoring_system():
+    news_sites = [
+        "https://news.ycombinator.com",
+        "https://techcrunch.com",
+        "https://arstechnica.com"
+    ]
+
+    # 批量抓取新闻标题
+    news_results = await scrape_multiple_webpages(
+        urls=news_sites,
+        extract_config={
+            "headlines": {
+                "selector": "h1, h2, .headline",
+                "multiple": True,
+                "attr": "text"
+            },
+            "timestamps": {
+                "selector": ".timestamp, time",
+                "multiple": True,
+                "attr": "text"
+            }
+        }
+    )
+
+    # 提取所有链接用于深度分析
+    all_links = []
+    for site in news_sites:
+        links_result = await extract_links(
+            url=site,
+            internal_only=True
+        )
+        all_links.extend(links_result['data']['links'])
+
+    return {
+        "news_headlines": news_results,
+        "discovered_links": all_links
+    }
+```
+
+**合规性检查流程**:
+
+```python
+async def compliance_check_workflow(target_url: str):
+    # 1. 检查 robots.txt
+    robots_result = await check_robots_txt(target_url)
+
+    if not robots_result['data']['can_crawl']:
+        return {"error": "网站禁止爬取", "robots_txt": robots_result}
+
+    # 2. 获取页面基础信息
+    page_info = await get_page_info(target_url)
+
+    # 3. 执行合规的数据抓取
+    scrape_result = await scrape_webpage(
+        url=target_url,
+        method="simple",  # 使用最轻量的方法
+        extract_config={
+            "public_content": ".main-content, .article",
+            "meta_info": "meta[name='description']"
+        }
+    )
+
+    # 4. 检查服务器性能影响
+    metrics = await get_server_metrics()
+
+    return {
+        "compliance_check": robots_result,
+        "page_info": page_info,
+        "extracted_data": scrape_result,
+        "performance_metrics": metrics
+    }
+```
 
 ## 📋 版本历史
+
+### v0.1.2 (2025-09-06)
+
+- **测试框架**: 建立完整的单元测试和集成测试体系，19 个基础测试全部通过
+- **测试文档**: 新增 67KB 详细测试文档和执行报告
+- **质量保障**: pytest 异步测试支持，Mock 策略和性能优化
 
 ### v0.1.1 (2025-09-05)
 

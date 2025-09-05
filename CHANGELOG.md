@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### 变更
 
 - **pyproject.toml**: 确保测试依赖 `pytest>=8.0.0` 和 `pytest-asyncio>=0.23.0` 配置正确
+- **scripts/setup.sh**: 代码格式化工具从 `black` 替换为 `ruff format`，提升格式化速度和一致性
 
 ### 整理
 
