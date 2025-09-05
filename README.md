@@ -640,24 +640,28 @@ pip install -e ".[dev]"
 ### 版本升级步骤
 
 1. **更新版本号**
+
    ```bash
    # 编辑 pyproject.toml 中的 version 字段
    vim pyproject.toml
    ```
 
 2. **更新变更日志**
+
    ```bash
    # 在 CHANGELOG.md 中记录变更内容
    vim CHANGELOG.md
    ```
 
 3. **更新 README 版本信息**
+
    ```bash
    # 更新 README.md 中的"当前最新稳定版本"
    vim README.md
    ```
 
 4. **提交版本变更**
+
    ```bash
    git add pyproject.toml CHANGELOG.md README.md
    git commit -m "chore(release): bump version to vX.Y.Z"
@@ -666,10 +670,11 @@ pip install -e ".[dev]"
    ```
 
 5. **构建和发布**
+
    ```bash
    # 使用 uv 构建包
    uv build
-   
+
    # 发布到 PyPI（如需要）
    uv publish
    ```
@@ -691,7 +696,7 @@ uv run python -c "from extractor import __version__; print(__version__)"
 ```bash
 # 服务器设置
 DATA_EXTRACTOR_SERVER_NAME=data-extractor
-DATA_EXTRACTOR_SERVER_VERSION=0.1.0
+DATA_EXTRACTOR_SERVER_VERSION=0.1.2
 
 # 并发和延迟设置
 DATA_EXTRACTOR_CONCURRENT_REQUESTS=16
