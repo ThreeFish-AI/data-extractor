@@ -14,10 +14,11 @@ tests/
 │   ├── __init__.py
 │   ├── test_scraper.py             # WebScraper 核心引擎测试
 │   ├── test_advanced_features.py   # 高级功能测试 (反检测、表单处理)
-│   └── test_utils.py               # 工具类测试 (限流、重试、缓存等)
+│   ├── test_utils.py               # 工具类测试 (限流、重试、缓存等)
+│   └── test_markdown_converter.py  # MarkdownConverter 测试
 ├── integration/                    # 集成测试
 │   ├── __init__.py
-│   └── test_mcp_tools.py           # 10 个 MCP 工具集成测试
+│   └── test_mcp_tools.py           # 12 个 MCP 工具集成测试
 └── fixtures/                       # 测试数据和固定装置
 ```
 
@@ -153,7 +154,7 @@ def test_cache_expiration(self, temp_cache_dir):
 
 ## MCP 工具集成测试 (`test_mcp_tools.py`)
 
-### 10 个核心 MCP 工具测试覆盖
+### 12 个核心 MCP 工具测试覆盖
 
 #### 1. scrape_webpage - 单页面抓取
 
@@ -225,6 +226,76 @@ def test_cache_expiration(self, temp_cache_dir):
 - **微数据**: 测试 HTML 微数据格式提取
 - **Open Graph**: 测试 OG 标签数据提取
 - **数据类型**: 测试不同数据类型过滤 (all/jsonld/microdata/opengraph)
+
+#### 11. convert_webpage_to_markdown - 页面转 Markdown
+
+- **HTML 转换**: 测试完整 HTML 内容转换为 Markdown 格式
+- **内容提取**: 测试主要内容区域智能提取功能
+- **元数据处理**: 测试标题、描述、字数等元数据计算
+- **URL 处理**: 测试相对 URL 转换为绝对 URL
+- **自定义选项**: 测试自定义 Markdown 格式化选项
+- **文本重构**: 测试从文本内容重构 HTML 的处理
+- **错误处理**: 测试无效 URL 和抓取失败的错误处理
+
+#### 12. batch_convert_webpages_to_markdown - 批量 Markdown 转换
+
+- **批量处理**: 测试多个 URL 的并发转换处理
+- **部分失败**: 测试部分 URL 失败时的错误处理
+- **统计信息**: 测试成功/失败统计和成功率计算
+- **空列表处理**: 测试空 URL 列表的错误处理
+- **无效 URL**: 测试包含无效 URL 的批量处理
+- **配置一致性**: 测试批量处理中的配置一致性
+
+## Markdown 转换器单元测试 (`test_markdown_converter.py`)
+
+### MarkdownConverter 核心类测试
+
+#### 1. 初始化和配置测试
+
+- **默认配置**: 测试 MarkdownConverter 默认选项设置
+- **配置验证**: 测试标题样式、列表符号、链接格式等配置项
+
+#### 2. HTML 预处理功能测试
+
+- **注释移除**: 测试 HTML 注释的清理功能
+- **标签清理**: 测试 script、style、nav、header 等无关标签移除
+- **URL 转换**: 测试相对 URL 转换为绝对 URL 功能
+- **空元素清理**: 测试空的 p 和 div 标签移除
+
+#### 3. HTML 到 Markdown 转换测试
+
+- **基础转换**: 测试标题、段落、链接、图片的基本转换
+- **列表处理**: 测试有序和无序列表的 Markdown 转换
+- **自定义选项**: 测试自定义 Markdown 格式化选项
+- **错误处理**: 测试转换过程中的异常处理
+
+#### 4. Markdown 后处理测试
+
+- **空行清理**: 测试多余空白行的清理功能
+- **列表格式**: 测试列表格式的优化处理
+- **空格清理**: 测试行尾空格和制表符的清理
+- **内容修剪**: 测试开头结尾空白字符的清理
+
+#### 5. 内容区域提取测试
+
+- **主要标签**: 测试 main、article 标签的内容提取
+- **类选择器**: 测试 .content、.post 等类选择器提取
+- **回退机制**: 测试找不到主要内容时回退到 body 的处理
+- **最小长度**: 测试内容最小长度要求的验证
+
+#### 6. 完整转换流程测试
+
+- **HTML 内容**: 测试包含完整 HTML 内容的网页转换
+- **文本重构**: 测试仅有文本内容时的 HTML 重构转换
+- **元数据包含**: 测试元数据的计算和包含功能
+- **配置选项**: 测试各种转换配置选项的应用
+
+#### 7. 批量转换测试
+
+- **成功转换**: 测试多个页面的成功批量转换
+- **部分失败**: 测试部分页面失败时的处理逻辑
+- **统计计算**: 测试成功率和统计信息的计算
+- **异常处理**: 测试批量转换过程中的异常捕获
 
 ```python
 # 示例集成测试用例

@@ -4,18 +4,20 @@
 
 ## 🛠️ MCP Server 核心工具
 
-| 工具名称                     | 功能描述       | 使用场景                         |
-| ---------------------------- | -------------- | -------------------------------- |
-| **scrape_webpage**           | 单页面抓取     | 基础数据提取，支持配置化选择器   |
-| **scrape_multiple_webpages** | 批量页面抓取   | 并发处理多个 URL，提升效率       |
-| **scrape_with_stealth**      | 反检测抓取     | 应对反爬虫保护的高难度网站       |
-| **fill_and_submit_form**     | 表单自动化     | 登录表单、联系表单等交互操作     |
-| **extract_links**            | 专业链接提取   | 网站地图生成，链接分析           |
-| **extract_structured_data**  | 结构化数据提取 | JSON-LD、微数据、Open Graph 解析 |
-| **get_page_info**            | 页面信息获取   | 快速获取标题、状态码、元数据     |
-| **check_robots_txt**         | 爬虫规则检查   | 遵守网站爬取规范，合规性检查     |
-| **get_server_metrics**       | 性能指标监控   | 服务器状态监控，性能调优         |
-| **clear_cache**              | 缓存管理       | 释放内存，清理过期数据           |
+| 工具名称                               | 功能描述           | 使用场景                         |
+| -------------------------------------- | ------------------ | -------------------------------- |
+| **scrape_webpage**                     | 单页面抓取         | 基础数据提取，支持配置化选择器   |
+| **scrape_multiple_webpages**           | 批量页面抓取       | 并发处理多个 URL，提升效率       |
+| **scrape_with_stealth**                | 反检测抓取         | 应对反爬虫保护的高难度网站       |
+| **fill_and_submit_form**               | 表单自动化         | 登录表单、联系表单等交互操作     |
+| **extract_links**                      | 专业链接提取       | 网站地图生成，链接分析           |
+| **extract_structured_data**            | 结构化数据提取     | JSON-LD、微数据、Open Graph 解析 |
+| **get_page_info**                      | 页面信息获取       | 快速获取标题、状态码、元数据     |
+| **check_robots_txt**                   | 爬虫规则检查       | 遵守网站爬取规范，合规性检查     |
+| **get_server_metrics**                 | 性能指标监控       | 服务器状态监控，性能调优         |
+| **clear_cache**                        | 缓存管理           | 释放内存，清理过期数据           |
+| **convert_webpage_to_markdown**        | 页面转 Markdown    | 将网页内容转换为 Markdown 格式   |
+| **batch_convert_webpages_to_markdown** | 批量 Markdown 转换 | 批量处理多个网页的 Markdown 转换 |
 
 ### 核心功能
 
@@ -412,6 +414,127 @@ uv run python -m extractor.server
 ### 10. clear_cache
 
 清除缓存的爬取结果。
+
+### 11. convert_webpage_to_markdown
+
+将网页内容抓取并转换为 Markdown 格式，适用于文档处理、内容分析和存储。
+
+**参数:**
+
+- `url`: 要抓取和转换的 URL
+- `method`: 抓取方法 (auto/simple/scrapy/selenium，默认 auto)
+- `extract_main_content`: 是否仅提取主要内容区域 (默认 true)
+- `include_metadata`: 是否包含页面元数据 (默认 true)
+- `custom_options`: 自定义 Markdown 转换选项 (可选)
+- `wait_for_element`: 等待的 CSS 选择器 (Selenium 专用)
+
+**功能特性:**
+
+- **智能内容提取**: 自动识别并提取网页主要内容区域
+- **清理处理**: 移除广告、导航栏、侧边栏等无关内容
+- **URL 转换**: 将相对 URL 转换为绝对 URL
+- **格式优化**: 清理多余空白行，优化 Markdown 格式
+- **元数据丰富**: 包含标题、描述、字数统计等信息
+
+**示例:**
+
+```json
+{
+  "url": "https://example.com/article",
+  "method": "auto",
+  "extract_main_content": true,
+  "include_metadata": true,
+  "custom_options": {
+    "heading_style": "ATX",
+    "bullets": "-",
+    "wrap": false
+  }
+}
+```
+
+**返回示例:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://example.com/article",
+    "markdown": "# Article Title\n\nThis is the article content...",
+    "metadata": {
+      "title": "Article Title",
+      "meta_description": "Article description",
+      "word_count": 500,
+      "character_count": 3000,
+      "domain": "example.com"
+    }
+  }
+}
+```
+
+### 12. batch_convert_webpages_to_markdown
+
+批量抓取多个网页并转换为 Markdown 格式，支持并发处理提升效率。
+
+**参数:**
+
+- `urls`: 要抓取和转换的 URL 列表
+- `method`: 抓取方法 (auto/simple/scrapy/selenium，默认 auto)
+- `extract_main_content`: 是否仅提取主要内容区域 (默认 true)
+- `include_metadata`: 是否包含页面元数据 (默认 true)
+- `custom_options`: 自定义 Markdown 转换选项 (可选)
+
+**功能特性:**
+
+- **并发处理**: 同时处理多个 URL 提升效率
+- **一致格式**: 所有页面使用相同的转换配置
+- **详细统计**: 提供成功/失败统计和汇总信息
+- **错误处理**: 单个页面失败不影响其他页面处理
+- **批量优化**: 针对大量页面优化的性能配置
+
+**示例:**
+
+```json
+{
+  "urls": [
+    "https://example.com/article1",
+    "https://example.com/article2",
+    "https://example.com/article3"
+  ],
+  "method": "auto",
+  "extract_main_content": true,
+  "include_metadata": true
+}
+```
+
+**返回示例:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "results": [
+      {
+        "success": true,
+        "url": "https://example.com/article1",
+        "markdown": "# Article 1\n\nContent...",
+        "metadata": {...}
+      },
+      {
+        "success": true,
+        "url": "https://example.com/article2",
+        "markdown": "# Article 2\n\nContent...",
+        "metadata": {...}
+      }
+    ],
+    "summary": {
+      "total": 3,
+      "successful": 2,
+      "failed": 1,
+      "success_rate": 0.67
+    }
+  }
+}
+```
 
 ## 📖 数据提取配置
 

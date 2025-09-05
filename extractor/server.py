@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from .scraper import WebScraper
 from .advanced_features import AntiDetectionScraper, FormHandler
+from .markdown_converter import MarkdownConverter
 from .config import settings
 from .utils import (
     timing_decorator,
@@ -34,6 +35,7 @@ logging.basicConfig(
 app = FastMCP(settings.server_name, version=settings.server_version)
 web_scraper = WebScraper()
 anti_detection_scraper = AntiDetectionScraper()
+markdown_converter = MarkdownConverter()
 
 
 class ScrapeRequest(BaseModel):
@@ -459,6 +461,79 @@ class FormRequest(BaseModel):
         """Validate method."""
         if v not in ["selenium", "playwright"]:
             raise ValueError("Method must be one of: selenium, playwright")
+        return v
+
+
+class ConvertToMarkdownRequest(BaseModel):
+    """Request model for converting webpage to Markdown."""
+
+    url: str = Field(..., description="URL to scrape and convert to Markdown")
+    method: str = Field(
+        default="auto", description="Scraping method: auto, simple, scrapy, selenium"
+    )
+    extract_main_content: bool = Field(
+        default=True, description="Extract main content area only"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include page metadata in result"
+    )
+    custom_options: Optional[Dict[str, Any]] = Field(
+        default=None, description="Custom markdownify options"
+    )
+    wait_for_element: Optional[str] = Field(
+        default=None, description="CSS selector to wait for (Selenium only)"
+    )
+
+    @field_validator("url")
+    def validate_url(cls, v: str) -> str:
+        """Validate URL format."""
+        parsed = urlparse(v)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+        return v
+
+    @field_validator("method")
+    def validate_method(cls, v: str) -> str:
+        """Validate scraping method."""
+        if v not in ["auto", "simple", "scrapy", "selenium"]:
+            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
+        return v
+
+
+class BatchConvertToMarkdownRequest(BaseModel):
+    """Request model for batch converting webpages to Markdown."""
+
+    urls: List[str] = Field(..., description="List of URLs to scrape and convert")
+    method: str = Field(
+        default="auto", description="Scraping method: auto, simple, scrapy, selenium"
+    )
+    extract_main_content: bool = Field(
+        default=True, description="Extract main content area only"
+    )
+    include_metadata: bool = Field(
+        default=True, description="Include page metadata in results"
+    )
+    custom_options: Optional[Dict[str, Any]] = Field(
+        default=None, description="Custom markdownify options"
+    )
+
+    @field_validator("urls")
+    def validate_urls(cls, v: List[str]) -> List[str]:
+        """Validate URLs format."""
+        if not v:
+            raise ValueError("URLs list cannot be empty")
+
+        for url in v:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                raise ValueError(f"Invalid URL format: {url}")
+        return v
+
+    @field_validator("method")
+    def validate_method(cls, v: str) -> str:
+        """Validate scraping method."""
+        if v not in ["auto", "simple", "scrapy", "selenium"]:
+            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
         return v
 
 
@@ -921,6 +996,221 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
     except Exception as e:
         logger.error(f"Error extracting structured data from {url}: {str(e)}")
         return {"success": False, "error": str(e), "url": url}
+
+
+@app.tool()
+@timing_decorator
+async def convert_webpage_to_markdown(
+    url: str,
+    method: str = "auto",
+    extract_main_content: bool = True,
+    include_metadata: bool = True,
+    custom_options: Optional[Dict[str, Any]] = None,
+    wait_for_element: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Scrape a webpage and convert it to Markdown format.
+
+    Args:
+        url: URL to scrape and convert to Markdown
+        method: Scraping method: auto, simple, scrapy, selenium (default: auto)
+        extract_main_content: Extract main content area only (default: True)
+        include_metadata: Include page metadata in result (default: True)
+        custom_options: Custom markdownify options (optional)
+        wait_for_element: CSS selector to wait for - Selenium only (optional)
+
+    This tool combines web scraping with Markdown conversion to provide clean,
+    readable text format suitable for documentation, analysis, or storage.
+
+    Features:
+    - Automatic main content extraction (removes nav, ads, etc.)
+    - Customizable Markdown formatting options
+    - Metadata extraction (title, description, word count, etc.)
+    - Support for all scraping methods
+    """
+    try:
+        # Validate inputs
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return {"success": False, "error": "Invalid URL format", "url": url}
+
+        if method not in ["auto", "simple", "scrapy", "selenium"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: auto, simple, scrapy, selenium",
+                "url": url,
+            }
+
+        start_time = time.time()
+        logger.info(f"Converting webpage to Markdown: {url} with method: {method}")
+
+        # Apply rate limiting
+        await rate_limiter.wait()
+
+        # Scrape the webpage first
+        scrape_result = await web_scraper.scrape_url(
+            url=url,
+            method=method,
+            extract_config=None,  # We'll handle HTML extraction in markdown converter
+            wait_for_element=wait_for_element,
+        )
+
+        if "error" in scrape_result:
+            return {
+                "success": False,
+                "error": scrape_result["error"],
+                "url": url,
+                "method_used": method,
+            }
+
+        # Convert to Markdown
+        conversion_result = markdown_converter.convert_webpage_to_markdown(
+            scrape_result=scrape_result,
+            extract_main_content=extract_main_content,
+            include_metadata=include_metadata,
+            custom_options=custom_options,
+        )
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        if conversion_result.get("success"):
+            metrics_collector.record_request(url, True, duration_ms, f"markdown_{method}")
+
+            result = {
+                "success": True,
+                "data": conversion_result,
+                "method_used": f"markdown_{method}",
+                "duration_ms": duration_ms,
+            }
+
+            return result
+        else:
+            error_response = ErrorHandler.handle_scraping_error(
+                Exception(conversion_result.get("error", "Markdown conversion failed")),
+                url,
+                f"markdown_{method}",
+            )
+            metrics_collector.record_request(
+                url,
+                False,
+                duration_ms,
+                f"markdown_{method}",
+                error_response["error"]["category"],
+            )
+            return error_response
+
+    except Exception as e:
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
+        )
+        error_response = ErrorHandler.handle_scraping_error(e, url, f"markdown_{method}")
+        metrics_collector.record_request(
+            url,
+            False,
+            duration_ms,
+            f"markdown_{method}",
+            error_response["error"]["category"],
+        )
+        return error_response
+
+
+@app.tool()
+@timing_decorator
+async def batch_convert_webpages_to_markdown(
+    urls: List[str],
+    method: str = "auto",
+    extract_main_content: bool = True,
+    include_metadata: bool = True,
+    custom_options: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Scrape multiple webpages and convert them to Markdown format.
+
+    Args:
+        urls: List of URLs to scrape and convert
+        method: Scraping method: auto, simple, scrapy, selenium (default: auto)
+        extract_main_content: Extract main content area only (default: True)
+        include_metadata: Include page metadata in results (default: True)
+        custom_options: Custom markdownify options (optional)
+
+    This tool provides batch processing for converting multiple webpages to Markdown.
+    It processes all URLs concurrently for better performance.
+
+    Features:
+    - Concurrent processing of multiple URLs
+    - Consistent formatting across all converted pages
+    - Detailed summary statistics
+    - Error handling for individual failures
+    - Same conversion options as single page tool
+    """
+    try:
+        # Validate inputs
+        if not urls:
+            return {"success": False, "error": "URLs list cannot be empty"}
+
+        for url in urls:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return {"success": False, "error": f"Invalid URL format: {url}"}
+
+        if method not in ["auto", "simple", "scrapy", "selenium"]:
+            return {
+                "success": False,
+                "error": "Method must be one of: auto, simple, scrapy, selenium",
+            }
+
+        start_time = time.time()
+        logger.info(f"Batch converting {len(urls)} webpages to Markdown with method: {method}")
+
+        # Scrape all URLs first
+        scrape_results = await web_scraper.scrape_multiple_urls(
+            urls=urls, method=method, extract_config=None
+        )
+
+        # Convert all results to Markdown
+        conversion_result = markdown_converter.batch_convert_to_markdown(
+            scrape_results=scrape_results,
+            extract_main_content=extract_main_content,
+            include_metadata=include_metadata,
+            custom_options=custom_options,
+        )
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # Record metrics for each URL
+        for i, url in enumerate(urls):
+            result = conversion_result["results"][i] if i < len(conversion_result["results"]) else {"success": False}
+            success = result.get("success", False)
+            metrics_collector.record_request(url, success, duration_ms // len(urls), f"batch_markdown_{method}")
+
+        if conversion_result.get("success"):
+            return {
+                "success": True,
+                "data": conversion_result,
+                "method_used": f"batch_markdown_{method}",
+                "duration_ms": duration_ms,
+            }
+        else:
+            return {
+                "success": False,
+                "error": conversion_result.get("error", "Batch conversion failed"),
+                "data": conversion_result.get("results", []),
+                "method_used": f"batch_markdown_{method}",
+                "duration_ms": duration_ms,
+            }
+
+    except Exception as e:
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
+        )
+        logger.error(f"Error in batch Markdown conversion: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "urls": urls,
+            "method_used": f"batch_markdown_{method}",
+            "duration_ms": duration_ms,
+        }
 
 
 def main() -> None:

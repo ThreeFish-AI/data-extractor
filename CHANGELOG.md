@@ -4,6 +4,58 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.3
+
+#### Released on 2025/09/06
+
+### 新增
+
+- **Markdown 转换工具集**
+  - **convert_webpage_to_markdown**: 单页面转 Markdown 工具，支持智能内容提取和元数据处理
+    - 自动识别并提取网页主要内容区域（main、article、.content 等选择器）
+    - HTML 预处理：移除注释、清理无关标签、转换相对 URL 为绝对 URL
+    - Markdown 格式优化：清理多余空白行、优化列表格式、移除行尾空格
+    - 元数据丰富：包含标题、描述、字数统计、链接数量、图片数量、域名等信息
+    - 自定义转换选项：支持标题样式、列表符号、链接格式等自定义配置
+  - **batch_convert_webpages_to_markdown**: 批量页面转 Markdown 工具，支持并发处理多个 URL
+    - 并发处理多个 URL，提升批量转换效率
+    - 详细统计信息：总数、成功数、失败数、成功率等汇总数据
+    - 错误隔离：单个页面失败不影响其他页面处理
+    - 配置一致性：所有页面使用相同的转换配置保证格式统一
+- **MarkdownConverter 核心转换引擎**
+  - extractor/markdown_converter.py: 新增专用 Markdown 转换模块
+  - 基于 markdownify 库的 HTML 到 Markdown 转换
+  - 智能内容区域提取算法，支持最小内容长度检查（200 字符阈值）
+  - HTML 预处理流水线：注释移除、标签清理、URL 转换、空元素清理
+  - Markdown 后处理优化：空行清理、列表格式化、内容修剪
+- **完整测试覆盖体系**
+  - tests/unit/test_markdown_converter.py: MarkdownConverter 单元测试（33 个测试用例）
+    - 初始化和配置测试、HTML 预处理测试、转换功能测试
+    - 后处理测试、内容提取测试、批量转换测试
+  - tests/integration/test_mcp_tools.py: 新增 Markdown 工具集成测试
+    - 工具注册验证、参数模式检查
+    - 更新工具总数从 10 个扩展到 12 个 MCP 工具
+
+### 变更
+
+- **pyproject.toml**: 新增依赖 `markdownify>=1.2.0` 支持 HTML 到 Markdown 转换
+- **README.md**: 更新 MCP Server 工具列表和详细文档
+  - 工具表格更新：新增 convert_webpage_to_markdown 和 batch_convert_webpages_to_markdown
+  - 新增工具详情章节：参数说明、功能特性、使用示例、返回格式
+  - 完整的 JSON 请求和响应示例，支持自定义转换选项
+- **TESTING.md**: 更新测试文档结构和覆盖说明
+  - 测试目录结构更新：新增 test_markdown_converter.py 单元测试文件
+  - MCP 工具测试覆盖从 10 个扩展到 12 个工具
+  - 新增 Markdown 转换器测试章节：7 个主要测试类别详细说明
+
+### 修复
+
+- **MarkdownConverter 配置优化**
+  - 修复 markdownify 配置冲突：移除 strip 和 convert 参数同时使用的错误
+  - 修复 wrap_width=0 导致的 "invalid width" 错误，改为 wrap=False 禁用换行
+  - 修复 BeautifulSoup 废弃方法：findAll → find_all，消除 DeprecationWarning
+  - 优化内容提取测试断言：调整为更现实的内容长度和验证逻辑
+
 ## v0.1.2
 
 #### Released on 2025/09/06
