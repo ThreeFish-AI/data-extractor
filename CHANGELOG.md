@@ -4,6 +4,23 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.2
+
+#### Released on 2025/09/05
+
+[变更]
+
+- 项目命名标准化重构
+  - 配置类重命名：`ScrapyMCPSettings` → `DataExtractorSettings`
+  - 环境变量前缀统一：`SCRAPY_MCP_` → `DATA_EXTRACTOR_`
+  - 配置属性名简化：移除 `scrapy_` 前缀，如 `scrapy_concurrent_requests` → `concurrent_requests`
+  - 更新所有环境变量名称：`SCRAPY_CONCURRENT_REQUESTS` → `DATA_EXTRACTOR_CONCURRENT_REQUESTS` 等
+  - 统一文档字符串：从 "Scrapy MCP Server" 更新为 "Data Extractor MCP Server"
+- 配置文件同步更新
+  - 更新 `.env.example` 中所有环境变量名称
+  - 更新 `README.md` 和 `CLAUDE.md` 中的配置示例
+  - 更新 `examples/basic_usage.py` 中的示例标题和描述
+
 ## v0.1.1
 
 #### Released on 2025/09/05

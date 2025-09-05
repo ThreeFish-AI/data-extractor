@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Basic usage examples for the Scrapy MCP Server.
+Basic usage examples for the Data Extractor MCP Server.
 
 This script demonstrates how to use various scraping tools programmatically.
 Note: This is for demonstration purposes. In real usage, the MCP server
@@ -195,7 +195,7 @@ async def example_server_metrics():
 
 async def main():
     """Run all examples."""
-    print("🚀 Scrapy MCP Server Usage Examples")
+    print("🚀 Data Extractor MCP Server Usage Examples")
     print("=" * 50)
     print()
     

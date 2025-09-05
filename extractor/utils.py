@@ -1,4 +1,4 @@
-"""Utility functions for the Scrapy MCP Server."""
+"""Utility functions for the Data Extractor MCP Server."""
 
 import asyncio
 import hashlib

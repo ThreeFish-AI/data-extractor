@@ -1,25 +1,25 @@
-"""Configuration settings for the Scrapy MCP Server."""
+"""Configuration settings for the Data Extractor MCP Server."""
 
 from typing import Dict, Any, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
-class ScrapyMCPSettings(BaseSettings):
-    """Settings for the Scrapy MCP Server."""
+class DataExtractorSettings(BaseSettings):
+    """Settings for the Data Extractor MCP Server."""
 
     # Server settings
     server_name: str = Field(default="data-extractor")
     server_version: str = Field(default="0.1.0")
 
-    # Scrapy settings
-    scrapy_concurrent_requests: int = Field(default=16)
-    scrapy_download_delay: float = Field(default=1.0)
-    scrapy_randomize_download_delay: bool = Field(default=True)
-    scrapy_autothrottle_enabled: bool = Field(default=True)
-    scrapy_autothrottle_start_delay: float = Field(default=1.0)
-    scrapy_autothrottle_max_delay: float = Field(default=60.0)
-    scrapy_autothrottle_target_concurrency: float = Field(default=1.0)
+    # Data Extractor settings
+    concurrent_requests: int = Field(default=16)
+    download_delay: float = Field(default=1.0)
+    randomize_download_delay: bool = Field(default=True)
+    autothrottle_enabled: bool = Field(default=True)
+    autothrottle_start_delay: float = Field(default=1.0)
+    autothrottle_max_delay: float = Field(default=60.0)
+    autothrottle_target_concurrency: float = Field(default=1.0)
 
     # Browser settings
     enable_javascript: bool = Field(default=False)
@@ -44,23 +44,23 @@ class ScrapyMCPSettings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "extra": "ignore",  # Allow extra environment variables
-        "env_prefix": "SCRAPY_MCP_"  # Automatically map env vars with this prefix
+        "env_prefix": "DATA_EXTRACTOR_"  # Automatically map env vars with this prefix
     }
 
     def get_scrapy_settings(self) -> Dict[str, Any]:
         """Get Scrapy-specific settings as a dictionary."""
         return {
-            "CONCURRENT_REQUESTS": self.scrapy_concurrent_requests,
-            "DOWNLOAD_DELAY": self.scrapy_download_delay,
-            "RANDOMIZE_DOWNLOAD_DELAY": self.scrapy_randomize_download_delay,
-            "AUTOTHROTTLE_ENABLED": self.scrapy_autothrottle_enabled,
-            "AUTOTHROTTLE_START_DELAY": self.scrapy_autothrottle_start_delay,
-            "AUTOTHROTTLE_MAX_DELAY": self.scrapy_autothrottle_max_delay,
-            "AUTOTHROTTLE_TARGET_CONCURRENCY": self.scrapy_autothrottle_target_concurrency,
+            "CONCURRENT_REQUESTS": self.concurrent_requests,
+            "DOWNLOAD_DELAY": self.download_delay,
+            "RANDOMIZE_DOWNLOAD_DELAY": self.randomize_download_delay,
+            "AUTOTHROTTLE_ENABLED": self.autothrottle_enabled,
+            "AUTOTHROTTLE_START_DELAY": self.autothrottle_start_delay,
+            "AUTOTHROTTLE_MAX_DELAY": self.autothrottle_max_delay,
+            "AUTOTHROTTLE_TARGET_CONCURRENCY": self.autothrottle_target_concurrency,
             "RETRY_TIMES": self.max_retries,
             "DOWNLOAD_TIMEOUT": self.request_timeout,
             "USER_AGENT": self.default_user_agent,
         }
 
 
-settings = ScrapyMCPSettings()
+settings = DataExtractorSettings()

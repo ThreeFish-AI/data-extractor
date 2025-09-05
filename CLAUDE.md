@@ -34,7 +34,7 @@ uv run data-extractor
 uv run python -m extractor.server
 
 # Run with environment variables
-uv run --env SCRAPY_MCP_ENABLE_JAVASCRIPT=true data-extractor
+uv run --env DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true data-extractor
 ```
 
 ### Code Quality and Testing
@@ -84,7 +84,7 @@ The system is built with a layered architecture centered around method auto-sele
 - `RateLimiter`, `RetryManager`, `CacheManager`, `MetricsCollector`, `ErrorHandler`
 - All utilities follow patterns for async support, error handling, and metrics
 
-**extractor/config.py** - Pydantic BaseSettings with automatic environment variable mapping using `SCRAPY_MCP_` prefix.
+**extractor/config.py** - Pydantic BaseSettings with automatic environment variable mapping using `DATA_EXTRACTOR_` prefix.
 
 ### Key Design Patterns
 
@@ -96,14 +96,14 @@ The system is built with a layered architecture centered around method auto-sele
 
 ## Configuration System
 
-Environment variables use `SCRAPY_MCP_` prefix (see .env.example):
+Environment variables use `DATA_EXTRACTOR_` prefix (see .env.example):
 
 **Critical Settings:**
 
-- `SCRAPY_MCP_ENABLE_JAVASCRIPT` - Enables browser automation globally
-- `SCRAPY_MCP_USE_RANDOM_USER_AGENT` - Anti-detection feature
-- `SCRAPY_CONCURRENT_REQUESTS` - Controls Scrapy concurrency
-- `SCRAPY_MCP_BROWSER_TIMEOUT` - Browser wait timeout
+- `DATA_EXTRACTOR_ENABLE_JAVASCRIPT` - Enables browser automation globally
+- `DATA_EXTRACTOR_USE_RANDOM_USER_AGENT` - Anti-detection feature
+- `DATA_EXTRACTOR_CONCURRENT_REQUESTS` - Controls Scrapy concurrency
+- `DATA_EXTRACTOR_BROWSER_TIMEOUT` - Browser wait timeout
 
 ## Data Extraction Configuration
 
@@ -123,7 +123,7 @@ See `examples/extraction_configs.py` for comprehensive examples covering e-comme
 
 **Adding Anti-Detection Features**: Extend `AntiDetectionScraper` in `advanced_features.py`. Consider browser stealth options, behavior simulation, and proxy rotation.
 
-**Configuration Changes**: Add settings to `ScrapyMCPSettings` in `config.py` using Pydantic Field with environment variable mapping.
+**Configuration Changes**: Add settings to `DataExtractorSettings` in `config.py` using Pydantic Field with environment variable mapping.
 
 **Utility Functions**: Add to `utils.py` following existing patterns for async support, error handling, and metrics integration.
 
