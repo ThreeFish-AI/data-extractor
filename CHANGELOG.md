@@ -4,6 +4,42 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.2
+
+#### Released on 2025/09/06
+
+### 新增
+
+- **完整测试框架体系**
+  - tests/unit/: 单元测试目录，包含核心引擎和工具类测试
+  - tests/integration/: 集成测试目录，包含 10 个 MCP 工具端到端测试
+  - tests/fixtures/: 测试数据和固定装置目录
+  - tests/conftest.py: pytest 配置和共享 fixtures，支持异步测试
+- **DataExtractor 核心引擎测试**
+  - tests/unit/test_scraper_simple.py: WebScraper 基础功能测试（9 个测试用例）
+  - tests/unit/test_scraper.py: HTML 解析和抓取引擎测试
+  - tests/unit/test_utils_basic.py: 工具类基础功能测试（10 个测试用例）
+  - tests/unit/test_advanced_features.py: 反检测和表单处理功能测试
+- **MCP 工具集成测试用例**
+  - tests/integration/test_mcp_tools.py: 10 个核心 MCP 工具完整测试覆盖
+    - scrape_webpage, scrape_multiple_webpages, extract_links, get_page_info
+    - check_robots_txt, scrape_with_stealth, fill_and_submit_form
+    - get_server_metrics, clear_cache, extract_structured_data
+- **测试文档与报告**
+  - TESTING.md: 67KB 详细测试文档，包含架构说明、运行指南、最佳实践
+  - TEST_RESULTS.md: 测试执行结果报告，19 个基础测试全部通过
+
+### 变更
+
+- **pyproject.toml**: 确保测试依赖 `pytest>=8.0.0` 和 `pytest-asyncio>=0.23.0` 配置正确
+
+### 整理
+
+- **测试架构标准化**
+  - 建立单元测试与集成测试分离的标准结构
+  - 统一异步测试支持和 Mock 策略
+  - 优化测试执行性能和错误处理机制
+
 ## v0.1.1
 
 #### Released on 2025/09/05
