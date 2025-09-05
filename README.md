@@ -2,7 +2,47 @@
 
 一个基于 Scrapy 和 FastMCP 构建的强大、稳定的网页爬取与数据提取 MCP Server，专为商业环境中的长期使用而设计。
 
-## 📁 项目目录结构
+## 🛠️ MCP Server 核心工具
+
+| 工具名称                     | 功能描述       | 使用场景                         |
+| ---------------------------- | -------------- | -------------------------------- |
+| **scrape_webpage**           | 单页面抓取     | 基础数据提取，支持配置化选择器   |
+| **scrape_multiple_webpages** | 批量页面抓取   | 并发处理多个 URL，提升效率       |
+| **scrape_with_stealth**      | 反检测抓取     | 应对反爬虫保护的高难度网站       |
+| **fill_and_submit_form**     | 表单自动化     | 登录表单、联系表单等交互操作     |
+| **extract_links**            | 专业链接提取   | 网站地图生成，链接分析           |
+| **extract_structured_data**  | 结构化数据提取 | JSON-LD、微数据、Open Graph 解析 |
+| **get_page_info**            | 页面信息获取   | 快速获取标题、状态码、元数据     |
+| **check_robots_txt**         | 爬虫规则检查   | 遵守网站爬取规范，合规性检查     |
+| **get_server_metrics**       | 性能指标监控   | 服务器状态监控，性能调优         |
+| **clear_cache**              | 缓存管理       | 释放内存，清理过期数据           |
+
+### 核心功能
+
+- **多种爬取方法**: 支持简单 HTTP 请求、Scrapy 框架和浏览器自动化
+- **智能方法选择**: 自动选择最适合的爬取方法
+- **并发处理**: 支持多个 URL 的并发爬取
+- **配置化提取**: 灵活的数据提取配置系统
+
+### 高级功能
+
+- **反反爬虫**: 使用 undetected-chromedriver 和 Playwright 的隐身技术
+- **表单处理**: 自动填写和提交各种类型的表单
+- **JavaScript 支持**: 完整的浏览器渲染支持
+- **智能重试**: 指数退避重试机制
+- **结果缓存**: 内存缓存提升性能
+
+### 企业级特性
+
+- **错误处理**: 完善的错误分类和处理
+- **性能监控**: 详细的请求指标和统计
+- **速率限制**: 防止服务器过载
+- **代理支持**: 支持 HTTP 代理配置
+- **随机 UA**: 防检测的用户代理轮换
+
+## 📋 项目现状
+
+### 项目结构
 
 ```
 data-extractor/
@@ -35,11 +75,382 @@ data-extractor/
 └── uv.lock                             # 依赖锁定文件
 ```
 
+### 已完成的里程碑 ✅
+
+- ✅ **v0.1.2 稳定版发布**: 基于 Scrapy + FastMCP 构建的企业级网页抓取 MCP Server
+- ✅ **测试框架建设**: 完整的单元测试和集成测试体系，测试通过率 99%+
+- ✅ **代码质量优化**: 类型注解完善，从 black 迁移到 ruff 格式化
+- ✅ **配置统一**: 项目名称从 scrapy-mcp 更名为 data-extractor，配置前缀统一
+- ✅ **文档完善**: README、CHANGELOG、TESTING 文档体系建立
+
+### 当前状态 📊
+
+- **版本**: v0.1.2
+- **测试覆盖率**: 99%+
+- **代码格式化**: ruff
+- **包管理**: uv
+- **Python 要求**: 3.12+
+
+### v0.1.2 (2025-09-06)
+
+- **测试框架**: 建立完整的单元测试和集成测试体系，19 个基础测试全部通过
+- **测试文档**: 新增 67KB 详细测试文档和执行报告
+- **质量保障**: pytest 异步测试支持，Mock 策略和性能优化
+
+### v0.1.1 (2025-09-05)
+
+- **核心重构**: 包名从 `scrapy_mcp` 重构为 `extractor`，提升项目结构清晰度
+- **命令更新**: 项目入口命令统一为 `data-extractor`
+- **文档完善**: 更新所有配置示例和安装说明
+
+### v0.1.0 (2025-08-26)
+
+- **初始发布**: 完整的网页爬取 MCP Server 实现
+- **核心功能**: 10 个专业爬取工具，支持多种场景
+- **企业特性**: 速率限制、智能重试、缓存机制
+- **技术栈**: 迁移至 uv 包管理，增强开发体验
+
+## 🚦 快速开始
+
+### 📦 安装
+
+```bash
+# 确认 Python 版本 (需要 3.12+)
+python --version
+
+# 克隆仓库
+git clone https://github.com/ThreeFish-AI/data-extractor.git
+cd data-extractor
+
+# 快速设置（推荐）
+./scripts/setup.sh
+
+# 或手动安装
+# 使用 uv 安装依赖
+uv sync
+
+# 安装包括开发依赖
+uv sync --extra dev
+
+# 或者使用传统方式
+pip install -e .
+
+# 或者使用开发模式
+pip install -e ".[dev]"
+```
+
+### 🔧 配置
+
+创建 `.env` 文件来自定义配置：
+
+```bash
+# 服务器设置
+DATA_EXTRACTOR_SERVER_NAME=data-extractor
+DATA_EXTRACTOR_SERVER_VERSION=0.1.2
+
+# 并发和延迟设置
+DATA_EXTRACTOR_CONCURRENT_REQUESTS=16
+DATA_EXTRACTOR_DOWNLOAD_DELAY=1.0
+DATA_EXTRACTOR_RANDOMIZE_DOWNLOAD_DELAY=true
+
+# 浏览器设置
+DATA_EXTRACTOR_ENABLE_JAVASCRIPT=false
+DATA_EXTRACTOR_BROWSER_HEADLESS=true
+DATA_EXTRACTOR_BROWSER_TIMEOUT=30
+
+# 反检测设置
+DATA_EXTRACTOR_USE_RANDOM_USER_AGENT=true
+DATA_EXTRACTOR_USE_PROXY=false
+DATA_EXTRACTOR_PROXY_URL=
+
+# 重试设置
+DATA_EXTRACTOR_MAX_RETRIES=3
+DATA_EXTRACTOR_REQUEST_TIMEOUT=30
+```
+
+### 启动服务器
+
+```bash
+# 使用命令行
+data-extractor
+
+# 使用 uv 运行（推荐）
+uv run data-extractor
+
+# 或者使用Python
+python -m extractor.server
+
+# 使用 uv 运行 Python 模块
+uv run python -m extractor.server
+```
+
+### MCP Client 配置
+
+在您的 MCP client (如 Claude Desktop) 中添加服务器配置：
+
+#### 方式一：直接命令方式
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "data-extractor",
+      "args": []
+    }
+  }
+}
+```
+
+#### 方式二：通过 uv 启动（推荐）
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": ["run", "data-extractor"],
+      "cwd": "/path/to/your/data-extractor"
+    }
+  }
+}
+```
+
+#### 方式三：从 GitHub 仓库直接安装和运行（推荐用于生产环境）
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.1",
+        "data-extractor"
+      ]
+    }
+  }
+}
+```
+
+#### 方式四：Python 模块方式（本地开发）
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "extractor.server"],
+      "cwd": "/path/to/your/data-extractor"
+    }
+  }
+}
+```
+
+**注意事项：**
+
+- 将 `cwd` 路径替换为您的项目实际路径
+- GitHub 仓库地址：`https://github.com/ThreeFish-AI/data-extractor.git`
+- 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
+- 当前最新稳定版本：v0.1.2
+
+## 🛠️ 工具详情
+
+### 1. scrape_webpage
+
+基础网页爬取工具，支持多种方法和自定义提取规则。
+
+**参数:**
+
+- `url`: 要爬取的 URL
+- `method`: 爬取方法 (auto/simple/scrapy/selenium)
+- `extract_config`: 数据提取配置 (可选)
+- `wait_for_element`: 等待的 CSS 选择器 (Selenium 专用)
+
+**示例:**
+
+```json
+{
+  "url": "https://example.com",
+  "method": "auto",
+  "extract_config": {
+    "title": "h1",
+    "content": {
+      "selector": ".content p",
+      "multiple": true,
+      "attr": "text"
+    }
+  }
+}
+```
+
+### 2. scrape_multiple_webpages
+
+并发爬取多个网页。
+
+**示例:**
+
+```json
+{
+  "urls": ["https://example1.com", "https://example2.com"],
+  "method": "simple",
+  "extract_config": {
+    "title": "h1",
+    "links": "a"
+  }
+}
+```
+
+### 3. scrape_with_stealth
+
+使用高级反检测技术爬取网页。
+
+**参数:**
+
+- `url`: 目标 URL
+- `method`: 隐身方法 (selenium/playwright)
+- `extract_config`: 提取配置
+- `wait_for_element`: 等待元素
+- `scroll_page`: 是否滚动页面加载动态内容
+
+**示例:**
+
+```json
+{
+  "url": "https://protected-site.com",
+  "method": "playwright",
+  "scroll_page": true,
+  "wait_for_element": ".dynamic-content"
+}
+```
+
+### 4. fill_and_submit_form
+
+表单填写和提交。
+
+**参数:**
+
+- `url`: 包含表单的页面 URL
+- `form_data`: 表单字段数据 (选择器:值 对)
+- `submit`: 是否提交表单
+- `submit_button_selector`: 提交按钮选择器
+- `method`: 方法 (selenium/playwright)
+
+**示例:**
+
+```json
+{
+  "url": "https://example.com/contact",
+  "form_data": {
+    "input[name='name']": "John Doe",
+    "input[name='email']": "john@example.com",
+    "textarea[name='message']": "Hello world"
+  },
+  "submit": true,
+  "method": "selenium"
+}
+```
+
+### 5. extract_links
+
+专门的链接提取工具。
+
+**参数:**
+
+- `url`: 目标 URL
+- `filter_domains`: 只包含这些域名的链接
+- `exclude_domains`: 排除这些域名的链接
+- `internal_only`: 只提取内部链接
+
+**示例:**
+
+```json
+{
+  "url": "https://example.com",
+  "internal_only": true
+}
+```
+
+### 6. extract_structured_data
+
+自动提取结构化数据 (联系信息、社交媒体链接等)。
+
+**参数:**
+
+- `url`: 目标 URL
+- `data_type`: 数据类型 (all/contact/social/content)
+
+**示例:**
+
+```json
+{
+  "url": "https://company.com",
+  "data_type": "contact"
+}
+```
+
+### 7. get_page_info
+
+快速获取页面基础信息。
+
+**示例:**
+
+```json
+{
+  "url": "https://example.com"
+}
+```
+
+### 8. check_robots_txt
+
+检查网站的 robots.txt 文件。
+
+### 9. get_server_metrics
+
+获取服务器性能指标和统计信息。
+
+### 10. clear_cache
+
+清除缓存的爬取结果。
+
+## 📖 数据提取配置
+
+### 简单选择器
+
+```json
+{
+  "title": "h1",
+  "links": "a"
+}
+```
+
+### 高级配置
+
+```json
+{
+  "products": {
+    "selector": ".product",
+    "multiple": true,
+    "attr": "text"
+  },
+  "prices": {
+    "selector": ".price",
+    "multiple": true,
+    "attr": "data-price"
+  },
+  "description": {
+    "selector": ".description",
+    "multiple": false,
+    "attr": "text"
+  }
+}
+```
+
 ## 🏗️ 架构设计
 
-### DataExtractor 核心引擎层
+### Data Extractor 核心引擎层
 
-DataExtractor 核心引擎采用分层架构设计，提供稳定可靠的网页抓取能力：
+Data Extractor 核心引擎采用分层架构设计，提供稳定可靠的网页抓取能力：
 
 #### 1. WebScraper 主控制器 (`extractor/scraper.py`)
 
@@ -142,7 +553,7 @@ class DataExtractorSettings(BaseSettings):
     )
 ```
 
-### DataExtractor MCP 工具集
+### Data Extractor MCP 工具集
 
 MCP (Model Context Protocol) 工具集基于 FastMCP 框架，提供 10 个专业级网页抓取工具：
 
@@ -163,22 +574,7 @@ async def scrape_webpage(url: str, method: str = "auto",
     """MCP 工具装饰器，自动处理输入验证和错误处理"""
 ```
 
-#### 2. 10 个核心 MCP 工具
-
-| 工具名称                     | 功能描述       | 使用场景                         |
-| ---------------------------- | -------------- | -------------------------------- |
-| **scrape_webpage**           | 单页面抓取     | 基础数据提取，支持配置化选择器   |
-| **scrape_multiple_webpages** | 批量页面抓取   | 并发处理多个 URL，提升效率       |
-| **scrape_with_stealth**      | 反检测抓取     | 应对反爬虫保护的高难度网站       |
-| **fill_and_submit_form**     | 表单自动化     | 登录表单、联系表单等交互操作     |
-| **extract_links**            | 专业链接提取   | 网站地图生成，链接分析           |
-| **extract_structured_data**  | 结构化数据提取 | JSON-LD、微数据、Open Graph 解析 |
-| **get_page_info**            | 页面信息获取   | 快速获取标题、状态码、元数据     |
-| **check_robots_txt**         | 爬虫规则检查   | 遵守网站爬取规范，合规性检查     |
-| **get_server_metrics**       | 性能指标监控   | 服务器状态监控，性能调优         |
-| **clear_cache**              | 缓存管理       | 释放内存，清理过期数据           |
-
-#### 3. 核心工具详细实现
+#### 2. 核心工具详细实现
 
 **scrape_webpage - 基础抓取工具**:
 
@@ -234,9 +630,9 @@ async def fill_and_submit_form(url: str, form_data: Dict,
     """
 ```
 
-## 🚀 实现方式与使用指南
+## 🚀 实现与使用指南
 
-### DataExtractor 核心引擎使用方式
+### Data Extractor 核心引擎使用方式
 
 #### 1. 直接使用核心引擎
 
@@ -328,7 +724,7 @@ async def enterprise_scrape(url: str):
         raise
 ```
 
-### DataExtractor MCP 工具集使用方式
+### Data Extractor MCP 工具集使用方式
 
 #### 1. MCP Client 集成
 
@@ -554,79 +950,6 @@ async def compliance_check_workflow(target_url: str):
     }
 ```
 
-## 📋 版本历史
-
-### v0.1.2 (2025-09-06)
-
-- **测试框架**: 建立完整的单元测试和集成测试体系，19 个基础测试全部通过
-- **测试文档**: 新增 67KB 详细测试文档和执行报告
-- **质量保障**: pytest 异步测试支持，Mock 策略和性能优化
-
-### v0.1.1 (2025-09-05)
-
-- **核心重构**: 包名从 `scrapy_mcp` 重构为 `extractor`，提升项目结构清晰度
-- **命令更新**: 项目入口命令统一为 `data-extractor`
-- **文档完善**: 更新所有配置示例和安装说明
-
-### v0.1.0 (2025-08-26)
-
-- **初始发布**: 完整的网页爬取 MCP Server 实现
-- **核心功能**: 10 个专业爬取工具，支持多种场景
-- **企业特性**: 速率限制、智能重试、缓存机制
-- **技术栈**: 迁移至 uv 包管理，增强开发体验
-
-## 🚀 特性
-
-### 核心功能
-
-- **多种爬取方法**: 支持简单 HTTP 请求、Scrapy 框架和浏览器自动化
-- **智能方法选择**: 自动选择最适合的爬取方法
-- **并发处理**: 支持多个 URL 的并发爬取
-- **配置化提取**: 灵活的数据提取配置系统
-
-### 高级功能
-
-- **反反爬虫**: 使用 undetected-chromedriver 和 Playwright 的隐身技术
-- **表单处理**: 自动填写和提交各种类型的表单
-- **JavaScript 支持**: 完整的浏览器渲染支持
-- **智能重试**: 指数退避重试机制
-- **结果缓存**: 内存缓存提升性能
-
-### 企业级特性
-
-- **错误处理**: 完善的错误分类和处理
-- **性能监控**: 详细的请求指标和统计
-- **速率限制**: 防止服务器过载
-- **代理支持**: 支持 HTTP 代理配置
-- **随机 UA**: 防检测的用户代理轮换
-
-## 📦 安装
-
-```bash
-# 确认 Python 版本 (需要 3.12+)
-python --version
-
-# 克隆仓库
-git clone https://github.com/ThreeFish-AI/data-extractor.git
-cd data-extractor
-
-# 快速设置（推荐）
-./scripts/setup.sh
-
-# 或手动安装
-# 使用 uv 安装依赖
-uv sync
-
-# 安装包括开发依赖
-uv sync --extra dev
-
-# 或者使用传统方式
-pip install -e .
-
-# 或者使用开发模式
-pip install -e ".[dev]"
-```
-
 ## 📋 版本管理
 
 ### 项目版本维护
@@ -641,43 +964,43 @@ pip install -e ".[dev]"
 
 1. **更新版本号**
 
-   ```bash
-   # 编辑 pyproject.toml 中的 version 字段
-   vim pyproject.toml
-   ```
+```bash
+# 编辑 pyproject.toml 中的 version 字段
+vim pyproject.toml
+```
 
 2. **更新变更日志**
 
-   ```bash
-   # 在 CHANGELOG.md 中记录变更内容
-   vim CHANGELOG.md
-   ```
+```bash
+# 在 CHANGELOG.md 中记录变更内容
+vim CHANGELOG.md
+```
 
 3. **更新 README 版本信息**
 
-   ```bash
-   # 更新 README.md 中的"当前最新稳定版本"
-   vim README.md
-   ```
+```bash
+# 更新 README.md 中的"当前最新稳定版本"
+vim README.md
+```
 
 4. **提交版本变更**
 
-   ```bash
-   git add pyproject.toml CHANGELOG.md README.md
-   git commit -m "chore(release): bump version to vX.Y.Z"
-   git tag -a vX.Y.Z -m "Release version X.Y.Z"
-   git push && git push --tags
-   ```
+```bash
+git add pyproject.toml CHANGELOG.md README.md
+git commit -m "chore(release): bump version to vX.Y.Z"
+git tag -a vX.Y.Z -m "Release version X.Y.Z"
+git push && git push --tags
+```
 
 5. **构建和发布**
 
-   ```bash
-   # 使用 uv 构建包
-   uv build
+```bash
+# 使用 uv 构建包
+uv build
 
-   # 发布到 PyPI（如需要）
-   uv publish
-   ```
+# 发布到 PyPI（如需要）
+uv publish
+```
 
 ### 版本检查
 
@@ -687,315 +1010,6 @@ python -c "import extractor; print(extractor.__version__)"
 
 # 或使用 uv
 uv run python -c "from extractor import __version__; print(__version__)"
-```
-
-## 🔧 配置
-
-创建 `.env` 文件来自定义配置：
-
-```bash
-# 服务器设置
-DATA_EXTRACTOR_SERVER_NAME=data-extractor
-DATA_EXTRACTOR_SERVER_VERSION=0.1.2
-
-# 并发和延迟设置
-DATA_EXTRACTOR_CONCURRENT_REQUESTS=16
-DATA_EXTRACTOR_DOWNLOAD_DELAY=1.0
-DATA_EXTRACTOR_RANDOMIZE_DOWNLOAD_DELAY=true
-
-# 浏览器设置
-DATA_EXTRACTOR_ENABLE_JAVASCRIPT=false
-DATA_EXTRACTOR_BROWSER_HEADLESS=true
-DATA_EXTRACTOR_BROWSER_TIMEOUT=30
-
-# 反检测设置
-DATA_EXTRACTOR_USE_RANDOM_USER_AGENT=true
-DATA_EXTRACTOR_USE_PROXY=false
-DATA_EXTRACTOR_PROXY_URL=
-
-# 重试设置
-DATA_EXTRACTOR_MAX_RETRIES=3
-DATA_EXTRACTOR_REQUEST_TIMEOUT=30
-```
-
-## 🚦 快速开始
-
-### 启动服务器
-
-```bash
-# 使用命令行
-data-extractor
-
-# 使用 uv 运行（推荐）
-uv run data-extractor
-
-# 或者使用Python
-python -m extractor.server
-
-# 使用 uv 运行 Python 模块
-uv run python -m extractor.server
-```
-
-### MCP Client 配置
-
-在您的 MCP client (如 Claude Desktop) 中添加服务器配置：
-
-#### 方式一：直接命令方式
-
-```json
-{
-  "mcpServers": {
-    "data-extractor": {
-      "command": "data-extractor",
-      "args": []
-    }
-  }
-}
-```
-
-#### 方式二：通过 uv 启动（推荐）
-
-```json
-{
-  "mcpServers": {
-    "data-extractor": {
-      "command": "uv",
-      "args": ["run", "data-extractor"],
-      "cwd": "/path/to/your/data-extractor"
-    }
-  }
-}
-```
-
-#### 方式三：从 GitHub 仓库直接安装和运行（推荐用于生产环境）
-
-```json
-{
-  "mcpServers": {
-    "data-extractor": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.1",
-        "data-extractor"
-      ]
-    }
-  }
-}
-```
-
-#### 方式四：Python 模块方式（本地开发）
-
-```json
-{
-  "mcpServers": {
-    "data-extractor": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "extractor.server"],
-      "cwd": "/path/to/your/data-extractor"
-    }
-  }
-}
-```
-
-**注意事项：**
-
-- 将 `cwd` 路径替换为您的项目实际路径
-- GitHub 仓库地址：`https://github.com/ThreeFish-AI/data-extractor.git`
-- 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
-- 当前最新稳定版本：v0.1.2
-
-## 🛠️ 可用工具
-
-### 1. scrape_webpage
-
-基础网页爬取工具，支持多种方法和自定义提取规则。
-
-**参数:**
-
-- `url`: 要爬取的 URL
-- `method`: 爬取方法 (auto/simple/scrapy/selenium)
-- `extract_config`: 数据提取配置 (可选)
-- `wait_for_element`: 等待的 CSS 选择器 (Selenium 专用)
-
-**示例:**
-
-```json
-{
-  "url": "https://example.com",
-  "method": "auto",
-  "extract_config": {
-    "title": "h1",
-    "content": {
-      "selector": ".content p",
-      "multiple": true,
-      "attr": "text"
-    }
-  }
-}
-```
-
-### 2. scrape_multiple_webpages
-
-并发爬取多个网页。
-
-**示例:**
-
-```json
-{
-  "urls": ["https://example1.com", "https://example2.com"],
-  "method": "simple",
-  "extract_config": {
-    "title": "h1",
-    "links": "a"
-  }
-}
-```
-
-### 3. scrape_with_stealth
-
-使用高级反检测技术爬取网页。
-
-**参数:**
-
-- `url`: 目标 URL
-- `method`: 隐身方法 (selenium/playwright)
-- `extract_config`: 提取配置
-- `wait_for_element`: 等待元素
-- `scroll_page`: 是否滚动页面加载动态内容
-
-**示例:**
-
-```json
-{
-  "url": "https://protected-site.com",
-  "method": "playwright",
-  "scroll_page": true,
-  "wait_for_element": ".dynamic-content"
-}
-```
-
-### 4. fill_and_submit_form
-
-表单填写和提交。
-
-**参数:**
-
-- `url`: 包含表单的页面 URL
-- `form_data`: 表单字段数据 (选择器:值 对)
-- `submit`: 是否提交表单
-- `submit_button_selector`: 提交按钮选择器
-- `method`: 方法 (selenium/playwright)
-
-**示例:**
-
-```json
-{
-  "url": "https://example.com/contact",
-  "form_data": {
-    "input[name='name']": "John Doe",
-    "input[name='email']": "john@example.com",
-    "textarea[name='message']": "Hello world"
-  },
-  "submit": true,
-  "method": "selenium"
-}
-```
-
-### 5. extract_links
-
-专门的链接提取工具。
-
-**参数:**
-
-- `url`: 目标 URL
-- `filter_domains`: 只包含这些域名的链接
-- `exclude_domains`: 排除这些域名的链接
-- `internal_only`: 只提取内部链接
-
-**示例:**
-
-```json
-{
-  "url": "https://example.com",
-  "internal_only": true
-}
-```
-
-### 6. extract_structured_data
-
-自动提取结构化数据 (联系信息、社交媒体链接等)。
-
-**参数:**
-
-- `url`: 目标 URL
-- `data_type`: 数据类型 (all/contact/social/content)
-
-**示例:**
-
-```json
-{
-  "url": "https://company.com",
-  "data_type": "contact"
-}
-```
-
-### 7. get_page_info
-
-快速获取页面基础信息。
-
-**示例:**
-
-```json
-{
-  "url": "https://example.com"
-}
-```
-
-### 8. check_robots_txt
-
-检查网站的 robots.txt 文件。
-
-### 9. get_server_metrics
-
-获取服务器性能指标和统计信息。
-
-### 10. clear_cache
-
-清除缓存的爬取结果。
-
-## 📖 数据提取配置
-
-### 简单选择器
-
-```json
-{
-  "title": "h1",
-  "links": "a"
-}
-```
-
-### 高级配置
-
-```json
-{
-  "products": {
-    "selector": ".product",
-    "multiple": true,
-    "attr": "text"
-  },
-  "prices": {
-    "selector": ".price",
-    "multiple": true,
-    "attr": "data-price"
-  },
-  "description": {
-    "selector": ".description",
-    "multiple": false,
-    "attr": "text"
-  }
-}
 ```
 
 ## 🎯 最佳实践
@@ -1079,7 +1093,7 @@ MIT License - 详见 LICENSE 文件
 
 ## 📞 支持
 
-如遇问题请提交 GitHub Issue 或联系维护团队。
+如遇问题请提交 GitHub Issue 或联系 [@ThreeFish-AI](aureliusshu@gmail.com)。
 
 ---
 
