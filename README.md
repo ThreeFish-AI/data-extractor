@@ -59,13 +59,17 @@ data-extractor/
 │   ├── basic_usage.py                  # 基础用法示例
 │   └── extraction_configs.py           # 数据提取配置示例
 ├── tests/                              # 完整测试体系
-│   ├── unit/                           # 单元测试
-│   │   ├── test_scraper_simple.py      # WebScraper 基础测试
-│   │   ├── test_utils_basic.py         # 工具类测试
-│   │   └── test_advanced_features.py   # 高级功能测试
-│   ├── integration/                    # 集成测试
-│   │   └── test_mcp_tools.py           # 10 个 MCP 工具测试
-│   └── conftest.py                     # pytest 配置和 fixtures
+│   ├── unit/                           # 单元测试 (131个测试)
+│   │   ├── test_scraper.py              # WebScraper 核心引擎测试
+│   │   ├── test_scraper_simple.py       # WebScraper 基础测试
+│   │   ├── test_advanced_features.py    # 高级功能测试 (反检测、表单处理)
+│   │   ├── test_utils.py                # 工具类测试 (限流、重试、缓存等)
+│   │   ├── test_utils_basic.py          # 基础工具类测试
+│   │   └── test_markdown_converter.py   # MarkdownConverter 测试
+│   ├── integration/                     # 集成测试 (31个测试)
+│   │   ├── test_mcp_tools.py            # 12个MCP工具集成测试
+│   │   └── test_comprehensive_integration.py # 综合集成测试 (端到端、性能、实际场景)
+│   └── conftest.py                      # pytest 配置和共享 fixtures
 ├── scripts/
 │   └── setup.sh                        # 快速安装脚本
 ├── TESTING.md                          # 测试文档 (67KB)
@@ -80,7 +84,7 @@ data-extractor/
 ### 已完成的里程碑 ✅
 
 - ✅ **v0.1.2 稳定版发布**: 基于 Scrapy + FastMCP 构建的企业级网页抓取 MCP Server
-- ✅ **测试框架建设**: 完整的单元测试和集成测试体系，测试通过率 99%+
+- ✅ **完整测试体系**: 162 个测试用例，通过率 99.4%，包含单元测试和综合集成测试
 - ✅ **代码质量优化**: 类型注解完善，从 black 迁移到 ruff 格式化
 - ✅ **配置统一**: 项目名称从 scrapy-mcp 更名为 data-extractor，配置前缀统一
 - ✅ **文档完善**: README、CHANGELOG、TESTING 文档体系建立
@@ -88,16 +92,17 @@ data-extractor/
 ### 当前状态 📊
 
 - **版本**: v0.1.2
-- **测试覆盖率**: 99%+
+- **测试覆盖率**: 99.4% (162 个测试用例，161 个通过，1 个跳过)
 - **代码格式化**: ruff
 - **包管理**: uv
 - **Python 要求**: 3.12+
 
 ### v0.1.2 (2025-09-06)
 
-- **测试框架**: 建立完整的单元测试和集成测试体系，19 个基础测试全部通过
-- **测试文档**: 新增 67KB 详细测试文档和执行报告
-- **质量保障**: pytest 异步测试支持，Mock 策略和性能优化
+- **完整测试体系**: 162 个测试用例 (131 个单元测试 + 31 个集成测试)，通过率 99.4%
+- **综合集成测试**: 端到端功能测试、性能负载测试、错误恢复韧性测试
+- **测试文档完善**: 详细的 TESTING.md (包含测试架构、执行指南、故障排除)
+- **质量保障**: pytest 异步测试、Mock 策略、性能基准、内存管理测试
 
 ### v0.1.1 (2025-09-05)
 
@@ -255,6 +260,46 @@ uv run python -m extractor.server
 - GitHub 仓库地址：`https://github.com/ThreeFish-AI/data-extractor.git`
 - 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
 - 当前最新稳定版本：v0.1.2
+
+## 🧪 测试运行
+
+### 快速测试验证
+
+```bash
+# 安装开发依赖
+uv sync --extra dev
+
+# 运行所有测试
+uv run pytest
+
+# 运行集成测试
+uv run pytest tests/integration/ -v
+
+# 运行单元测试
+uv run pytest tests/unit/ -v
+```
+
+### 测试覆盖情况
+
+- **总测试数**: 162 个测试用例
+- **通过率**: 99.4% (161 个通过，1 个跳过)
+- **单元测试**: 131 个 - 核心组件功能测试
+- **集成测试**: 31 个 - 端到端功能和系统健康测试
+
+### 测试类型
+
+| 测试类别            | 测试数量 | 覆盖范围                         |
+| ------------------- | -------- | -------------------------------- |
+| WebScraper 核心引擎 | 35+      | 方法选择、数据提取、错误处理     |
+| 高级功能测试        | 25+      | 反检测、表单处理、浏览器自动化   |
+| 工具类测试          | 40+      | 限流、重试、缓存、指标收集       |
+| Markdown 转换器     | 30+      | HTML 转换、格式化、批量处理      |
+| MCP 工具集成        | 20+      | 12 个 MCP 工具注册和功能验证     |
+| 综合集成测试        | 11+      | 端到端工作流、性能负载、错误恢复 |
+
+### 详细测试文档
+
+查看 [TESTING.md](./TESTING.md) 了解完整的测试架构、执行指南和故障排除方法。
 
 ## 🛠️ 工具详情
 

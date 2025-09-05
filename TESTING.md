@@ -18,7 +18,8 @@ tests/
 │   └── test_markdown_converter.py  # MarkdownConverter 测试
 ├── integration/                    # 集成测试
 │   ├── __init__.py
-│   └── test_mcp_tools.py           # 12 个 MCP 工具集成测试
+│   ├── test_mcp_tools.py           # 12 个 MCP 工具集成测试
+│   └── test_comprehensive_integration.py  # 综合集成测试 (端到端、性能、实际场景)
 └── fixtures/                       # 测试数据和固定装置
 ```
 
@@ -35,6 +36,8 @@ tests/
 - 测试 MCP 工具的端到端功能
 - 验证组件间的交互
 - 模拟真实使用场景
+- 性能和负载测试
+- 系统健康和诊断检查
 
 ## 核心引擎测试 (单元测试)
 
@@ -369,6 +372,193 @@ async def test_scrape_webpage_with_extraction_config(self, sample_scrape_result)
         )
 ```
 
+## 综合集成测试 (`test_comprehensive_integration.py`)
+
+### 端到端功能测试
+
+#### 1. TestComprehensiveIntegration - 综合功能测试
+
+- **完整转换流程**: 测试从网页抓取到 Markdown 转换的完整流程
+- **高级格式化集成**: 测试所有格式化功能的协同工作
+- **真实网站测试**: 测试实际新闻文章、技术博客的转换效果
+- **批量转换工作流**: 测试混合成功/失败结果的批量处理
+- **配置动态应用**: 测试转换过程中配置选项的动态应用
+
+```python
+@pytest.mark.asyncio
+async def test_full_markdown_conversion_pipeline(self, mock_successful_scrape_result):
+    """测试完整的 Markdown 转换流程"""
+    tools = await app.get_tools()
+    convert_tool = tools["convert_webpage_to_markdown"]
+
+    # 执行端到端转换测试
+    with patch('extractor.server.web_scraper') as mock_scraper:
+        mock_scraper.scrape_url.return_value = mock_successful_scrape_result
+        result = await convert_tool.fn(
+            url="https://example.com/article",
+            formatting_options={"format_tables": True, "apply_typography": True}
+        )
+        assert result["success"] is True
+        assert "conversion_result" in result
+```
+
+#### 2. TestPerformanceAndLoad - 性能与负载测试
+
+- **并发性能测试**: 测试同时处理 20 个 URL 的并发能力
+- **大内容处理**: 测试大型网页内容的转换性能
+- **内存使用监控**: 测试长时间运行的内存稳定性
+- **响应时间测试**: 测试各种场景下的响应时间要求
+- **系统资源监控**: 测试 CPU 和内存资源使用情况
+
+```python
+@pytest.mark.asyncio
+async def test_performance_under_load(self):
+    """测试系统负载性能"""
+    start_time = time.time()
+
+    # 创建 20 个并发任务
+    tasks = []
+    for i in range(20):
+        task = self._simulate_conversion_task(f"https://example{i}.com")
+        tasks.append(task)
+
+    # 并发执行并测量性能
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    duration = time.time() - start_time
+
+    # 验证性能要求
+    assert duration < 30.0  # 20个任务在30秒内完成
+    success_count = sum(1 for r in results if not isinstance(r, Exception))
+    assert success_count >= 18  # 至少90%成功率
+```
+
+#### 3. TestErrorResilienceAndRecovery - 错误恢复与韧性测试
+
+- **网络错误处理**: 测试网络超时、连接失败的恢复能力
+- **部分失败处理**: 测试批量操作中部分失败的处理逻辑
+- **资源耗尽恢复**: 测试系统资源不足时的自动恢复
+- **异常场景覆盖**: 测试各种异常情况下的系统稳定性
+- **故障转移机制**: 测试组件故障时的自动切换能力
+
+#### 4. TestRealWorldScenarios - 真实场景测试
+
+- **新闻文章转换**: 测试复杂新闻网站的内容提取和格式化
+- **技术博客处理**: 测试包含代码块的技术内容转换
+- **电商页面测试**: 测试产品页面的结构化数据提取
+- **多媒体内容**: 测试包含图片、视频的页面处理
+- **多语言支持**: 测试中文、英文等多语言内容处理
+
+````python
+@pytest.mark.asyncio
+async def test_news_article_conversion(self):
+    """测试新闻文章的真实转换场景"""
+    # 模拟复杂的新闻网站结构
+    news_html = self._create_complex_news_html()
+
+    converter = MarkdownConverter()
+    result = converter.convert_webpage_to_markdown({
+        "url": "https://news-example.com/article",
+        "content": {"html": news_html, "text": "Extracted text content"},
+        "title": "Breaking News: Technology Advances",
+        "meta_description": "Latest news in technology sector"
+    })
+
+    # 验证转换质量
+    markdown = result["markdown"]
+    assert "# Breaking News: Technology Advances" in markdown
+    assert "## " in markdown  # 应包含副标题
+    assert "|" in markdown    # 应包含表格
+    assert "```" in markdown  # 应包含代码块
+````
+
+#### 5. TestConfigurationFlexibility - 配置灵活性测试
+
+- **动态配置切换**: 测试运行时配置选项的动态切换
+- **配置参数验证**: 测试各种配置参数组合的有效性
+- **默认配置测试**: 测试默认配置下的系统行为
+- **配置冲突处理**: 测试相互冲突配置的处理逻辑
+- **配置持久性测试**: 测试配置在不同操作间的持久性
+
+### TestSystemHealthAndDiagnostics - 系统健康诊断
+
+#### 组件初始化验证
+
+- **服务器组件检查**: 验证所有核心组件正确初始化
+- **工具注册完整性**: 确保所有 12 个 MCP 工具正确注册
+- **依赖关系验证**: 检查组件间依赖关系的正确性
+- **配置一致性检查**: 验证系统配置的一致性和有效性
+
+#### 系统韧性测试
+
+- **并发访问测试**: 测试多个客户端同时访问的稳定性
+- **长期运行测试**: 测试系统长期运行的稳定性
+- **资源泄漏检测**: 监控和检测潜在的内存泄漏
+- **故障恢复能力**: 测试系统从故障状态的自动恢复能力
+
+#### 工具参数模式完整性
+
+- **参数模式验证**: 确保所有工具具有正确的参数模式
+- **描述信息检查**: 验证工具描述信息的完整性和准确性
+- **模式结构验证**: 检查工具模式的结构完整性
+- **参数类型验证**: 验证参数类型定义的正确性
+
+```python
+@pytest.mark.asyncio
+async def test_system_resilience_under_load(self):
+    """测试系统负载韧性"""
+    # 并发访问多个工具
+    tasks = []
+    for tool_name in ["scrape_webpage", "convert_webpage_to_markdown", "get_server_metrics"]:
+        task = app.get_tool(tool_name)
+        tasks.append(task)
+
+    # 验证并发访问的稳定性
+    results = await asyncio.gather(*tasks)
+    for result in results:
+        assert result is not None
+        assert hasattr(result, "name")
+```
+
+### TestMemoryAndResourceManagement - 内存和资源管理测试
+
+#### 内存管理测试
+
+- **内存泄漏检测**: 通过重复操作检测内存泄漏
+- **垃圾回收验证**: 验证对象正确被垃圾回收
+- **内存使用边界**: 测试内存使用的合理边界
+- **大对象处理**: 测试大型内容对象的内存管理
+
+#### 资源清理测试
+
+- **文件句柄管理**: 确保文件句柄正确关闭
+- **网络连接清理**: 验证网络连接正确释放
+- **缓存清理机制**: 测试缓存的自动清理功能
+- **临时资源清理**: 验证临时资源的及时清理
+
+```python
+@pytest.mark.asyncio
+async def test_memory_and_resource_management(self):
+    """测试内存和资源管理"""
+    import gc
+
+    initial_objects = len(gc.get_objects())
+
+    # 重复创建和使用转换器
+    for i in range(10):
+        converter = MarkdownConverter()
+        html = f"<html><body><h1>Test {i}</h1><p>Content {i}</p></body></html>"
+        markdown = converter.html_to_markdown(html)
+        assert "Test" in markdown
+        del converter
+
+    gc.collect()
+    final_objects = len(gc.get_objects())
+    object_growth = final_objects - initial_objects
+
+    # 验证没有严重内存泄漏
+    assert object_growth < 1000, f"Memory leak detected: {object_growth} new objects"
+```
+
 ## 测试配置与固定装置 (`conftest.py`)
 
 ### 共享 Fixtures
@@ -629,7 +819,35 @@ pytest --pdb --pdbcls=IPython.terminal.debugger:Pdb
 | AntiDetectionScraper   | 90%+       | 隐身功能、行为模拟           |
 | FormHandler            | 90%+       | 表单元素识别、提交逻辑       |
 | Utils (RateLimiter 等) | 95%+       | 边界条件、并发安全           |
+| MarkdownConverter      | 95%+       | HTML 转换、格式化、批量处理  |
 | MCP Tools              | 95%+       | 输入验证、错误响应           |
-| 整体项目               | 90%+       | 端到端功能完整性             |
+| 集成测试 (端到端)      | 90%+       | 完整工作流、性能、韧性       |
+| 整体项目               | 92%+       | 端到端功能完整性             |
+
+### 新增集成测试覆盖范围
+
+#### MCP 工具集成测试 (`test_mcp_tools.py`)
+
+- **工具注册验证**: 确保所有 12 个 MCP 工具正确注册
+- **工具结构检查**: 验证工具属性、描述、参数模式完整性
+- **Markdown 转换集成**: 测试 Markdown 转换工具的集成功能
+- **系统健康诊断**: 验证系统组件初始化和基本功能
+
+#### 综合集成测试 (`test_comprehensive_integration.py`)
+
+- **端到端工作流**: 从网页抓取到 Markdown 转换的完整流程测试
+- **性能负载测试**: 并发处理、响应时间、系统资源使用测试
+- **错误恢复韧性**: 网络故障、部分失败、异常处理测试
+- **真实场景模拟**: 新闻网站、技术博客、多媒体内容测试
+- **配置灵活性**: 动态配置、参数验证、默认行为测试
+- **系统诊断监控**: 内存管理、资源清理、长期稳定性测试
+
+#### 测试质量保证
+
+- **测试隔离性**: 每个测试独立执行，无状态依赖
+- **Mock 策略**: 外部依赖完全隔离，确保测试稳定性
+- **异常覆盖**: 全面测试错误情况和边界条件
+- **性能基准**: 建立性能基准，确保系统响应要求
+- **资源监控**: 监控内存泄漏、资源使用、垃圾回收效果
 
 通过这套完整的测试体系，确保 Data Extractor 核心引擎和 MCP 工具集的稳定性、可靠性和性能表现。
