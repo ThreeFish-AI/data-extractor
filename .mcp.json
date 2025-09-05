@@ -1,13 +1,16 @@
 {
   "mcpServers": {
-    "data-extractor": {
-      "command": "uv",
+    "filesystem": {
+      "command": "npx",
       "args": [
-        "run",
-        "--with",
-        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.0",
-        "data-extractor"
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/cm.huang/Documents/workspace/projects/aurelius/attention"
       ]
+    },
+    "everything": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-everything"]
     },
     "time": {
       "command": "uvx",
