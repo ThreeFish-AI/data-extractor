@@ -95,7 +95,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - .env.example: 所有环境变量名称按新前缀规范更新
   - README.md 和 CLAUDE.md: 配置示例和使用说明同步更新
   - examples/basic_usage.py: 示例标题和描述文档更新
-- **.mcp.json**: MCP 服务器配置切换到外部 GitHub 包源 `git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.0`
+- **.mcp.json**: MCP 服务器配置切换到外部 GitHub 包源 `git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.1`
 - **CLAUDE.md**: 项目指导文档重构，新增架构概述和开发规范说明
 - **README.md**: 文档更新以反映新包结构和使用方式
 - **MIGRATION.md**: 迁移指南更新适配包重构

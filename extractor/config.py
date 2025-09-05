@@ -10,7 +10,7 @@ class DataExtractorSettings(BaseSettings):
 
     # Server settings
     server_name: str = Field(default="data-extractor")
-    server_version: str = Field(default="0.1.0")
+    server_version: str = Field(default="0.1.2")
 
     # Data Extractor settings
     concurrent_requests: int = Field(default=16)
