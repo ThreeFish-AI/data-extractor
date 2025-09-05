@@ -61,4 +61,5 @@ dev-dependencies = [
     "pytest-asyncio>=0.23.0",
     "mypy>=1.10.0",
     "pre-commit>=3.8.0",
+    "types-requests>=2.32.4.20250809",
 ]
