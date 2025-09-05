@@ -5,6 +5,18 @@ All notable changes to the Scrapy MCP Server project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 基于 Scrapy + FastMCP 构建 WebFetch MCP Server
+
+- [x] 初始化 scrapy-mcp: 我需要一个可用于爬取网页内容的 MCP Server, 需要简单好用,页面读取能力稳定,请参考成熟技术方案,基于 Scrapy + FastMCP 帮我搭建一个这样的 MCP Server,以满足我在商业工具中长期的需求.
+- [x] git init:
+- [x] 帮我新增 .gitignore: 帮我增加一个 .gitignore，尽量精简并符合当前项目要求
+- [x] claude code: /init
+- [x] use uv: 将项目的包管理工具更换为 uv
+- [x] 在 README.md 的 MCP Client 配置指引中帮我添加通过 Repo 方式和 uv 指令启动该 MCP Server 的指引
+- [x] 根据项目名称、结构、GitHub Repo 地址等(git@github.com:ThreeFish-AI/scrapy-mcp.git)信息，修正 README.md 中类似 <repository-url> 的占位符、模块名、服务名、路径等
+- [x] 将 Python 版本的最低要求改为 3.12，注意相关依赖的可用性。
+- [x] 解决 uv run scrapy-mcp 启动异常问题；
+
 ## v0.1.1
 
 #### Released on 2025/xx/xx
