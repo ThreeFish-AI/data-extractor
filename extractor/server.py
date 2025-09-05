@@ -62,8 +62,7 @@ class ScrapeRequest(BaseModel):
     def validate_method(cls, v):
         """Validate scraping method."""
         if v not in ["auto", "simple", "scrapy", "selenium"]:
-            raise ValueError(
-                "Method must be one of: auto, simple, scrapy, selenium")
+            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
         return v
 
 
@@ -94,8 +93,7 @@ class MultipleScrapeRequest(BaseModel):
     def validate_method(cls, v):
         """Validate scraping method."""
         if v not in ["auto", "simple", "scrapy", "selenium"]:
-            raise ValueError(
-                "Method must be one of: auto, simple, scrapy, selenium")
+            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
         return v
 
 
@@ -262,7 +260,8 @@ async def extract_links(
 
         # Scrape the page to get links
         scrape_result = await web_scraper.scrape_url(
-            url=url, method="simple"  # Use simple method for link extraction
+            url=url,
+            method="simple",  # Use simple method for link extraction
         )
 
         if "error" in scrape_result:
@@ -437,8 +436,7 @@ class FormRequest(BaseModel):
     form_data: Dict[str, Any] = Field(
         ..., description="Form field data (selector: value pairs)"
     )
-    submit: bool = Field(
-        default=False, description="Whether to submit the form")
+    submit: bool = Field(default=False, description="Whether to submit the form")
     submit_button_selector: Optional[str] = Field(
         default=None, description="Selector for submit button"
     )
@@ -530,8 +528,7 @@ async def scrape_with_stealth(
 
         # Validate and normalize extract config
         if extract_config:
-            extract_config = ConfigValidator.validate_extract_config(
-                extract_config)
+            extract_config = ConfigValidator.validate_extract_config(extract_config)
 
         # Perform stealth scraping with retry
         result = await retry_manager.retry_async(
@@ -586,11 +583,9 @@ async def scrape_with_stealth(
 
     except Exception as e:
         duration_ms = (
-            int((time.time() - start_time) *
-                1000) if "start_time" in locals() else 0
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(
-            e, url, f"stealth_{method}")
+        error_response = ErrorHandler.handle_scraping_error(e, url, f"stealth_{method}")
         metrics_collector.record_request(
             url,
             False,
@@ -731,8 +726,7 @@ async def fill_and_submit_form(
         duration_ms = int((time.time() - start_time) * 1000)
 
         if result.get("success"):
-            metrics_collector.record_request(
-                url, True, duration_ms, f"form_{method}")
+            metrics_collector.record_request(url, True, duration_ms, f"form_{method}")
 
             return {
                 "success": True,
@@ -762,11 +756,9 @@ async def fill_and_submit_form(
 
     except Exception as e:
         duration_ms = (
-            int((time.time() - start_time) *
-                1000) if "start_time" in locals() else 0
+            int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(
-            e, url, f"form_{method}")
+        error_response = ErrorHandler.handle_scraping_error(e, url, f"form_{method}")
         metrics_collector.record_request(
             url,
             False,

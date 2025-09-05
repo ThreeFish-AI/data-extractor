@@ -1,5 +1,14 @@
 {
   "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.1",
+        "data-extractor"
+      ]
+    },
     "filesystem": {
       "command": "npx",
       "args": [

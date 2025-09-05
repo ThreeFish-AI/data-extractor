@@ -56,9 +56,8 @@ class AntiDetectionScraper:
             options.add_argument(f"--user-agent={self.ua.random}")
 
         # Additional stealth options
-        options.add_experimental_option(
-            "excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
         options.add_argument("--disable-blink-features=AutomationControlled")
 
         # Proxy support
@@ -70,7 +69,8 @@ class AntiDetectionScraper:
 
         # Execute stealth scripts
         driver.execute_script(
-            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
 
         return driver
 
@@ -86,14 +86,16 @@ class AntiDetectionScraper:
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--disable-extensions",
-                "--window-size=1920,1080"
-            ]
+                "--window-size=1920,1080",
+            ],
         )
 
         # Create context with randomized settings
         context_options = {
             "viewport": {"width": 1920, "height": 1080},
-            "user_agent": self.ua.random if settings.use_random_user_agent else settings.default_user_agent
+            "user_agent": self.ua.random
+            if settings.use_random_user_agent
+            else settings.default_user_agent,
         }
 
         if settings.use_proxy and settings.proxy_url:
@@ -118,10 +120,14 @@ class AntiDetectionScraper:
 
         self.page = await self.context.new_page()
 
-    async def scrape_with_stealth(self, url: str, method: str = "selenium",
-                                  extract_config: Optional[Dict] = None,
-                                  wait_for_element: Optional[str] = None,
-                                  scroll_page: bool = False) -> Dict[str, Any]:
+    async def scrape_with_stealth(
+        self,
+        url: str,
+        method: str = "selenium",
+        extract_config: Optional[Dict] = None,
+        wait_for_element: Optional[str] = None,
+        scroll_page: bool = False,
+    ) -> Dict[str, Any]:
         """
         Scrape using stealth techniques to avoid detection.
 
@@ -151,8 +157,13 @@ class AntiDetectionScraper:
         finally:
             await self.cleanup()
 
-    async def _scrape_with_selenium_stealth(self, url: str, extract_config: Optional[Dict],
-                                            wait_for_element: Optional[str], scroll_page: bool) -> Dict[str, Any]:
+    async def _scrape_with_selenium_stealth(
+        self,
+        url: str,
+        extract_config: Optional[Dict],
+        wait_for_element: Optional[str],
+        scroll_page: bool,
+    ) -> Dict[str, Any]:
         """Scrape using Selenium with stealth techniques."""
         self.driver = await self._get_undetected_chrome_driver()
 
@@ -168,12 +179,10 @@ class AntiDetectionScraper:
         if wait_for_element:
             try:
                 WebDriverWait(self.driver, settings.browser_timeout).until(
-                    EC.presence_of_element_located(
-                        (By.CSS_SELECTOR, wait_for_element))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, wait_for_element))
                 )
             except TimeoutException:
-                logger.warning(
-                    f"Timeout waiting for element: {wait_for_element}")
+                logger.warning(f"Timeout waiting for element: {wait_for_element}")
 
         # Scroll page to load dynamic content
         if scroll_page:
@@ -188,8 +197,13 @@ class AntiDetectionScraper:
 
         return result
 
-    async def _scrape_with_playwright_stealth(self, url: str, extract_config: Optional[Dict],
-                                              wait_for_element: Optional[str], scroll_page: bool) -> Dict[str, Any]:
+    async def _scrape_with_playwright_stealth(
+        self,
+        url: str,
+        extract_config: Optional[Dict],
+        wait_for_element: Optional[str],
+        scroll_page: bool,
+    ) -> Dict[str, Any]:
         """Scrape using Playwright with stealth techniques."""
         await self._setup_playwright_browser()
 
@@ -202,10 +216,11 @@ class AntiDetectionScraper:
         # Wait for specific element if specified
         if wait_for_element:
             try:
-                await self.page.wait_for_selector(wait_for_element, timeout=settings.browser_timeout * 1000)
+                await self.page.wait_for_selector(
+                    wait_for_element, timeout=settings.browser_timeout * 1000
+                )
             except Exception:
-                logger.warning(
-                    f"Timeout waiting for element: {wait_for_element}")
+                logger.warning(f"Timeout waiting for element: {wait_for_element}")
 
         # Scroll page to load dynamic content
         if scroll_page:
@@ -222,8 +237,7 @@ class AntiDetectionScraper:
 
     async def _scroll_page_selenium(self):
         """Scroll page naturally to trigger dynamic content loading."""
-        total_height = self.driver.execute_script(
-            "return document.body.scrollHeight")
+        total_height = self.driver.execute_script("return document.body.scrollHeight")
         current_height = 0
 
         while current_height < total_height:
@@ -237,8 +251,7 @@ class AntiDetectionScraper:
             current_height += scroll_amount
 
             # Check if page height changed (lazy loading)
-            new_height = self.driver.execute_script(
-                "return document.body.scrollHeight")
+            new_height = self.driver.execute_script("return document.body.scrollHeight")
             if new_height > total_height:
                 total_height = new_height
 
@@ -298,21 +311,21 @@ class AntiDetectionScraper:
         except Exception as e:
             logger.debug(f"Error simulating human behavior: {str(e)}")
 
-    async def _extract_data_selenium(self, extract_config: Optional[Dict]) -> Dict[str, Any]:
+    async def _extract_data_selenium(
+        self, extract_config: Optional[Dict]
+    ) -> Dict[str, Any]:
         """Extract data using Selenium."""
         from bs4 import BeautifulSoup
 
         soup = BeautifulSoup(self.driver.page_source, "html.parser")
 
-        result = {
-            "title": self.driver.title,
-            "content": {}
-        }
+        result = {"title": self.driver.title, "content": {}}
 
         # Get meta description
         try:
             meta_desc = self.driver.find_element(
-                By.CSS_SELECTOR, "meta[name='description']")
+                By.CSS_SELECTOR, "meta[name='description']"
+            )
             result["meta_description"] = meta_desc.get_attribute("content")
         except NoSuchElementException:
             result["meta_description"] = None
@@ -321,10 +334,8 @@ class AntiDetectionScraper:
             for key, config in extract_config.items():
                 try:
                     if isinstance(config, str):
-                        elements = self.driver.find_elements(
-                            By.CSS_SELECTOR, config)
-                        result["content"][key] = [
-                            elem.text for elem in elements]
+                        elements = self.driver.find_elements(By.CSS_SELECTOR, config)
+                        result["content"][key] = [elem.text for elem in elements]
                     elif isinstance(config, dict):
                         selector = config.get("selector")
                         attr = config.get("attr")
@@ -332,26 +343,29 @@ class AntiDetectionScraper:
 
                         if multiple:
                             elements = self.driver.find_elements(
-                                By.CSS_SELECTOR, selector)
+                                By.CSS_SELECTOR, selector
+                            )
                             if attr == "text":
                                 extracted = [elem.text for elem in elements]
                             elif attr:
-                                extracted = [elem.get_attribute(
-                                    attr) for elem in elements]
+                                extracted = [
+                                    elem.get_attribute(attr) for elem in elements
+                                ]
                             else:
-                                extracted = [elem.get_attribute(
-                                    "outerHTML") for elem in elements]
+                                extracted = [
+                                    elem.get_attribute("outerHTML") for elem in elements
+                                ]
                         else:
                             try:
                                 element = self.driver.find_element(
-                                    By.CSS_SELECTOR, selector)
+                                    By.CSS_SELECTOR, selector
+                                )
                                 if attr == "text":
                                     extracted = element.text
                                 elif attr:
                                     extracted = element.get_attribute(attr)
                                 else:
-                                    extracted = element.get_attribute(
-                                        "outerHTML")
+                                    extracted = element.get_attribute("outerHTML")
                             except:
                                 extracted = None
 
@@ -363,23 +377,26 @@ class AntiDetectionScraper:
             # Default extraction
             result["content"]["text"] = soup.get_text(strip=True)
             result["content"]["links"] = [
-                {"url": urljoin(self.driver.current_url, a.get(
-                    "href", "")), "text": a.get_text(strip=True)}
+                {
+                    "url": urljoin(self.driver.current_url, a.get("href", "")),
+                    "text": a.get_text(strip=True),
+                }
                 for a in soup.find_all("a", href=True)
             ]
 
         return result
 
-    async def _extract_data_playwright(self, extract_config: Optional[Dict]) -> Dict[str, Any]:
+    async def _extract_data_playwright(
+        self, extract_config: Optional[Dict]
+    ) -> Dict[str, Any]:
         """Extract data using Playwright."""
-        result = {
-            "title": await self.page.title(),
-            "content": {}
-        }
+        result = {"title": await self.page.title(), "content": {}}
 
         # Get meta description
         try:
-            meta_desc = await self.page.get_attribute("meta[name='description']", "content")
+            meta_desc = await self.page.get_attribute(
+                "meta[name='description']", "content"
+            )
             result["meta_description"] = meta_desc
         except:
             result["meta_description"] = None
@@ -437,10 +454,12 @@ class AntiDetectionScraper:
                 href = await link_elem.get_attribute("href")
                 text = await link_elem.text_content()
                 if href:
-                    links.append({
-                        "url": urljoin(self.page.url, href),
-                        "text": text.strip() if text else ""
-                    })
+                    links.append(
+                        {
+                            "url": urljoin(self.page.url, href),
+                            "text": text.strip() if text else "",
+                        }
+                    )
             result["content"]["links"] = links
 
         return result
@@ -474,10 +493,14 @@ class FormHandler:
     def __init__(self, driver_or_page):
         self.driver_or_page = driver_or_page
         # Simple check for Playwright page
-        self.is_playwright = hasattr(driver_or_page, 'fill')
+        self.is_playwright = hasattr(driver_or_page, "fill")
 
-    async def fill_form(self, form_data: Dict[str, Any], submit: bool = False,
-                        submit_button_selector: Optional[str] = None) -> Dict[str, Any]:
+    async def fill_form(
+        self,
+        form_data: Dict[str, Any],
+        submit: bool = False,
+        submit_button_selector: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Fill and optionally submit a form.
 
@@ -497,17 +520,11 @@ class FormHandler:
                 submit_result = await self._submit_form(submit_button_selector)
                 results["_submit"] = submit_result
 
-            return {
-                "success": True,
-                "results": results
-            }
+            return {"success": True, "results": results}
 
         except Exception as e:
             logger.error(f"Error filling form: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     async def _fill_field(self, selector: str, value: Any) -> Dict[str, Any]:
         """Fill a single form field."""
@@ -523,8 +540,7 @@ class FormHandler:
     async def _fill_field_selenium(self, selector: str, value: Any) -> Dict[str, Any]:
         """Fill field using Selenium."""
         try:
-            element = self.driver_or_page.find_element(
-                By.CSS_SELECTOR, selector)
+            element = self.driver_or_page.find_element(By.CSS_SELECTOR, selector)
             tag_name = element.tag_name.lower()
             input_type = element.get_attribute("type")
 
@@ -597,7 +613,9 @@ class FormHandler:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def _submit_form(self, submit_button_selector: Optional[str] = None) -> Dict[str, Any]:
+    async def _submit_form(
+        self, submit_button_selector: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Submit the form."""
         try:
             if self.is_playwright:
@@ -608,13 +626,16 @@ class FormHandler:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def _submit_form_selenium(self, submit_button_selector: Optional[str] = None) -> Dict[str, Any]:
+    async def _submit_form_selenium(
+        self, submit_button_selector: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Submit form using Selenium."""
         try:
             if submit_button_selector:
                 # Use specific submit button
                 submit_button = self.driver_or_page.find_element(
-                    By.CSS_SELECTOR, submit_button_selector)
+                    By.CSS_SELECTOR, submit_button_selector
+                )
                 submit_button.click()
             else:
                 # Try to find submit button automatically
@@ -623,7 +644,7 @@ class FormHandler:
                     "button[type='submit']",
                     "button:contains('Submit')",
                     "input[value*='Submit']",
-                    "button:contains('Send')"
+                    "button:contains('Send')",
                 ]
 
                 for selector in submit_selectors:
@@ -632,10 +653,12 @@ class FormHandler:
                             # Use XPath for text content
                             xpath = f"//button[contains(text(), 'Submit')] | //button[contains(text(), 'Send')]"
                             submit_button = self.driver_or_page.find_element(
-                                By.XPATH, xpath)
+                                By.XPATH, xpath
+                            )
                         else:
                             submit_button = self.driver_or_page.find_element(
-                                By.CSS_SELECTOR, selector)
+                                By.CSS_SELECTOR, selector
+                            )
 
                         submit_button.click()
                         break
@@ -643,8 +666,7 @@ class FormHandler:
                         continue
                 else:
                     # If no submit button found, try submitting the form directly
-                    form = self.driver_or_page.find_element(
-                        By.TAG_NAME, "form")
+                    form = self.driver_or_page.find_element(By.TAG_NAME, "form")
                     form.submit()
 
             # Wait for page to load after submission
@@ -655,7 +677,9 @@ class FormHandler:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def _submit_form_playwright(self, submit_button_selector: Optional[str] = None) -> Dict[str, Any]:
+    async def _submit_form_playwright(
+        self, submit_button_selector: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Submit form using Playwright."""
         try:
             if submit_button_selector:
@@ -667,7 +691,7 @@ class FormHandler:
                     "input[type='submit']",
                     "button[type='submit']",
                     "text=Submit",
-                    "text=Send"
+                    "text=Send",
                 ]
 
                 for selector in submit_selectors:
@@ -682,7 +706,9 @@ class FormHandler:
 
             # Wait for navigation or response
             try:
-                await self.driver_or_page.wait_for_load_state("networkidle", timeout=10000)
+                await self.driver_or_page.wait_for_load_state(
+                    "networkidle", timeout=10000
+                )
             except:
                 pass  # Ignore timeout, form might submit without navigation
 

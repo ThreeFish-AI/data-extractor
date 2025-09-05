@@ -94,16 +94,8 @@ def sample_extraction_config():
     return {
         "title": "title",
         "heading": "h1",
-        "content": {
-            "selector": ".content p",
-            "multiple": True,
-            "attr": "text"
-        },
-        "links": {
-            "selector": "a",
-            "multiple": True,
-            "attr": "href"
-        }
+        "content": {"selector": ".content p", "multiple": True, "attr": "text"},
+        "links": {"selector": "a", "multiple": True, "attr": "href"},
     }
 
 
@@ -119,14 +111,14 @@ def sample_scrape_result():
             "title": "Test Page",
             "heading": "Test Heading",
             "content": ["Test paragraph 1", "Test paragraph 2"],
-            "links": ["https://example.com"]
+            "links": ["https://example.com"],
         },
         "metadata": {
             "content_length": 500,
             "response_time": 1.5,
             "final_url": "https://example.com",
-            "content_type": "text/html"
-        }
+            "content_type": "text/html",
+        },
     }
 
 

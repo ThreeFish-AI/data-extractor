@@ -44,7 +44,7 @@ class DataExtractorSettings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "extra": "ignore",  # Allow extra environment variables
-        "env_prefix": "DATA_EXTRACTOR_"  # Automatically map env vars with this prefix
+        "env_prefix": "DATA_EXTRACTOR_",  # Automatically map env vars with this prefix
     }
 
     def get_scrapy_settings(self) -> Dict[str, Any]:

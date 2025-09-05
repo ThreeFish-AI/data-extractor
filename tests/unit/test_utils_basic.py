@@ -28,7 +28,7 @@ class TestRateLimiterBasic:
     async def test_rate_limiter_wait(self):
         """Test rate limiter wait functionality."""
         limiter = RateLimiter(requests_per_second=10.0)  # High rate for fast test
-        
+
         # First call should be immediate
         start = time.time()
         await limiter.wait()
@@ -49,10 +49,10 @@ class TestRetryManagerBasic:
     async def test_retry_success_immediate(self):
         """Test retry when operation succeeds immediately."""
         manager = RetryManager(max_retries=3, base_delay=0.01)
-        
+
         async def success_func():
             return "success"
-        
+
         result = await manager.retry_async(success_func)
         assert result == "success"
 
@@ -87,22 +87,22 @@ class TestTimingDecorator:
     @pytest.mark.asyncio
     async def test_timing_decorator_basic(self):
         """Test timing decorator works."""
-        
+
         @timing_decorator
         async def test_function():
             await asyncio.sleep(0.01)  # Small delay
             return "result"
-        
+
         result = await test_function()
         assert result == "result"
 
     def test_timing_decorator_sync(self):
         """Test timing decorator works with sync functions."""
-        
-        @timing_decorator  
+
+        @timing_decorator
         def test_function():
             time.sleep(0.01)  # Small delay
             return "result"
-        
+
         result = test_function()
         assert result == "result"

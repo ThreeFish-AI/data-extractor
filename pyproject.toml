@@ -8,9 +8,7 @@ version = "0.1.0"
 description = "A robust web scraping MCP server based on Scrapy and FastMCP"
 readme = "README.md"
 requires-python = ">=3.12"
-authors = [
-    {name = "Aurelius", email = "aureliusshu@gmail.com"}
-]
+authors = [{ name = "Aurelius", email = "aureliusshu@gmail.com" }]
 keywords = ["mcp", "scraping", "scrapy", "web-crawler"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -44,18 +42,12 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
-    "black>=24.0.0",
-    "flake8>=7.0.0",
     "mypy>=1.10.0",
     "pre-commit>=3.8.0",
 ]
 
 [project.scripts]
 data-extractor = "extractor.server:main"
-
-[tool.black]
-line-length = 88
-target-version = ['py312']
 
 [tool.mypy]
 python_version = "3.12"
@@ -67,8 +59,6 @@ disallow_untyped_defs = true
 dev-dependencies = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
-    "black>=24.0.0",
-    "flake8>=7.0.0",
     "mypy>=1.10.0",
     "pre-commit>=3.8.0",
 ]

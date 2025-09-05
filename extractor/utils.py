@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ScrapingResult:
     """Standard result format for scraping operations."""
+
     url: str
     success: bool
     data: Optional[Dict[str, Any]] = None
@@ -58,7 +59,9 @@ class RateLimiter:
 class RetryManager:
     """Handle retry logic with exponential backoff."""
 
-    def __init__(self, max_retries: int = 3, base_delay: float = 1.0, backoff_factor: float = 2.0):
+    def __init__(
+        self, max_retries: int = 3, base_delay: float = 1.0, backoff_factor: float = 2.0
+    ):
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.backoff_factor = backoff_factor
@@ -76,9 +79,10 @@ class RetryManager:
                 if attempt == self.max_retries:
                     break
 
-                delay = self.base_delay * (self.backoff_factor ** attempt)
+                delay = self.base_delay * (self.backoff_factor**attempt)
                 logger.warning(
-                    f"Attempt {attempt + 1} failed: {str(e)}. Retrying in {delay:.2f}s...")
+                    f"Attempt {attempt + 1} failed: {str(e)}. Retrying in {delay:.2f}s..."
+                )
                 await asyncio.sleep(delay)
 
         raise last_exception
@@ -86,6 +90,7 @@ class RetryManager:
 
 def timing_decorator(func):
     """Decorator to measure function execution time."""
+
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
         start_time = time.time()
@@ -100,7 +105,8 @@ def timing_decorator(func):
         except Exception as e:
             duration_ms = int((time.time() - start_time) * 1000)
             logger.error(
-                f"Function {func.__name__} failed after {duration_ms}ms: {str(e)}")
+                f"Function {func.__name__} failed after {duration_ms}ms: {str(e)}"
+            )
             raise
 
     @wraps(func)
@@ -117,7 +123,8 @@ def timing_decorator(func):
         except Exception as e:
             duration_ms = int((time.time() - start_time) * 1000)
             logger.error(
-                f"Function {func.__name__} failed after {duration_ms}ms: {str(e)}")
+                f"Function {func.__name__} failed after {duration_ms}ms: {str(e)}"
+            )
             raise
 
     if asyncio.iscoroutinefunction(func):
@@ -141,8 +148,8 @@ class URLValidator:
     @staticmethod
     def normalize_url(url: str) -> str:
         """Normalize URL format."""
-        if not url.startswith(('http://', 'https://')):
-            url = 'https://' + url
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
 
         parsed = urlparse(url)
         # Remove fragment and normalize
@@ -168,9 +175,9 @@ class TextCleaner:
             return ""
 
         # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
         # Remove control characters
-        text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+        text = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", text)
         # Strip leading/trailing whitespace
         text = text.strip()
 
@@ -179,7 +186,7 @@ class TextCleaner:
     @staticmethod
     def extract_emails(text: str) -> List[str]:
         """Extract email addresses from text."""
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         return re.findall(email_pattern, text)
 
     @staticmethod
@@ -187,10 +194,10 @@ class TextCleaner:
         """Extract phone numbers from text."""
         # Basic phone number patterns
         phone_patterns = [
-            r'\b\d{3}-\d{3}-\d{4}\b',  # 123-456-7890
-            r'\b\(\d{3}\)\s*\d{3}-\d{4}\b',  # (123) 456-7890
-            r'\b\d{3}\.\d{3}\.\d{4}\b',  # 123.456.7890
-            r'\b\d{10}\b'  # 1234567890
+            r"\b\d{3}-\d{3}-\d{4}\b",  # 123-456-7890
+            r"\b\(\d{3}\)\s*\d{3}-\d{4}\b",  # (123) 456-7890
+            r"\b\d{3}\.\d{3}\.\d{4}\b",  # 123.456.7890
+            r"\b\d{10}\b",  # 1234567890
         ]
 
         phone_numbers = []
@@ -232,7 +239,7 @@ class ConfigValidator:
                     "selector": value["selector"],
                     "attr": value.get("attr", "text"),
                     "multiple": value.get("multiple", False),
-                    "type": value.get("type", "css")
+                    "type": value.get("type", "css"),
                 }
             else:
                 raise ValueError(f"Invalid config value for key '{key}'")
@@ -249,12 +256,18 @@ class CacheManager:
         self.cache: Dict[str, Dict[str, Any]] = {}
         self.timestamps: Dict[str, datetime] = {}
 
-    def _generate_key(self, url: str, method: str, config: Optional[Dict] = None) -> str:
+    def _generate_key(
+        self, url: str, method: str, config: Optional[Dict] = None
+    ) -> str:
         """Generate cache key."""
-        key_data = f"{url}:{method}:{json.dumps(config, sort_keys=True) if config else ''}"
+        key_data = (
+            f"{url}:{method}:{json.dumps(config, sort_keys=True) if config else ''}"
+        )
         return hashlib.md5(key_data.encode()).hexdigest()
 
-    def get(self, url: str, method: str, config: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
+    def get(
+        self, url: str, method: str, config: Optional[Dict] = None
+    ) -> Optional[Dict[str, Any]]:
         """Get cached result if available and not expired."""
         key = self._generate_key(url, method, config)
 
@@ -270,7 +283,13 @@ class CacheManager:
 
         return self.cache.get(key)
 
-    def set(self, url: str, method: str, result: Dict[str, Any], config: Optional[Dict] = None):
+    def set(
+        self,
+        url: str,
+        method: str,
+        result: Dict[str, Any],
+        config: Optional[Dict] = None,
+    ):
         """Cache result."""
         key = self._generate_key(url, method, config)
 
@@ -291,8 +310,7 @@ class CacheManager:
         if not self.timestamps:
             return
 
-        oldest_key = min(self.timestamps.keys(),
-                         key=lambda k: self.timestamps[k])
+        oldest_key = min(self.timestamps.keys(), key=lambda k: self.timestamps[k])
         self._remove(oldest_key)
 
     def clear(self):
@@ -306,7 +324,7 @@ class CacheManager:
             "size": len(self.cache),
             "max_size": self.max_size,
             "ttl_seconds": self.ttl_seconds,
-            "hit_ratio": 0  # Could implement hit/miss tracking
+            "hit_ratio": 0,  # Could implement hit/miss tracking
         }
 
 
@@ -320,21 +338,28 @@ class ErrorHandler:
         error_message = str(e)
 
         logger.error(
-            f"Scraping error for {url} using {method}: {error_type}: {error_message}")
+            f"Scraping error for {url} using {method}: {error_type}: {error_message}"
+        )
 
         # Categorize common errors
         if "timeout" in error_message.lower():
             category = "timeout"
-            user_message = "Request timed out. The website might be slow or unavailable."
+            user_message = (
+                "Request timed out. The website might be slow or unavailable."
+            )
         elif "connection" in error_message.lower():
             category = "connection"
-            user_message = "Connection failed. Please check the URL and your internet connection."
+            user_message = (
+                "Connection failed. Please check the URL and your internet connection."
+            )
         elif "404" in error_message:
             category = "not_found"
             user_message = "Page not found (404). Please verify the URL is correct."
         elif "403" in error_message:
             category = "forbidden"
-            user_message = "Access forbidden (403). The website might be blocking scraping."
+            user_message = (
+                "Access forbidden (403). The website might be blocking scraping."
+            )
         elif "cloudflare" in error_message.lower():
             category = "anti_bot"
             user_message = "Anti-bot protection detected. Try using stealth mode or a different method."
@@ -351,8 +376,8 @@ class ErrorHandler:
                 "user_message": user_message,
                 "url": url,
                 "method": method,
-                "timestamp": datetime.now().isoformat()
-            }
+                "timestamp": datetime.now().isoformat(),
+            },
         }
 
 
@@ -367,11 +392,17 @@ class MetricsCollector:
             "total_duration_ms": 0,
             "methods_used": {},
             "error_categories": {},
-            "domains_scraped": set()
+            "domains_scraped": set(),
         }
 
-    def record_request(self, url: str, success: bool, duration_ms: int,
-                       method: str, error_category: Optional[str] = None):
+    def record_request(
+        self,
+        url: str,
+        success: bool,
+        duration_ms: int,
+        method: str,
+        error_category: Optional[str] = None,
+    ):
         """Record scraping request metrics."""
         self.metrics["total_requests"] += 1
         self.metrics["total_duration_ms"] += duration_ms
@@ -398,13 +429,11 @@ class MetricsCollector:
         """Get current metrics."""
         stats = self.metrics.copy()
         stats["domains_scraped"] = list(stats["domains_scraped"])
-        stats["success_rate"] = (
-            self.metrics["successful_requests"] /
-            max(1, self.metrics["total_requests"])
+        stats["success_rate"] = self.metrics["successful_requests"] / max(
+            1, self.metrics["total_requests"]
         )
-        stats["average_duration_ms"] = (
-            self.metrics["total_duration_ms"] /
-            max(1, self.metrics["total_requests"])
+        stats["average_duration_ms"] = self.metrics["total_duration_ms"] / max(
+            1, self.metrics["total_requests"]
         )
         return stats
 
@@ -417,7 +446,7 @@ class MetricsCollector:
             "total_duration_ms": 0,
             "methods_used": {},
             "error_categories": {},
-            "domains_scraped": set()
+            "domains_scraped": set(),
         }
 
 

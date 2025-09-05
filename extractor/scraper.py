@@ -28,7 +28,9 @@ class WebScrapingSpider(scrapy.Spider):
 
     name = "web_scraper"
 
-    def __init__(self, url: str, extract_config: Optional[Dict] = None, *args, **kwargs):
+    def __init__(
+        self, url: str, extract_config: Optional[Dict] = None, *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.start_urls = [url]
         self.extract_config = extract_config or {}
@@ -40,8 +42,10 @@ class WebScrapingSpider(scrapy.Spider):
             "url": response.url,
             "status_code": response.status,
             "title": response.css("title::text").get(),
-            "meta_description": response.css("meta[name='description']::attr(content)").get(),
-            "content": {}
+            "meta_description": response.css(
+                "meta[name='description']::attr(content)"
+            ).get(),
+            "content": {},
         }
 
         # Extract based on configuration
@@ -49,8 +53,7 @@ class WebScrapingSpider(scrapy.Spider):
             for key, selector_config in self.extract_config.items():
                 if isinstance(selector_config, str):
                     # Simple CSS selector
-                    result["content"][key] = response.css(
-                        selector_config).getall()
+                    result["content"][key] = response.css(selector_config).getall()
                 elif isinstance(selector_config, dict):
                     # Complex selector configuration
                     selector_type = selector_config.get("type", "css")
@@ -67,31 +70,36 @@ class WebScrapingSpider(scrapy.Spider):
 
                     if attr:
                         if attr == "text":
-                            extracted = elements.css("::text").getall(
-                            ) if multiple else elements.css("::text").get()
+                            extracted = (
+                                elements.css("::text").getall()
+                                if multiple
+                                else elements.css("::text").get()
+                            )
                         else:
-                            extracted = elements.css(f"::{attr}").getall(
-                            ) if multiple else elements.css(f"::{attr}").get()
+                            extracted = (
+                                elements.css(f"::{attr}").getall()
+                                if multiple
+                                else elements.css(f"::{attr}").get()
+                            )
                     else:
                         extracted = elements.getall() if multiple else elements.get()
 
                     result["content"][key] = extracted
         else:
             # Default extraction: get all text content
-            result["content"]["text"] = " ".join(
-                response.css("body *::text").getall())
+            result["content"]["text"] = " ".join(response.css("body *::text").getall())
             result["content"]["links"] = [
                 {"url": urljoin(response.url, link), "text": text}
                 for link, text in zip(
                     response.css("a::attr(href)").getall(),
-                    response.css("a::text").getall()
+                    response.css("a::text").getall(),
                 )
             ]
             result["content"]["images"] = [
                 {"src": urljoin(response.url, src), "alt": alt}
                 for src, alt in zip(
                     response.css("img::attr(src)").getall(),
-                    response.css("img::attr(alt)").getall()
+                    response.css("img::attr(alt)").getall(),
                 )
             ]
 
@@ -111,7 +119,9 @@ class ScrapyWrapper:
         configure_logging(install_root_handler=False)
         logging.getLogger("scrapy").setLevel(logging.WARNING)
 
-    async def scrape(self, url: str, extract_config: Optional[Dict] = None) -> List[Dict]:
+    async def scrape(
+        self, url: str, extract_config: Optional[Dict] = None
+    ) -> List[Dict]:
         """Scrape a URL using Scrapy."""
         try:
             self.runner = CrawlerRunner(settings.get_scrapy_settings())
@@ -161,8 +171,12 @@ class SeleniumScraper:
 
         return webdriver.Chrome(options=options)
 
-    async def scrape(self, url: str, wait_for_element: Optional[str] = None,
-                     extract_config: Optional[Dict] = None) -> Dict[str, Any]:
+    async def scrape(
+        self,
+        url: str,
+        wait_for_element: Optional[str] = None,
+        extract_config: Optional[Dict] = None,
+    ) -> Dict[str, Any]:
         """Scrape a URL using Selenium."""
         try:
             self.driver = self._get_driver()
@@ -173,11 +187,11 @@ class SeleniumScraper:
                 try:
                     WebDriverWait(self.driver, settings.browser_timeout).until(
                         EC.presence_of_element_located(
-                            (By.CSS_SELECTOR, wait_for_element))
+                            (By.CSS_SELECTOR, wait_for_element)
+                        )
                     )
                 except TimeoutException:
-                    logger.warning(
-                        f"Timeout waiting for element: {wait_for_element}")
+                    logger.warning(f"Timeout waiting for element: {wait_for_element}")
 
             # Extract page content
             page_source = self.driver.page_source
@@ -187,7 +201,7 @@ class SeleniumScraper:
                 "url": self.driver.current_url,
                 "title": self.driver.title,
                 "meta_description": None,
-                "content": {}
+                "content": {},
             }
 
             # Get meta description
@@ -202,9 +216,9 @@ class SeleniumScraper:
                         if isinstance(selector_config, str):
                             # Simple CSS selector
                             elements = self.driver.find_elements(
-                                By.CSS_SELECTOR, selector_config)
-                            result["content"][key] = [
-                                elem.text for elem in elements]
+                                By.CSS_SELECTOR, selector_config
+                            )
+                            result["content"][key] = [elem.text for elem in elements]
                         elif isinstance(selector_config, dict):
                             # Complex selector configuration
                             selector = selector_config.get("selector")
@@ -213,27 +227,30 @@ class SeleniumScraper:
 
                             if multiple:
                                 elements = self.driver.find_elements(
-                                    By.CSS_SELECTOR, selector)
+                                    By.CSS_SELECTOR, selector
+                                )
                                 if attr == "text":
-                                    extracted = [
-                                        elem.text for elem in elements]
+                                    extracted = [elem.text for elem in elements]
                                 elif attr:
-                                    extracted = [elem.get_attribute(
-                                        attr) for elem in elements]
+                                    extracted = [
+                                        elem.get_attribute(attr) for elem in elements
+                                    ]
                                 else:
-                                    extracted = [elem.get_attribute(
-                                        "outerHTML") for elem in elements]
+                                    extracted = [
+                                        elem.get_attribute("outerHTML")
+                                        for elem in elements
+                                    ]
                             else:
                                 try:
                                     element = self.driver.find_element(
-                                        By.CSS_SELECTOR, selector)
+                                        By.CSS_SELECTOR, selector
+                                    )
                                     if attr == "text":
                                         extracted = element.text
                                     elif attr:
                                         extracted = element.get_attribute(attr)
                                     else:
-                                        extracted = element.get_attribute(
-                                            "outerHTML")
+                                        extracted = element.get_attribute("outerHTML")
                                 except:
                                     extracted = None
 
@@ -245,13 +262,14 @@ class SeleniumScraper:
                 # Default extraction
                 result["content"]["text"] = soup.get_text(strip=True)
                 result["content"]["links"] = [
-                    {"url": urljoin(url, a.get("href", "")),
-                     "text": a.get_text(strip=True)}
+                    {
+                        "url": urljoin(url, a.get("href", "")),
+                        "text": a.get_text(strip=True),
+                    }
                     for a in soup.find_all("a", href=True)
                 ]
                 result["content"]["images"] = [
-                    {"src": urljoin(url, img.get("src", "")),
-                     "alt": img.get("alt", "")}
+                    {"src": urljoin(url, img.get("src", "")), "alt": img.get("alt", "")}
                     for img in soup.find_all("img", src=True)
                 ]
 
@@ -278,14 +296,16 @@ class SimpleScraper:
         if settings.use_random_user_agent and self.ua:
             self.session.headers.update({"User-Agent": self.ua.random})
         else:
-            self.session.headers.update(
-                {"User-Agent": settings.default_user_agent})
+            self.session.headers.update({"User-Agent": settings.default_user_agent})
 
         if settings.use_proxy and settings.proxy_url:
             self.session.proxies.update(
-                {"http": settings.proxy_url, "https": settings.proxy_url})
+                {"http": settings.proxy_url, "https": settings.proxy_url}
+            )
 
-    async def scrape(self, url: str, extract_config: Optional[Dict] = None) -> Dict[str, Any]:
+    async def scrape(
+        self, url: str, extract_config: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """Scrape a URL using requests."""
         try:
             response = self.session.get(url, timeout=settings.request_timeout)
@@ -298,7 +318,7 @@ class SimpleScraper:
                 "status_code": response.status_code,
                 "title": None,
                 "meta_description": None,
-                "content": {}
+                "content": {},
             }
 
             # Extract title
@@ -318,8 +338,9 @@ class SimpleScraper:
                         if isinstance(selector_config, str):
                             # Simple CSS selector
                             elements = soup.select(selector_config)
-                            result["content"][key] = [elem.get_text(
-                                strip=True) for elem in elements]
+                            result["content"][key] = [
+                                elem.get_text(strip=True) for elem in elements
+                            ]
                         elif isinstance(selector_config, dict):
                             # Complex selector configuration
                             selector = selector_config.get("selector")
@@ -330,20 +351,20 @@ class SimpleScraper:
 
                             if multiple:
                                 if attr == "text":
-                                    extracted = [elem.get_text(
-                                        strip=True) for elem in elements]
+                                    extracted = [
+                                        elem.get_text(strip=True) for elem in elements
+                                    ]
                                 elif attr:
-                                    extracted = [elem.get(attr, "")
-                                                 for elem in elements]
+                                    extracted = [
+                                        elem.get(attr, "") for elem in elements
+                                    ]
                                 else:
-                                    extracted = [str(elem)
-                                                 for elem in elements]
+                                    extracted = [str(elem) for elem in elements]
                             else:
                                 element = elements[0] if elements else None
                                 if element:
                                     if attr == "text":
-                                        extracted = element.get_text(
-                                            strip=True)
+                                        extracted = element.get_text(strip=True)
                                     elif attr:
                                         extracted = element.get(attr, "")
                                     else:
@@ -359,13 +380,14 @@ class SimpleScraper:
                 # Default extraction
                 result["content"]["text"] = soup.get_text(strip=True)
                 result["content"]["links"] = [
-                    {"url": urljoin(url, a.get("href", "")),
-                     "text": a.get_text(strip=True)}
+                    {
+                        "url": urljoin(url, a.get("href", "")),
+                        "text": a.get_text(strip=True),
+                    }
                     for a in soup.find_all("a", href=True)
                 ]
                 result["content"]["images"] = [
-                    {"src": urljoin(url, img.get("src", "")),
-                     "alt": img.get("alt", "")}
+                    {"src": urljoin(url, img.get("src", "")), "alt": img.get("alt", "")}
                     for img in soup.find_all("img", src=True)
                 ]
 
@@ -384,9 +406,13 @@ class WebScraper:
         self.selenium_scraper = SeleniumScraper()
         self.simple_scraper = SimpleScraper()
 
-    async def scrape_url(self, url: str, method: str = "auto",
-                         extract_config: Optional[Dict] = None,
-                         wait_for_element: Optional[str] = None) -> Dict[str, Any]:
+    async def scrape_url(
+        self,
+        url: str,
+        method: str = "auto",
+        extract_config: Optional[Dict] = None,
+        wait_for_element: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Scrape a URL using the specified method.
 
@@ -416,7 +442,9 @@ class WebScraper:
                 results = await self.scrapy_wrapper.scrape(url, extract_config)
                 return results[0] if results else {"error": "No results", "url": url}
             elif method == "selenium":
-                return await self.selenium_scraper.scrape(url, wait_for_element, extract_config)
+                return await self.selenium_scraper.scrape(
+                    url, wait_for_element, extract_config
+                )
             else:
                 raise ValueError(f"Unknown scraping method: {method}")
 
@@ -424,23 +452,21 @@ class WebScraper:
             logger.error(f"Scraping failed for {url}: {str(e)}")
             return {"error": str(e), "url": url}
 
-    async def scrape_multiple_urls(self, urls: List[str], method: str = "auto",
-                                   extract_config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    async def scrape_multiple_urls(
+        self,
+        urls: List[str],
+        method: str = "auto",
+        extract_config: Optional[Dict] = None,
+    ) -> List[Dict[str, Any]]:
         """Scrape multiple URLs concurrently."""
-        tasks = [
-            self.scrape_url(url, method, extract_config)
-            for url in urls
-        ]
+        tasks = [self.scrape_url(url, method, extract_config) for url in urls]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                processed_results.append({
-                    "error": str(result),
-                    "url": urls[i]
-                })
+                processed_results.append({"error": str(result), "url": urls[i]})
             else:
                 processed_results.append(result)
 
