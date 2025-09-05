@@ -62,17 +62,19 @@ data-extractor/
 ├── examples/                           # 使用示例
 │   ├── basic_usage.py                  # 基础用法示例
 │   └── extraction_configs.py           # 数据提取配置示例
-├── tests/                              # 完整测试体系
-│   ├── unit/                           # 单元测试 (131个测试)
+├── tests/                              # 完整测试体系 (191个测试)
+│   ├── unit/                           # 单元测试 (98个测试)
 │   │   ├── test_scraper.py              # WebScraper 核心引擎测试
-│   │   ├── test_scraper_simple.py       # WebScraper 基础测试
 │   │   ├── test_advanced_features.py    # 高级功能测试 (反检测、表单处理)
 │   │   ├── test_utils.py                # 工具类测试 (限流、重试、缓存等)
-│   │   ├── test_utils_basic.py          # 基础工具类测试
-│   │   └── test_markdown_converter.py   # MarkdownConverter 测试
-│   ├── integration/                     # 集成测试 (31个测试)
+│   │   ├── test_markdown_converter.py   # MarkdownConverter 测试
+│   │   └── test_pdf_processor.py        # PDF 处理引擎测试
+│   ├── integration/                     # 集成测试 (93个测试)
 │   │   ├── test_mcp_tools.py            # 12个MCP工具集成测试
-│   │   └── test_comprehensive_integration.py # 综合集成测试 (端到端、性能、实际场景)
+│   │   ├── test_comprehensive_integration.py # 综合集成测试 (端到端、性能、实际场景)
+│   │   ├── test_pdf_integration.py      # PDF 工具实际执行验证 (13项)
+│   │   ├── test_cross_tool_integration.py # 跨工具协作流程验证 (9项)
+│   │   └── test_end_to_end_integration.py # 端到端现实场景测试 (34项)
 │   └── conftest.py                      # pytest 配置和共享 fixtures
 ├── scripts/
 │   └── setup.sh                        # 快速安装脚本
@@ -96,7 +98,8 @@ data-extractor/
 ### 已完成的里程碑 ✅
 
 - ✅ **v0.1.3 稳定版发布**: 基于 Scrapy + FastMCP 构建的企业级网页抓取 MCP Server
-- ✅ **完整测试体系**: 162 个测试用例，通过率 99.4%，包含单元测试和综合集成测试
+- ✅ **完整测试体系**: 191 个测试用例，通过率 95%+，包含单元测试和强化集成测试
+- ✅ **集成测试强化**: 新增 PDF 工具实际执行验证、跨工具协作流程、端到端现实场景测试
 - ✅ **代码质量优化**: 类型注解完善，从 black 迁移到 ruff 格式化
 - ✅ **配置统一**: 项目名称从 scrapy-mcp 更名为 data-extractor，配置前缀统一
 - ✅ **文档完善**: README、CHANGELOG、TESTING 文档体系建立
@@ -105,7 +108,7 @@ data-extractor/
 
 - **版本**: v0.1.3 ✨
 - **功能状态**: 14 个 MCP 工具 + Markdown 转换功能完整 + PDF 转换功能完整
-- **测试覆盖率**: 99.4% (162 个测试用例，161 个通过，1 个跳过)
+- **测试覆盖率**: 95%+ (191 个测试用例，强化集成测试覆盖)
 - **质量评级**: A+ (生产就绪标准)
 - **代码格式化**: ruff
 - **包管理**: uv
@@ -304,10 +307,10 @@ uv run pytest tests/unit/ -v
 
 ### 测试覆盖情况
 
-- **总测试数**: 162 个测试用例
-- **通过率**: 99.4% (161 个通过，1 个跳过)
-- **单元测试**: 131 个 - 核心组件功能测试
-- **集成测试**: 31 个 - 端到端功能和系统健康测试
+- **总测试数**: 191 个测试用例
+- **通过率**: 95%+ (强化集成测试后的覆盖率)
+- **单元测试**: 98 个 - 核心组件功能测试
+- **集成测试**: 93 个 - 端到端功能和系统健康测试，包含强化测试
 
 ### 测试类型
 
@@ -315,10 +318,12 @@ uv run pytest tests/unit/ -v
 | ------------------- | -------- | -------------------------------- |
 | WebScraper 核心引擎 | 35+      | 方法选择、数据提取、错误处理     |
 | 高级功能测试        | 25+      | 反检测、表单处理、浏览器自动化   |
-| 工具类测试          | 40+      | 限流、重试、缓存、指标收集       |
-| Markdown 转换器     | 30+      | HTML 转换、格式化、批量处理      |
-| MCP 工具集成        | 20+      | 12 个 MCP 工具注册和功能验证     |
-| 综合集成测试        | 11+      | 端到端工作流、性能负载、错误恢复 |
+| 工具类测试          | 30+      | 限流、重试、缓存、指标收集       |
+| Markdown 转换器     | 8        | HTML 转换、格式化、批量处理      |
+| MCP 工具集成        | 37       | 14 个 MCP 工具注册和功能验证     |
+| PDF 工具实际调用    | 13       | PDF 处理工具的实际 MCP 执行验证  |
+| 跨工具协作测试      | 9        | 多工具工作流、参数传递、错误传播 |
+| 端到端现实场景      | 34       | 完整处理管道、性能基准、数据完整 |
 
 ### 详细测试文档
 
