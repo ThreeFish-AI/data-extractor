@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from typing import Dict, Any, List, Optional
+from urllib.parse import urljoin
 
 import scrapy
 from scrapy.crawler import CrawlerRunner
@@ -29,14 +30,14 @@ class WebScrapingSpider(scrapy.Spider):
     name = "web_scraper"
 
     def __init__(
-        self, url: str, extract_config: Optional[Dict] = None, *args, **kwargs
-    ):
+        self, url: str, extract_config: Optional[Dict[str, Any]] = None, *args, **kwargs
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.start_urls = [url]
         self.extract_config = extract_config or {}
-        self.results = []
+        self.results: List[Dict[str, Any]] = []
 
-    def parse(self, response: Response):
+    def parse(self, response: Response) -> Dict[str, Any]:
         """Parse the response and extract data based on configuration."""
         result = {
             "url": response.url,
@@ -110,32 +111,31 @@ class WebScrapingSpider(scrapy.Spider):
 class ScrapyWrapper:
     """Wrapper for Scrapy functionality."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.configure_logging()
         self.runner = None
 
-    def configure_logging(self):
+    def configure_logging(self) -> None:
         """Configure Scrapy logging."""
         configure_logging(install_root_handler=False)
         logging.getLogger("scrapy").setLevel(logging.WARNING)
 
     async def scrape(
-        self, url: str, extract_config: Optional[Dict] = None
-    ) -> List[Dict]:
+        self, url: str, extract_config: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """Scrape a URL using Scrapy."""
         try:
             self.runner = CrawlerRunner(settings.get_scrapy_settings())
 
-            spider = WebScrapingSpider(url=url, extract_config=extract_config)
-
-            deferred = self.runner.crawl(spider)
+            spider_instance = WebScrapingSpider(url=url, extract_config=extract_config)
+            deferred = self.runner.crawl(spider_instance)
             deferred.addBoth(lambda _: None)  # Ignore result
 
             # Wait for the spider to complete
             while not deferred.called:
                 await asyncio.sleep(0.1)
 
-            return spider.results
+            return spider_instance.results
 
         except Exception as e:
             logger.error(f"Scrapy scraping failed for {url}: {str(e)}")
@@ -145,7 +145,7 @@ class ScrapyWrapper:
 class SeleniumScraper:
     """Selenium-based scraper for JavaScript-heavy sites."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.driver = None
         self.ua = UserAgent() if settings.use_random_user_agent else None
 
@@ -175,7 +175,7 @@ class SeleniumScraper:
         self,
         url: str,
         wait_for_element: Optional[str] = None,
-        extract_config: Optional[Dict] = None,
+        extract_config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Scrape a URL using Selenium."""
         try:
@@ -206,7 +206,7 @@ class SeleniumScraper:
 
             # Get meta description
             meta_desc = soup.find("meta", attrs={"name": "description"})
-            if meta_desc:
+            if meta_desc and hasattr(meta_desc, "get"):
                 result["meta_description"] = meta_desc.get("content")
 
             # Extract based on configuration
@@ -251,7 +251,7 @@ class SeleniumScraper:
                                         extracted = element.get_attribute(attr)
                                     else:
                                         extracted = element.get_attribute("outerHTML")
-                                except:
+                                except Exception:
                                     extracted = None
 
                             result["content"][key] = extracted
@@ -263,14 +263,19 @@ class SeleniumScraper:
                 result["content"]["text"] = soup.get_text(strip=True)
                 result["content"]["links"] = [
                     {
-                        "url": urljoin(url, a.get("href", "")),
+                        "url": urljoin(url, str(a.get("href", ""))),
                         "text": a.get_text(strip=True),
                     }
                     for a in soup.find_all("a", href=True)
+                    if hasattr(a, "get")
                 ]
                 result["content"]["images"] = [
-                    {"src": urljoin(url, img.get("src", "")), "alt": img.get("alt", "")}
+                    {
+                        "src": urljoin(url, str(img.get("src", ""))),
+                        "alt": str(img.get("alt", "")),
+                    }
                     for img in soup.find_all("img", src=True)
+                    if hasattr(img, "get")
                 ]
 
             return result
@@ -286,12 +291,12 @@ class SeleniumScraper:
 class SimpleScraper:
     """Simple HTTP-based scraper using requests."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.session = requests.Session()
         self.ua = UserAgent() if settings.use_random_user_agent else None
         self._configure_session()
 
-    def _configure_session(self):
+    def _configure_session(self) -> None:
         """Configure the requests session."""
         if settings.use_random_user_agent and self.ua:
             self.session.headers.update({"User-Agent": self.ua.random})
@@ -304,7 +309,7 @@ class SimpleScraper:
             )
 
     async def scrape(
-        self, url: str, extract_config: Optional[Dict] = None
+        self, url: str, extract_config: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Scrape a URL using requests."""
         try:
@@ -328,7 +333,7 @@ class SimpleScraper:
 
             # Extract meta description
             meta_desc = soup.find("meta", attrs={"name": "description"})
-            if meta_desc:
+            if meta_desc and hasattr(meta_desc, "get"):
                 result["meta_description"] = meta_desc.get("content")
 
             # Extract based on configuration
@@ -347,7 +352,10 @@ class SimpleScraper:
                             attr = selector_config.get("attr")
                             multiple = selector_config.get("multiple", False)
 
-                            elements = soup.select(selector)
+                            if selector:
+                                elements = soup.select(selector)
+                            else:
+                                elements = []
 
                             if multiple:
                                 if attr == "text":
@@ -356,7 +364,9 @@ class SimpleScraper:
                                     ]
                                 elif attr:
                                     extracted = [
-                                        elem.get(attr, "") for elem in elements
+                                        elem.get(attr, "")
+                                        for elem in elements
+                                        if hasattr(elem, "get")
                                     ]
                                 else:
                                     extracted = [str(elem) for elem in elements]
@@ -365,7 +375,7 @@ class SimpleScraper:
                                 if element:
                                     if attr == "text":
                                         extracted = element.get_text(strip=True)
-                                    elif attr:
+                                    elif attr and hasattr(element, "get"):
                                         extracted = element.get(attr, "")
                                     else:
                                         extracted = str(element)
@@ -381,14 +391,19 @@ class SimpleScraper:
                 result["content"]["text"] = soup.get_text(strip=True)
                 result["content"]["links"] = [
                     {
-                        "url": urljoin(url, a.get("href", "")),
+                        "url": urljoin(url, str(a.get("href", ""))),
                         "text": a.get_text(strip=True),
                     }
                     for a in soup.find_all("a", href=True)
+                    if hasattr(a, "get")
                 ]
                 result["content"]["images"] = [
-                    {"src": urljoin(url, img.get("src", "")), "alt": img.get("alt", "")}
+                    {
+                        "src": urljoin(url, str(img.get("src", ""))),
+                        "alt": str(img.get("alt", "")),
+                    }
                     for img in soup.find_all("img", src=True)
+                    if hasattr(img, "get")
                 ]
 
             return result
@@ -401,7 +416,7 @@ class SimpleScraper:
 class WebScraper:
     """Main web scraper that chooses the appropriate scraping method."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.scrapy_wrapper = ScrapyWrapper()
         self.selenium_scraper = SeleniumScraper()
         self.simple_scraper = SimpleScraper()
@@ -410,7 +425,7 @@ class WebScraper:
         self,
         url: str,
         method: str = "auto",
-        extract_config: Optional[Dict] = None,
+        extract_config: Optional[Dict[str, Any]] = None,
         wait_for_element: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -456,7 +471,7 @@ class WebScraper:
         self,
         urls: List[str],
         method: str = "auto",
-        extract_config: Optional[Dict] = None,
+        extract_config: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """Scrape multiple URLs concurrently."""
         tasks = [self.scrape_url(url, method, extract_config) for url in urls]

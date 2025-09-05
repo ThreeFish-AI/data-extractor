@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 from urllib.parse import urlparse
 import re
 from functools import wraps
@@ -44,7 +44,7 @@ class RateLimiter:
         self.min_interval = 1.0 / requests_per_second
         self.last_request_time = 0.0
 
-    async def wait(self):
+    async def wait(self) -> None:
         """Wait if necessary to respect rate limit."""
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
@@ -66,7 +66,9 @@ class RetryManager:
         self.base_delay = base_delay
         self.backoff_factor = backoff_factor
 
-    async def retry_async(self, func, *args, **kwargs):
+    async def retry_async(
+        self, func: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Any:
         """Retry an async function with exponential backoff."""
         last_exception = None
 
@@ -85,14 +87,17 @@ class RetryManager:
                 )
                 await asyncio.sleep(delay)
 
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        else:
+            raise RuntimeError("Retry failed without capturing exception")
 
 
-def timing_decorator(func):
+def timing_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to measure function execution time."""
 
     @wraps(func)
-    async def async_wrapper(*args, **kwargs):
+    async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
         try:
             result = await func(*args, **kwargs)
@@ -110,7 +115,7 @@ def timing_decorator(func):
             raise
 
     @wraps(func)
-    def sync_wrapper(*args, **kwargs):
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
         try:
             result = func(*args, **kwargs)
@@ -289,7 +294,7 @@ class CacheManager:
         method: str,
         result: Dict[str, Any],
         config: Optional[Dict] = None,
-    ):
+    ) -> None:
         """Cache result."""
         key = self._generate_key(url, method, config)
 
@@ -300,12 +305,12 @@ class CacheManager:
         self.cache[key] = result.copy()
         self.timestamps[key] = datetime.now()
 
-    def _remove(self, key: str):
+    def _remove(self, key: str) -> None:
         """Remove item from cache."""
         self.cache.pop(key, None)
         self.timestamps.pop(key, None)
 
-    def _evict_oldest(self):
+    def _evict_oldest(self) -> None:
         """Evict oldest cache entry."""
         if not self.timestamps:
             return
@@ -313,7 +318,7 @@ class CacheManager:
         oldest_key = min(self.timestamps.keys(), key=lambda k: self.timestamps[k])
         self._remove(oldest_key)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all cache."""
         self.cache.clear()
         self.timestamps.clear()
@@ -384,8 +389,8 @@ class ErrorHandler:
 class MetricsCollector:
     """Collect scraping metrics."""
 
-    def __init__(self):
-        self.metrics = {
+    def __init__(self) -> None:
+        self.metrics: Dict[str, Any] = {
             "total_requests": 0,
             "successful_requests": 0,
             "failed_requests": 0,
@@ -402,7 +407,7 @@ class MetricsCollector:
         duration_ms: int,
         method: str,
         error_category: Optional[str] = None,
-    ):
+    ) -> None:
         """Record scraping request metrics."""
         self.metrics["total_requests"] += 1
         self.metrics["total_duration_ms"] += duration_ms
@@ -437,7 +442,7 @@ class MetricsCollector:
         )
         return stats
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset metrics."""
         self.metrics = {
             "total_requests": 0,

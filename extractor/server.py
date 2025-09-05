@@ -51,7 +51,7 @@ class ScrapeRequest(BaseModel):
     )
 
     @field_validator("url")
-    def validate_url(cls, v):
+    def validate_url(cls, v: str) -> str:
         """Validate URL format."""
         parsed = urlparse(v)
         if not parsed.scheme or not parsed.netloc:
@@ -59,7 +59,7 @@ class ScrapeRequest(BaseModel):
         return v
 
     @field_validator("method")
-    def validate_method(cls, v):
+    def validate_method(cls, v: str) -> str:
         """Validate scraping method."""
         if v not in ["auto", "simple", "scrapy", "selenium"]:
             raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
@@ -78,7 +78,7 @@ class MultipleScrapeRequest(BaseModel):
     )
 
     @field_validator("urls")
-    def validate_urls(cls, v):
+    def validate_urls(cls, v: List[str]) -> List[str]:
         """Validate URLs format."""
         if not v:
             raise ValueError("URLs list cannot be empty")
@@ -90,7 +90,7 @@ class MultipleScrapeRequest(BaseModel):
         return v
 
     @field_validator("method")
-    def validate_method(cls, v):
+    def validate_method(cls, v: str) -> str:
         """Validate scraping method."""
         if v not in ["auto", "simple", "scrapy", "selenium"]:
             raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
@@ -112,7 +112,7 @@ class ExtractLinksRequest(BaseModel):
     )
 
     @field_validator("url")
-    def validate_url(cls, v):
+    def validate_url(cls, v: str) -> str:
         """Validate URL format."""
         parsed = urlparse(v)
         if not parsed.scheme or not parsed.netloc:
@@ -415,14 +415,14 @@ class StealthScrapeRequest(BaseModel):
     )
 
     @field_validator("url")
-    def validate_url(cls, v):
+    def validate_url(cls, v: str) -> str:
         """Validate URL format."""
         if not URLValidator.is_valid_url(v):
             raise ValueError("Invalid URL format")
         return URLValidator.normalize_url(v)
 
     @field_validator("method")
-    def validate_method(cls, v):
+    def validate_method(cls, v: str) -> str:
         """Validate stealth method."""
         if v not in ["selenium", "playwright"]:
             raise ValueError("Method must be one of: selenium, playwright")
@@ -448,14 +448,14 @@ class FormRequest(BaseModel):
     )
 
     @field_validator("url")
-    def validate_url(cls, v):
+    def validate_url(cls, v: str) -> str:
         """Validate URL format."""
         if not URLValidator.is_valid_url(v):
             raise ValueError("Invalid URL format")
         return URLValidator.normalize_url(v)
 
     @field_validator("method")
-    def validate_method(cls, v):
+    def validate_method(cls, v: str) -> str:
         """Validate method."""
         if v not in ["selenium", "playwright"]:
             raise ValueError("Method must be one of: selenium, playwright")
@@ -923,7 +923,7 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
         return {"success": False, "error": str(e), "url": url}
 
 
-def main():
+def main() -> None:
     """Run the MCP server."""
     print(f"Starting {settings.server_name} v{settings.server_version}")
     print(

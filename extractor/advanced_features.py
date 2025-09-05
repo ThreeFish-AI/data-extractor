@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class AntiDetectionScraper:
     """Advanced scraper with anti-detection capabilities."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ua = UserAgent()
         self.driver = None
         self.page = None
@@ -74,7 +74,7 @@ class AntiDetectionScraper:
 
         return driver
 
-    async def _setup_playwright_browser(self):
+    async def _setup_playwright_browser(self) -> None:
         """Setup Playwright browser for advanced scraping."""
         self.playwright = await async_playwright().start()
 
@@ -124,7 +124,7 @@ class AntiDetectionScraper:
         self,
         url: str,
         method: str = "selenium",
-        extract_config: Optional[Dict] = None,
+        extract_config: Optional[Dict[str, Any]] = None,
         wait_for_element: Optional[str] = None,
         scroll_page: bool = False,
     ) -> Dict[str, Any]:
@@ -160,7 +160,7 @@ class AntiDetectionScraper:
     async def _scrape_with_selenium_stealth(
         self,
         url: str,
-        extract_config: Optional[Dict],
+        extract_config: Optional[Dict[str, Any]],
         wait_for_element: Optional[str],
         scroll_page: bool,
     ) -> Dict[str, Any]:
@@ -200,7 +200,7 @@ class AntiDetectionScraper:
     async def _scrape_with_playwright_stealth(
         self,
         url: str,
-        extract_config: Optional[Dict],
+        extract_config: Optional[Dict[str, Any]],
         wait_for_element: Optional[str],
         scroll_page: bool,
     ) -> Dict[str, Any]:
@@ -235,7 +235,7 @@ class AntiDetectionScraper:
 
         return result
 
-    async def _scroll_page_selenium(self):
+    async def _scroll_page_selenium(self) -> None:
         """Scroll page naturally to trigger dynamic content loading."""
         total_height = self.driver.execute_script("return document.body.scrollHeight")
         current_height = 0
@@ -255,7 +255,7 @@ class AntiDetectionScraper:
             if new_height > total_height:
                 total_height = new_height
 
-    async def _scroll_page_playwright(self):
+    async def _scroll_page_playwright(self) -> None:
         """Scroll page naturally using Playwright."""
         await self.page.evaluate("""
             new Promise((resolve) => {
@@ -274,7 +274,7 @@ class AntiDetectionScraper:
             })
         """)
 
-    async def _simulate_human_behavior_selenium(self):
+    async def _simulate_human_behavior_selenium(self) -> None:
         """Simulate human-like behavior to avoid detection."""
         try:
             # Random mouse movements
@@ -295,7 +295,7 @@ class AntiDetectionScraper:
         except Exception as e:
             logger.debug(f"Error simulating human behavior: {str(e)}")
 
-    async def _simulate_human_behavior_playwright(self):
+    async def _simulate_human_behavior_playwright(self) -> None:
         """Simulate human-like behavior using Playwright."""
         try:
             # Random mouse movements
@@ -312,7 +312,7 @@ class AntiDetectionScraper:
             logger.debug(f"Error simulating human behavior: {str(e)}")
 
     async def _extract_data_selenium(
-        self, extract_config: Optional[Dict]
+        self, extract_config: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Extract data using Selenium."""
         from bs4 import BeautifulSoup
@@ -366,7 +366,7 @@ class AntiDetectionScraper:
                                     extracted = element.get_attribute(attr)
                                 else:
                                     extracted = element.get_attribute("outerHTML")
-                            except:
+                            except Exception:
                                 extracted = None
 
                         result["content"][key] = extracted
@@ -378,16 +378,17 @@ class AntiDetectionScraper:
             result["content"]["text"] = soup.get_text(strip=True)
             result["content"]["links"] = [
                 {
-                    "url": urljoin(self.driver.current_url, a.get("href", "")),
+                    "url": urljoin(self.driver.current_url, str(a.get("href", ""))),
                     "text": a.get_text(strip=True),
                 }
                 for a in soup.find_all("a", href=True)
+                if hasattr(a, "get")
             ]
 
         return result
 
     async def _extract_data_playwright(
-        self, extract_config: Optional[Dict]
+        self, extract_config: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Extract data using Playwright."""
         result = {"title": await self.page.title(), "content": {}}
@@ -398,7 +399,7 @@ class AntiDetectionScraper:
                 "meta[name='description']", "content"
             )
             result["meta_description"] = meta_desc
-        except:
+        except Exception:
             result["meta_description"] = None
 
         if extract_config:
@@ -464,7 +465,7 @@ class AntiDetectionScraper:
 
         return result
 
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         """Clean up resources."""
         if self.driver:
             self.driver.quit()
@@ -490,7 +491,7 @@ class AntiDetectionScraper:
 class FormHandler:
     """Handle form interactions and submissions."""
 
-    def __init__(self, driver_or_page):
+    def __init__(self, driver_or_page: Any) -> None:
         self.driver_or_page = driver_or_page
         # Simple check for Playwright page
         self.is_playwright = hasattr(driver_or_page, "fill")
@@ -698,7 +699,7 @@ class FormHandler:
                     try:
                         await self.driver_or_page.click(selector)
                         break
-                    except:
+                    except Exception:
                         continue
                 else:
                     # If no submit button found, press Enter on the form
@@ -709,7 +710,7 @@ class FormHandler:
                 await self.driver_or_page.wait_for_load_state(
                     "networkidle", timeout=10000
                 )
-            except:
+            except Exception:
                 pass  # Ignore timeout, form might submit without navigation
 
             return {"success": True, "new_url": self.driver_or_page.url}
