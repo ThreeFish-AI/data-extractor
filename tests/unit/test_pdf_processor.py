@@ -62,10 +62,9 @@ class TestPDFProcessor:
     async def test_process_pdf_invalid_method(self, pdf_processor):
         """Test PDF processing with invalid method."""
         result = await pdf_processor.process_pdf(
-            pdf_source="test.pdf",
-            method="invalid_method"
+            pdf_source="test.pdf", method="invalid_method"
         )
-        
+
         assert result["success"] is False
         assert "Method must be one of" in result["error"]
 
@@ -73,22 +72,20 @@ class TestPDFProcessor:
     async def test_process_pdf_nonexistent_local_file(self, pdf_processor):
         """Test PDF processing with nonexistent local file."""
         result = await pdf_processor.process_pdf(
-            pdf_source="/nonexistent/file.pdf",
-            method="auto"
+            pdf_source="/nonexistent/file.pdf", method="auto"
         )
-        
+
         assert result["success"] is False
         assert "PDF file does not exist" in result["error"]
 
     @pytest.mark.asyncio
     async def test_process_pdf_url_download_failure(self, pdf_processor):
         """Test PDF processing with URL download failure."""
-        with patch.object(pdf_processor, '_download_pdf', return_value=None):
+        with patch.object(pdf_processor, "_download_pdf", return_value=None):
             result = await pdf_processor.process_pdf(
-                pdf_source="https://example.com/test.pdf",
-                method="auto"
+                pdf_source="https://example.com/test.pdf", method="auto"
             )
-            
+
             assert result["success"] is False
             assert "Failed to download PDF from URL" in result["error"]
 
@@ -99,23 +96,23 @@ class TestPDFProcessor:
         pdf_path.write_bytes(b"mock pdf content")
 
         # Mock fitz (PyMuPDF)
-        with patch('extractor.pdf_processor.fitz') as mock_fitz:
+        with patch("extractor.pdf_processor.fitz") as mock_fitz:
             mock_doc = MagicMock()
             mock_doc.page_count = 3
             mock_doc.metadata = {
                 "title": "Test Document",
                 "author": "Test Author",
-                "subject": "Test Subject"
+                "subject": "Test Subject",
             }
-            
+
             mock_page = MagicMock()
             mock_page.get_text.return_value = "Sample page text"
             mock_doc.load_page.return_value = mock_page
-            
+
             mock_fitz.open.return_value = mock_doc
 
             result = await pdf_processor._extract_with_pymupdf(pdf_path, None, True)
-            
+
             assert result["success"] is True
             assert "text" in result
             assert "metadata" in result
@@ -128,21 +125,19 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch('extractor.pdf_processor.fitz') as mock_fitz:
+        with patch("extractor.pdf_processor.fitz") as mock_fitz:
             mock_doc = MagicMock()
             mock_doc.page_count = 10
             mock_doc.metadata = {}
-            
+
             mock_page = MagicMock()
             mock_page.get_text.return_value = "Page text"
             mock_doc.load_page.return_value = mock_page
-            
+
             mock_fitz.open.return_value = mock_doc
 
-            result = await pdf_processor._extract_with_pymupdf(
-                pdf_path, (2, 5), True
-            )
-            
+            result = await pdf_processor._extract_with_pymupdf(pdf_path, (2, 5), True)
+
             assert result["success"] is True
             assert result["pages_processed"] == 3  # Pages 2, 3, 4
             assert result["total_pages"] == 10
@@ -153,23 +148,21 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch('extractor.pdf_processor.PyPDF2') as mock_pypdf2, \
-             patch('builtins.open', mock_open(read_data=b"mock pdf")):
-            
+        with (
+            patch("extractor.pdf_processor.PyPDF2") as mock_pypdf2,
+            patch("builtins.open", mock_open(read_data=b"mock pdf")),
+        ):
             mock_reader = MagicMock()
             mock_reader.pages = [MagicMock(), MagicMock(), MagicMock()]
-            mock_reader.metadata = {
-                "/Title": "Test PDF",
-                "/Author": "Test Author"
-            }
-            
+            mock_reader.metadata = {"/Title": "Test PDF", "/Author": "Test Author"}
+
             for page in mock_reader.pages:
                 page.extract_text.return_value = "Extracted text"
-            
+
             mock_pypdf2.PdfReader.return_value = mock_reader
 
             result = await pdf_processor._extract_with_pypdf2(pdf_path, None, True)
-            
+
             assert result["success"] is True
             assert "text" in result
             assert "metadata" in result
@@ -182,13 +175,14 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch('extractor.pdf_processor.PyPDF2') as mock_pypdf2, \
-             patch('builtins.open', mock_open()):
-            
+        with (
+            patch("extractor.pdf_processor.PyPDF2") as mock_pypdf2,
+            patch("builtins.open", mock_open()),
+        ):
             mock_pypdf2.PdfReader.side_effect = Exception("PDF reading failed")
 
             result = await pdf_processor._extract_with_pypdf2(pdf_path, None, True)
-            
+
             assert result["success"] is False
             assert "PyPDF2 extraction failed" in result["error"]
 
@@ -198,15 +192,15 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch.object(pdf_processor, '_extract_with_pymupdf') as mock_pymupdf:
+        with patch.object(pdf_processor, "_extract_with_pymupdf") as mock_pymupdf:
             mock_pymupdf.return_value = {
                 "success": True,
                 "text": "Extracted text",
-                "pages_processed": 3
+                "pages_processed": 3,
             }
 
             result = await pdf_processor._auto_extract(pdf_path, None, True)
-            
+
             assert result["success"] is True
             assert result["method_used"] == "pymupdf"
             mock_pymupdf.assert_called_once()
@@ -217,18 +211,19 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch.object(pdf_processor, '_extract_with_pymupdf') as mock_pymupdf, \
-             patch.object(pdf_processor, '_extract_with_pypdf2') as mock_pypdf2:
-            
+        with (
+            patch.object(pdf_processor, "_extract_with_pymupdf") as mock_pymupdf,
+            patch.object(pdf_processor, "_extract_with_pypdf2") as mock_pypdf2,
+        ):
             mock_pymupdf.side_effect = Exception("PyMuPDF failed")
             mock_pypdf2.return_value = {
                 "success": True,
                 "text": "Extracted text",
-                "pages_processed": 3
+                "pages_processed": 3,
             }
 
             result = await pdf_processor._auto_extract(pdf_path, None, True)
-            
+
             assert result["success"] is True
             assert result["method_used"] == "pypdf2"
             mock_pymupdf.assert_called_once()
@@ -240,23 +235,26 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch.object(pdf_processor, '_extract_with_pymupdf') as mock_pymupdf, \
-             patch.object(pdf_processor, '_extract_with_pypdf2') as mock_pypdf2:
-            
+        with (
+            patch.object(pdf_processor, "_extract_with_pymupdf") as mock_pymupdf,
+            patch.object(pdf_processor, "_extract_with_pypdf2") as mock_pypdf2,
+        ):
             mock_pymupdf.side_effect = Exception("PyMuPDF failed")
             mock_pypdf2.side_effect = Exception("PyPDF2 failed")
 
             result = await pdf_processor._auto_extract(pdf_path, None, True)
-            
+
             assert result["success"] is False
-            assert "Both PyMuPDF and PyPDF2 extraction methods failed" in result["error"]
+            assert (
+                "Both PyMuPDF and PyPDF2 extraction methods failed" in result["error"]
+            )
 
     def test_convert_to_markdown_simple(self, pdf_processor):
         """Test simple text to markdown conversion."""
         text = "MAIN TITLE\n\nSubsection Title:\nSome content here\nMore content"
-        
+
         result = pdf_processor._convert_to_markdown(text)
-        
+
         assert "# MAIN TITLE" in result
         assert "## Subsection Title:" in result
         assert "Some content here" in result
@@ -268,26 +266,26 @@ class TestPDFProcessor:
         assert result == ""
 
     @pytest.mark.asyncio
-    async def test_process_pdf_success_with_markdown_output(self, pdf_processor, tmp_path):
+    async def test_process_pdf_success_with_markdown_output(
+        self, pdf_processor, tmp_path
+    ):
         """Test successful PDF processing with markdown output."""
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch.object(pdf_processor, '_auto_extract') as mock_extract:
+        with patch.object(pdf_processor, "_auto_extract") as mock_extract:
             mock_extract.return_value = {
                 "success": True,
                 "text": "TEST DOCUMENT\n\nContent here",
                 "pages_processed": 1,
                 "total_pages": 1,
-                "metadata": {"title": "Test"}
+                "metadata": {"title": "Test"},
             }
 
             result = await pdf_processor.process_pdf(
-                pdf_source=str(pdf_path),
-                method="auto",
-                output_format="markdown"
+                pdf_source=str(pdf_path), method="auto", output_format="markdown"
             )
-            
+
             assert result["success"] is True
             assert "text" in result
             assert "markdown" in result
@@ -299,7 +297,7 @@ class TestPDFProcessor:
     async def test_batch_process_pdfs_empty_list(self, pdf_processor):
         """Test batch processing with empty PDF list."""
         result = await pdf_processor.batch_process_pdfs([])
-        
+
         assert result["success"] is False
         assert "PDF sources list cannot be empty" in result["error"]
 
@@ -313,20 +311,19 @@ class TestPDFProcessor:
             pdf_file.write_bytes(b"mock pdf content")
             pdf_files.append(str(pdf_file))
 
-        with patch.object(pdf_processor, 'process_pdf') as mock_process:
+        with patch.object(pdf_processor, "process_pdf") as mock_process:
             mock_process.return_value = {
                 "success": True,
                 "text": "Sample text",
                 "pages_processed": 1,
                 "word_count": 10,
-                "character_count": 50
+                "character_count": 50,
             }
 
             result = await pdf_processor.batch_process_pdfs(
-                pdf_sources=pdf_files,
-                method="auto"
+                pdf_sources=pdf_files, method="auto"
             )
-            
+
             assert result["success"] is True
             assert len(result["results"]) == 3
             assert result["summary"]["total_pdfs"] == 3
@@ -337,7 +334,7 @@ class TestPDFProcessor:
     async def test_batch_process_pdfs_mixed_results(self, pdf_processor, tmp_path):
         """Test batch processing with mixed success/failure results."""
         pdf_files = [str(tmp_path / f"test{i}.pdf") for i in range(3)]
-        
+
         def mock_process_side_effect(pdf_source, **kwargs):
             if "test1" in pdf_source:
                 return {"success": False, "error": "Processing failed"}
@@ -345,15 +342,16 @@ class TestPDFProcessor:
                 "success": True,
                 "text": "Sample text",
                 "pages_processed": 1,
-                "word_count": 10
+                "word_count": 10,
             }
 
-        with patch.object(pdf_processor, 'process_pdf', side_effect=mock_process_side_effect):
+        with patch.object(
+            pdf_processor, "process_pdf", side_effect=mock_process_side_effect
+        ):
             result = await pdf_processor.batch_process_pdfs(
-                pdf_sources=pdf_files,
-                method="auto"
+                pdf_sources=pdf_files, method="auto"
             )
-            
+
             assert result["success"] is True
             assert result["summary"]["total_pdfs"] == 3
             assert result["summary"]["successful"] == 2
@@ -363,18 +361,19 @@ class TestPDFProcessor:
     async def test_batch_process_pdfs_with_exceptions(self, pdf_processor, tmp_path):
         """Test batch processing with exceptions."""
         pdf_files = [str(tmp_path / f"test{i}.pdf") for i in range(2)]
-        
+
         def mock_process_side_effect(pdf_source, **kwargs):
             if "test0" in pdf_source:
                 raise ValueError("Processing error")
             return {"success": True, "text": "Sample text"}
 
-        with patch.object(pdf_processor, 'process_pdf', side_effect=mock_process_side_effect):
+        with patch.object(
+            pdf_processor, "process_pdf", side_effect=mock_process_side_effect
+        ):
             result = await pdf_processor.batch_process_pdfs(
-                pdf_sources=pdf_files,
-                method="auto"
+                pdf_sources=pdf_files, method="auto"
             )
-            
+
             assert result["success"] is True
             assert len(result["results"]) == 2
             # One result should be an error from exception handling
@@ -385,21 +384,22 @@ class TestPDFProcessor:
         """Test cleanup functionality."""
         temp_dir = pdf_processor.temp_dir
         assert os.path.exists(temp_dir)
-        
+
         pdf_processor.cleanup()
-        
+
         assert not os.path.exists(temp_dir)
 
     @pytest.mark.asyncio
     async def test_process_pdf_with_page_range_validation(self, pdf_processor):
         """Test PDF processing with invalid page range."""
-        with patch.object(pdf_processor, '_is_url', return_value=False), \
-             patch('pathlib.Path.exists', return_value=True):
-            
+        with (
+            patch.object(pdf_processor, "_is_url", return_value=False),
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             # Test with invalid page range format
             result = await pdf_processor.process_pdf(
                 pdf_source="/test.pdf",
-                page_range=(5, 2)  # end < start
+                page_range=(5, 2),  # end < start
             )
             # This should be handled in the validation logic
             # The current implementation doesn't validate in process_pdf
@@ -412,35 +412,36 @@ class TestPDFProcessor:
         pdf_path.write_bytes(b"mock pdf content")
 
         # Test PyMuPDF without metadata
-        with patch('extractor.pdf_processor.fitz') as mock_fitz:
+        with patch("extractor.pdf_processor.fitz") as mock_fitz:
             mock_doc = MagicMock()
             mock_doc.page_count = 1
             mock_doc.metadata = {}
-            
+
             mock_page = MagicMock()
             mock_page.get_text.return_value = "Sample text"
             mock_doc.load_page.return_value = mock_page
-            
+
             mock_fitz.open.return_value = mock_doc
 
             result = await pdf_processor._extract_with_pymupdf(pdf_path, None, False)
-            
+
             assert result["success"] is True
             assert "metadata" not in result
 
         # Test PyPDF2 without metadata
-        with patch('extractor.pdf_processor.PyPDF2') as mock_pypdf2, \
-             patch('builtins.open', mock_open(read_data=b"mock pdf")):
-            
+        with (
+            patch("extractor.pdf_processor.PyPDF2") as mock_pypdf2,
+            patch("builtins.open", mock_open(read_data=b"mock pdf")),
+        ):
             mock_reader = MagicMock()
             mock_reader.pages = [MagicMock()]
             mock_reader.metadata = None
-            
+
             mock_reader.pages[0].extract_text.return_value = "Sample text"
             mock_pypdf2.PdfReader.return_value = mock_reader
 
             result = await pdf_processor._extract_with_pypdf2(pdf_path, None, False)
-            
+
             assert result["success"] is True
             assert "metadata" not in result
 
@@ -450,20 +451,18 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch.object(pdf_processor, '_auto_extract') as mock_extract:
+        with patch.object(pdf_processor, "_auto_extract") as mock_extract:
             mock_extract.return_value = {
                 "success": True,
                 "text": "Sample text content",
                 "pages_processed": 1,
-                "total_pages": 1
+                "total_pages": 1,
             }
 
             result = await pdf_processor.process_pdf(
-                pdf_source=str(pdf_path),
-                method="auto",
-                output_format="text"
+                pdf_source=str(pdf_path), method="auto", output_format="text"
             )
-            
+
             assert result["success"] is True
             assert "text" in result
             assert "markdown" not in result

@@ -587,7 +587,9 @@ class PDFToMarkdownRequest(BaseModel):
 class BatchPDFToMarkdownRequest(BaseModel):
     """Request model for batch converting PDFs to Markdown."""
 
-    pdf_sources: List[str] = Field(..., description="List of PDF URLs or local file paths")
+    pdf_sources: List[str] = Field(
+        ..., description="List of PDF URLs or local file paths"
+    )
     method: str = Field(
         default="auto", description="Extraction method: auto, pymupdf, pypdf2"
     )
@@ -1337,7 +1339,7 @@ async def convert_pdf_to_markdown(
     method: str = "auto",
     include_metadata: bool = True,
     page_range: Optional[List[int]] = None,
-    output_format: str = "markdown"
+    output_format: str = "markdown",
 ) -> Dict[str, Any]:
     """
     Convert a PDF document to Markdown format.
@@ -1367,14 +1369,14 @@ async def convert_pdf_to_markdown(
             return {
                 "success": False,
                 "error": "Method must be one of: auto, pymupdf, pypdf2",
-                "pdf_source": pdf_source
+                "pdf_source": pdf_source,
             }
 
         if output_format not in ["markdown", "text"]:
             return {
                 "success": False,
                 "error": "Output format must be one of: markdown, text",
-                "pdf_source": pdf_source
+                "pdf_source": pdf_source,
             }
 
         # Convert page_range list to tuple if provided
@@ -1384,24 +1386,26 @@ async def convert_pdf_to_markdown(
                 return {
                     "success": False,
                     "error": "Page range must contain exactly 2 elements: [start, end]",
-                    "pdf_source": pdf_source
+                    "pdf_source": pdf_source,
                 }
             if page_range[0] < 0 or page_range[1] < 0:
                 return {
                     "success": False,
                     "error": "Page numbers must be non-negative",
-                    "pdf_source": pdf_source
+                    "pdf_source": pdf_source,
                 }
             if page_range[0] >= page_range[1]:
                 return {
                     "success": False,
                     "error": "Start page must be less than end page",
-                    "pdf_source": pdf_source
+                    "pdf_source": pdf_source,
                 }
             page_range_tuple = tuple(page_range)
 
         start_time = time.time()
-        logger.info(f"Converting PDF to {output_format}: {pdf_source} with method: {method}")
+        logger.info(
+            f"Converting PDF to {output_format}: {pdf_source} with method: {method}"
+        )
 
         # Apply rate limiting
         await rate_limiter.wait()
@@ -1412,7 +1416,7 @@ async def convert_pdf_to_markdown(
             method=method,
             include_metadata=include_metadata,
             page_range=page_range_tuple,
-            output_format=output_format
+            output_format=output_format,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -1426,7 +1430,7 @@ async def convert_pdf_to_markdown(
                 "success": True,
                 "data": result,
                 "method_used": f"pdf_{method}",
-                "duration_ms": duration_ms
+                "duration_ms": duration_ms,
             }
         else:
             error_response = ErrorHandler.handle_scraping_error(
@@ -1447,7 +1451,9 @@ async def convert_pdf_to_markdown(
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(e, pdf_source, f"pdf_{method}")
+        error_response = ErrorHandler.handle_scraping_error(
+            e, pdf_source, f"pdf_{method}"
+        )
         metrics_collector.record_request(
             pdf_source,
             False,
@@ -1465,7 +1471,7 @@ async def batch_convert_pdfs_to_markdown(
     method: str = "auto",
     include_metadata: bool = True,
     page_range: Optional[List[int]] = None,
-    output_format: str = "markdown"
+    output_format: str = "markdown",
 ) -> Dict[str, Any]:
     """
     Convert multiple PDF documents to Markdown format concurrently.
@@ -1496,13 +1502,13 @@ async def batch_convert_pdfs_to_markdown(
         if method not in ["auto", "pymupdf", "pypdf2"]:
             return {
                 "success": False,
-                "error": "Method must be one of: auto, pymupdf, pypdf2"
+                "error": "Method must be one of: auto, pymupdf, pypdf2",
             }
 
         if output_format not in ["markdown", "text"]:
             return {
                 "success": False,
-                "error": "Output format must be one of: markdown, text"
+                "error": "Output format must be one of: markdown, text",
             }
 
         # Convert page_range list to tuple if provided
@@ -1511,17 +1517,14 @@ async def batch_convert_pdfs_to_markdown(
             if len(page_range) != 2:
                 return {
                     "success": False,
-                    "error": "Page range must contain exactly 2 elements: [start, end]"
+                    "error": "Page range must contain exactly 2 elements: [start, end]",
                 }
             if page_range[0] < 0 or page_range[1] < 0:
-                return {
-                    "success": False,
-                    "error": "Page numbers must be non-negative"
-                }
+                return {"success": False, "error": "Page numbers must be non-negative"}
             if page_range[0] >= page_range[1]:
                 return {
                     "success": False,
-                    "error": "Start page must be less than end page"
+                    "error": "Start page must be less than end page",
                 }
             page_range_tuple = tuple(page_range)
 
@@ -1536,7 +1539,7 @@ async def batch_convert_pdfs_to_markdown(
             method=method,
             include_metadata=include_metadata,
             page_range=page_range_tuple,
-            output_format=output_format
+            output_format=output_format,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -1550,7 +1553,10 @@ async def batch_convert_pdfs_to_markdown(
             )
             success = pdf_result.get("success", False)
             metrics_collector.record_request(
-                pdf_source, success, duration_ms // len(pdf_sources), f"batch_pdf_{method}"
+                pdf_source,
+                success,
+                duration_ms // len(pdf_sources),
+                f"batch_pdf_{method}",
             )
 
         if result.get("success"):
@@ -1558,7 +1564,7 @@ async def batch_convert_pdfs_to_markdown(
                 "success": True,
                 "data": result,
                 "method_used": f"batch_pdf_{method}",
-                "duration_ms": duration_ms
+                "duration_ms": duration_ms,
             }
         else:
             return {
@@ -1566,7 +1572,7 @@ async def batch_convert_pdfs_to_markdown(
                 "error": result.get("error", "Batch PDF conversion failed"),
                 "data": result.get("results", []),
                 "method_used": f"batch_pdf_{method}",
-                "duration_ms": duration_ms
+                "duration_ms": duration_ms,
             }
 
     except Exception as e:
@@ -1579,7 +1585,7 @@ async def batch_convert_pdfs_to_markdown(
             "error": str(e),
             "pdf_sources": pdf_sources,
             "method_used": f"batch_pdf_{method}",
-            "duration_ms": duration_ms
+            "duration_ms": duration_ms,
         }
 
 
