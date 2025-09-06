@@ -12,7 +12,6 @@ from pydantic import BaseModel, Field, field_validator
 from .scraper import WebScraper
 from .advanced_features import AntiDetectionScraper, FormHandler
 from .markdown_converter import MarkdownConverter
-from .pdf_processor import PDFProcessor
 from .config import settings
 from .utils import (
     timing_decorator,
@@ -37,7 +36,14 @@ app = FastMCP(settings.server_name, version=settings.server_version)
 web_scraper = WebScraper()
 anti_detection_scraper = AntiDetectionScraper()
 markdown_converter = MarkdownConverter()
-pdf_processor = PDFProcessor()
+
+
+# 延迟初始化 PDF 处理器，避免启动时加载 PyMuPDF
+def _get_pdf_processor():
+    """获取 PDF 处理器实例，延迟导入以避免启动警告"""
+    from .pdf_processor import PDFProcessor
+
+    return PDFProcessor()
 
 
 class ScrapeRequest(BaseModel):
@@ -1411,6 +1417,7 @@ async def convert_pdf_to_markdown(
         await rate_limiter.wait()
 
         # Process PDF
+        pdf_processor = _get_pdf_processor()
         result = await pdf_processor.process_pdf(
             pdf_source=pdf_source,
             method=method,
@@ -1534,6 +1541,7 @@ async def batch_convert_pdfs_to_markdown(
         )
 
         # Process all PDFs
+        pdf_processor = _get_pdf_processor()
         result = await pdf_processor.batch_process_pdfs(
             pdf_sources=pdf_sources,
             method=method,

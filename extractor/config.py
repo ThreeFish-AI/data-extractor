@@ -5,12 +5,36 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
+# 动态从 pyproject.toml 读取版本号
+def _get_dynamic_version():
+    """从 pyproject.toml 动态读取版本号"""
+    from pathlib import Path
+
+    try:
+        current_file = Path(__file__).resolve()
+        project_root = (
+            current_file.parent.parent
+        )  # config.py -> extractor -> project_root
+        pyproject_path = project_root / "pyproject.toml"
+
+        if pyproject_path.exists():
+            with open(pyproject_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                for line in content.splitlines():
+                    line = line.strip()
+                    if line.startswith('version = "') and line.endswith('"'):
+                        return line.split('"')[1]
+    except Exception:
+        pass
+    return "0.0.0"
+
+
 class DataExtractorSettings(BaseSettings):
     """Settings for the Data Extractor MCP Server."""
 
     # Server settings
     server_name: str = Field(default="data-extractor")
-    server_version: str = Field(default="0.1.3")
+    server_version: str = Field(default_factory=_get_dynamic_version)
 
     # Data Extractor settings
     concurrent_requests: int = Field(default=16)
@@ -63,4 +87,16 @@ class DataExtractorSettings(BaseSettings):
         }
 
 
+# 创建设置实例，并动态设置版本号（如果没有环境变量覆盖的话）
 settings = DataExtractorSettings()
+if not hasattr(settings, "_version_set"):
+    # 如果没有从环境变量读取到版本号，使用动态版本
+    dynamic_version = _get_dynamic_version()
+    if settings.server_version != dynamic_version:
+        # 重新创建实例以使用正确的版本号
+        import os
+
+        if "DATA_EXTRACTOR_SERVER_VERSION" not in os.environ:
+            os.environ["DATA_EXTRACTOR_SERVER_VERSION"] = dynamic_version
+            settings = DataExtractorSettings()
+    setattr(settings, "_version_set", True)

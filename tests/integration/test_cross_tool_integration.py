@@ -5,19 +5,24 @@ import pytest_asyncio
 import asyncio
 from unittest.mock import patch
 
-from extractor.server import app, web_scraper, pdf_processor
+from extractor.server import app, web_scraper, _get_pdf_processor
 
 
 class TestCrossToolIntegration:
     """Integration tests for scenarios involving multiple tools working together."""
 
+    @pytest.fixture
+    def pdf_processor(self):
+        """创建 PDF 处理器实例用于测试"""
+        return _get_pdf_processor()
+
     @pytest_asyncio.fixture
-    async def all_tools(self):
+    async def all_tools(self, pdf_processor):
         """Get all MCP tools from the app."""
         return await app.get_tools()
 
     @pytest.mark.asyncio
-    async def test_webpage_to_pdf_to_markdown_workflow(self, all_tools):
+    async def test_webpage_to_pdf_to_markdown_workflow(self, all_tools, pdf_processor):
         """Test a complete workflow: scrape webpage, then process any PDFs found."""
         scrape_tool = all_tools["scrape_webpage"]
         convert_pdf_tool = all_tools["convert_pdf_to_markdown"]
@@ -75,6 +80,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_scrape.return_value = webpage_result
@@ -121,7 +127,9 @@ class TestCrossToolIntegration:
             )
 
     @pytest.mark.asyncio
-    async def test_batch_scraping_with_pdf_extraction_workflow(self, all_tools):
+    async def test_batch_scraping_with_pdf_extraction_workflow(
+        self, all_tools, pdf_processor
+    ):
         """Test batch webpage scraping followed by batch PDF processing."""
         batch_scrape_tool = all_tools["scrape_multiple_webpages"]
         batch_pdf_tool = all_tools["batch_convert_pdfs_to_markdown"]
@@ -181,6 +189,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_multiple_urls") as mock_batch_scrape,
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
             mock_batch_scrape.return_value = batch_scrape_results
@@ -219,7 +228,9 @@ class TestCrossToolIntegration:
             assert pdf_response["data"]["summary"]["total_words_extracted"] == 4000
 
     @pytest.mark.asyncio
-    async def test_metrics_collection_across_multiple_tools(self, all_tools):
+    async def test_metrics_collection_across_multiple_tools(
+        self, all_tools, pdf_processor
+    ):
         """Test that metrics are collected properly across different tool usage."""
         scrape_tool = all_tools["scrape_webpage"]
         pdf_tool = all_tools["convert_pdf_to_markdown"]
@@ -249,6 +260,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_scrape.return_value = scrape_result
@@ -275,7 +287,7 @@ class TestCrossToolIntegration:
             assert any(cat in metrics_data for cat in expected_categories)
 
     @pytest.mark.asyncio
-    async def test_error_propagation_across_tools(self, all_tools):
+    async def test_error_propagation_across_tools(self, all_tools, pdf_processor):
         """Test how errors propagate when using multiple tools together."""
         scrape_tool = all_tools["scrape_webpage"]
         pdf_tool = all_tools["convert_pdf_to_markdown"]
@@ -289,7 +301,10 @@ class TestCrossToolIntegration:
             assert scrape_response["success"] is False
 
         # Mock a failed PDF processing
-        with patch.object(pdf_processor, "process_pdf") as mock_pdf:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_pdf,
+        ):
             mock_pdf.return_value = {
                 "success": False,
                 "error": "PDF parsing failed",
@@ -306,7 +321,9 @@ class TestCrossToolIntegration:
             )
 
     @pytest.mark.asyncio
-    async def test_resource_cleanup_across_multiple_tools(self, all_tools):
+    async def test_resource_cleanup_across_multiple_tools(
+        self, all_tools, pdf_processor
+    ):
         """Test proper resource cleanup when using multiple tools."""
         import gc
 
@@ -341,6 +358,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
@@ -367,7 +385,7 @@ class TestCrossToolIntegration:
         )
 
     @pytest.mark.asyncio
-    async def test_concurrent_multi_tool_operations(self, all_tools):
+    async def test_concurrent_multi_tool_operations(self, all_tools, pdf_processor):
         """Test concurrent execution of different tools."""
         scrape_tool = all_tools["scrape_webpage"]
         pdf_tool = all_tools["convert_pdf_to_markdown"]
@@ -395,6 +413,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_scrape.return_value = scrape_result
@@ -424,6 +443,11 @@ class TestCrossToolIntegration:
 class TestRealWorldIntegrationScenarios:
     """Integration tests simulating real-world usage scenarios."""
 
+    @pytest.fixture
+    def pdf_processor(self):
+        """创建 PDF 处理器实例用于测试"""
+        return _get_pdf_processor()
+
     @pytest_asyncio.fixture
     async def scenario_tools(self):
         """Get tools commonly used together in real scenarios."""
@@ -440,7 +464,9 @@ class TestRealWorldIntegrationScenarios:
         }
 
     @pytest.mark.asyncio
-    async def test_research_paper_collection_scenario(self, scenario_tools):
+    async def test_research_paper_collection_scenario(
+        self, scenario_tools, pdf_processor
+    ):
         """Test a complete research paper collection workflow."""
         # Scenario: User wants to collect and convert all research papers from an academic site
 
@@ -511,7 +537,10 @@ class TestRealWorldIntegrationScenarios:
             },
         }
 
-        with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
+        ):
             mock_batch_pdf.return_value = batch_result
 
             batch_response = await batch_pdf_tool.fn(
@@ -547,7 +576,9 @@ class TestRealWorldIntegrationScenarios:
         assert metrics_response["success"] is True
 
     @pytest.mark.asyncio
-    async def test_website_documentation_backup_scenario(self, scenario_tools):
+    async def test_website_documentation_backup_scenario(
+        self, scenario_tools, pdf_processor
+    ):
         """Test creating a complete backup of website documentation."""
         # Scenario: User wants to backup all documentation pages as markdown
 
@@ -622,7 +653,10 @@ class TestRealWorldIntegrationScenarios:
         # Step 3: Convert the PDF to markdown
         pdf_tool = scenario_tools["convert_pdf_to_markdown"]
 
-        with patch.object(pdf_processor, "process_pdf") as mock_pdf:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_pdf,
+        ):
             mock_pdf.return_value = {
                 "success": True,
                 "markdown": "# FAQ\n\n## Q: How to get started?\nA: Follow the getting started guide.",
@@ -642,7 +676,7 @@ class TestRealWorldIntegrationScenarios:
         assert "FAQ" in pdf_result["data"]["markdown"]
 
     @pytest.mark.asyncio
-    async def test_competitive_analysis_scenario(self, scenario_tools):
+    async def test_competitive_analysis_scenario(self, scenario_tools, pdf_processor):
         """Test competitive analysis workflow across multiple competitor sites."""
         # Scenario: Analyze multiple competitor websites and their resources
 
@@ -725,7 +759,10 @@ class TestRealWorldIntegrationScenarios:
             },
         }
 
-        with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
+        ):
             mock_batch_pdf.return_value = whitepaper_results
 
             pdf_response = await batch_pdf_tool.fn(pdf_sources=pdf_urls, method="auto")

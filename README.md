@@ -51,7 +51,7 @@
 ```
 data-extractor/
 ├── extractor/                          # 核心引擎模块
-│   ├── __init__.py                     # 包初始化 (v0.1.3)
+│   ├── __init__.py                     # 包初始化 (v0.1.4)
 │   ├── server.py                       # FastMCP 服务器与 14 个 MCP 工具
 │   ├── scraper.py                      # WebScraper 核心抓取引擎
 │   ├── advanced_features.py            # 反检测与表单自动化
@@ -97,7 +97,7 @@ data-extractor/
 
 ### 已完成的里程碑 ✅
 
-- ✅ **v0.1.3 稳定版发布**: 基于 Scrapy + FastMCP 构建的企业级网页抓取 MCP Server
+- ✅ **v0.1.4 稳定版发布**: 基于 Scrapy + FastMCP 构建的企业级网页抓取 MCP Server
 - ✅ **完整测试体系**: 191 个测试用例，通过率 95%+，包含单元测试和强化集成测试
 - ✅ **集成测试强化**: 新增 PDF 工具实际执行验证、跨工具协作流程、端到端现实场景测试
 - ✅ **代码质量优化**: 类型注解完善，从 black 迁移到 ruff 格式化
@@ -106,7 +106,7 @@ data-extractor/
 
 ### 当前状态 📊
 
-- **版本**: v0.1.3 ✨
+- **版本**: v0.1.4 ✨
 - **功能状态**: 14 个 MCP 工具 + Markdown 转换功能完整 + PDF 转换功能完整
 - **测试覆盖率**: 95%+ (191 个测试用例，强化集成测试覆盖)
 - **质量评级**: A+ (生产就绪标准)
@@ -179,7 +179,7 @@ pip install -e ".[dev]"
 ```bash
 # 服务器设置
 DATA_EXTRACTOR_SERVER_NAME=data-extractor
-DATA_EXTRACTOR_SERVER_VERSION=0.1.3
+DATA_EXTRACTOR_SERVER_VERSION=0.1.4
 
 # 并发和延迟设置
 DATA_EXTRACTOR_CONCURRENT_REQUESTS=16
@@ -258,7 +258,7 @@ uv run python -m extractor.server
       "args": [
         "run",
         "--with",
-        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.3",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.4",
         "data-extractor"
       ]
     }
@@ -285,7 +285,7 @@ uv run python -m extractor.server
 - 将 `cwd` 路径替换为您的项目实际路径
 - GitHub 仓库地址：`https://github.com/ThreeFish-AI/data-extractor.git`
 - 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
-- 当前最新稳定版本：v0.1.3
+- 当前最新稳定版本：v0.1.4
 
 ## 🧪 测试运行
 

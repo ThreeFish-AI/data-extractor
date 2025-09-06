@@ -495,7 +495,9 @@ class TestSystemHealthAndDiagnostics:
     async def test_pdf_tools_resource_cleanup(self):
         """Test that PDF tools properly clean up resources."""
         # Verify that PDF processor has cleanup capabilities
-        from extractor.server import pdf_processor
+        from extractor.server import _get_pdf_processor
+
+        pdf_processor = _get_pdf_processor()
 
         # Check that the processor has cleanup method
         assert hasattr(pdf_processor, "cleanup")

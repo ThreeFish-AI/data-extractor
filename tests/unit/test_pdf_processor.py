@@ -96,7 +96,9 @@ class TestPDFProcessor:
         pdf_path.write_bytes(b"mock pdf content")
 
         # Mock fitz (PyMuPDF)
-        with patch("extractor.pdf_processor.fitz") as mock_fitz:
+        with patch("extractor.pdf_processor._import_fitz") as mock_import_fitz:
+            mock_fitz = MagicMock()
+            mock_import_fitz.return_value = mock_fitz
             mock_doc = MagicMock()
             mock_doc.page_count = 3
             mock_doc.metadata = {
@@ -125,7 +127,9 @@ class TestPDFProcessor:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
-        with patch("extractor.pdf_processor.fitz") as mock_fitz:
+        with patch("extractor.pdf_processor._import_fitz") as mock_import_fitz:
+            mock_fitz = MagicMock()
+            mock_import_fitz.return_value = mock_fitz
             mock_doc = MagicMock()
             mock_doc.page_count = 10
             mock_doc.metadata = {}
@@ -149,9 +153,12 @@ class TestPDFProcessor:
         pdf_path.write_bytes(b"mock pdf content")
 
         with (
-            patch("extractor.pdf_processor.pypdf") as mock_pypdf,
+            patch("extractor.pdf_processor._import_pypdf") as mock_import_pypdf,
             patch("builtins.open", mock_open(read_data=b"mock pdf")),
         ):
+            mock_pypdf = MagicMock()
+            mock_import_pypdf.return_value = mock_pypdf
+
             mock_reader = MagicMock()
             mock_reader.pages = [MagicMock(), MagicMock(), MagicMock()]
             mock_reader.metadata = {"/Title": "Test PDF", "/Author": "Test Author"}
@@ -176,9 +183,11 @@ class TestPDFProcessor:
         pdf_path.write_bytes(b"mock pdf content")
 
         with (
-            patch("extractor.pdf_processor.pypdf") as mock_pypdf,
+            patch("extractor.pdf_processor._import_pypdf") as mock_import_pypdf,
             patch("builtins.open", mock_open()),
         ):
+            mock_pypdf = MagicMock()
+            mock_import_pypdf.return_value = mock_pypdf
             mock_pypdf.PdfReader.side_effect = Exception("PDF reading failed")
 
             result = await pdf_processor._extract_with_pypdf(pdf_path, None, True)
@@ -410,7 +419,9 @@ class TestPDFProcessor:
         pdf_path.write_bytes(b"mock pdf content")
 
         # Test PyMuPDF without metadata
-        with patch("extractor.pdf_processor.fitz") as mock_fitz:
+        with patch("extractor.pdf_processor._import_fitz") as mock_import_fitz:
+            mock_fitz = MagicMock()
+            mock_import_fitz.return_value = mock_fitz
             mock_doc = MagicMock()
             mock_doc.page_count = 1
             mock_doc.metadata = {}
@@ -428,9 +439,12 @@ class TestPDFProcessor:
 
         # Test pypdf without metadata
         with (
-            patch("extractor.pdf_processor.pypdf") as mock_pypdf,
+            patch("extractor.pdf_processor._import_pypdf") as mock_import_pypdf,
             patch("builtins.open", mock_open(read_data=b"mock pdf")),
         ):
+            mock_pypdf = MagicMock()
+            mock_import_pypdf.return_value = mock_pypdf
+
             mock_reader = MagicMock()
             mock_reader.pages = [MagicMock()]
             mock_reader.metadata = None

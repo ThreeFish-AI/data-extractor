@@ -6,7 +6,7 @@ import tempfile
 import os
 from unittest.mock import patch, MagicMock
 
-from extractor.server import app, pdf_processor
+from extractor.server import app, _get_pdf_processor
 from extractor.pdf_processor import PDFProcessor
 
 
@@ -25,6 +25,12 @@ def sample_pdf_content():
     }
 
 
+@pytest.fixture
+def pdf_processor():
+    """Create a PDF processor instance for testing."""
+    return PDFProcessor()
+
+
 @pytest_asyncio.fixture
 async def pdf_test_tools():
     """Get PDF processing tools from the app."""
@@ -40,58 +46,61 @@ class TestPDFToolsIntegration:
 
     @pytest.mark.asyncio
     async def test_pdf_convert_tool_actual_execution(
-        self, pdf_test_tools, sample_pdf_content
+        self, pdf_test_tools, pdf_processor, sample_pdf_content
     ):
         """Test actual PDF conversion tool execution with mocked PDF processing."""
         convert_tool = pdf_test_tools["convert"]
 
-        # Mock the PDF processor's process_pdf method
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
-            mock_process.return_value = {
-                "success": True,
-                **sample_pdf_content,
-                "markdown": "# Sample Document\n\nThis is a test PDF document.",
-                "source": "/test/sample.pdf",
-                "method_used": "pymupdf",
-                "output_format": "markdown",
-                "word_count": 25,
-                "character_count": 150,
-            }
+        # Mock the PDF processor via _get_pdf_processor
+        with patch("extractor.server._get_pdf_processor") as mock_get_processor:
+            mock_get_processor.return_value = pdf_processor
+            # Mock the PDF processor's process_pdf method
+            with patch.object(pdf_processor, "process_pdf") as mock_process:
+                mock_process.return_value = {
+                    "success": True,
+                    **sample_pdf_content,
+                    "markdown": "# Sample Document\n\nThis is a test PDF document.",
+                    "source": "/test/sample.pdf",
+                    "method_used": "pymupdf",
+                    "output_format": "markdown",
+                    "word_count": 25,
+                    "character_count": 150,
+                }
 
-            # Execute the tool
-            result = await convert_tool.fn(
-                pdf_source="/test/sample.pdf",
-                method="auto",
-                include_metadata=True,
-                output_format="markdown",
-            )
+                # Execute the tool
+                result = await convert_tool.fn(
+                    pdf_source="/test/sample.pdf",
+                    method="auto",
+                    include_metadata=True,
+                    output_format="markdown",
+                )
 
-            # Verify successful execution
-            assert result["success"] is True
-            assert result["data"]["success"] is True
-            assert "markdown" in result["data"]
-            assert result["data"]["source"] == "/test/sample.pdf"
-            assert result["data"]["method_used"] == "pymupdf"
-            assert result["data"]["word_count"] == 25
+                # Verify successful execution
+                assert result["success"] is True
+                assert result["data"]["success"] is True
+                assert "markdown" in result["data"]
+                assert result["data"]["source"] == "/test/sample.pdf"
+                assert result["data"]["method_used"] == "pymupdf"
+                assert result["data"]["word_count"] == 25
 
-            # Verify metadata is included
-            metadata = result["data"]["metadata"]
-            assert metadata["title"] == "Sample Document"
-            assert metadata["author"] == "Test Author"
-            assert metadata["total_pages"] == 3
+                # Verify metadata is included
+                metadata = result["data"]["metadata"]
+                assert metadata["title"] == "Sample Document"
+                assert metadata["author"] == "Test Author"
+                assert metadata["total_pages"] == 3
 
-            # Verify tool was called correctly
-            mock_process.assert_called_once_with(
-                pdf_source="/test/sample.pdf",
-                method="auto",
-                include_metadata=True,
-                page_range=None,
-                output_format="markdown",
-            )
+                # Verify tool was called correctly
+                mock_process.assert_called_once_with(
+                    pdf_source="/test/sample.pdf",
+                    method="auto",
+                    include_metadata=True,
+                    page_range=None,
+                    output_format="markdown",
+                )
 
     @pytest.mark.asyncio
     async def test_pdf_batch_tool_actual_execution(
-        self, pdf_test_tools, sample_pdf_content
+        self, pdf_test_tools, pdf_processor, sample_pdf_content
     ):
         """Test actual PDF batch conversion tool execution."""
         batch_tool = pdf_test_tools["batch"]
@@ -131,34 +140,40 @@ class TestPDFToolsIntegration:
             },
         }
 
-        with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch:
-            mock_batch.return_value = batch_result
+        with patch("extractor.server._get_pdf_processor") as mock_get_processor:
+            mock_get_processor.return_value = pdf_processor
+            with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch:
+                mock_batch.return_value = batch_result
 
-            # Execute batch tool
-            result = await batch_tool.fn(
-                pdf_sources=["/test/doc1.pdf", "/test/doc2.pdf", "/test/missing.pdf"],
-                method="auto",
-                include_metadata=True,
-                output_format="markdown",
-            )
+                # Execute batch tool
+                result = await batch_tool.fn(
+                    pdf_sources=[
+                        "/test/doc1.pdf",
+                        "/test/doc2.pdf",
+                        "/test/missing.pdf",
+                    ],
+                    method="auto",
+                    include_metadata=True,
+                    output_format="markdown",
+                )
 
-            # Verify successful batch execution
-            assert result["success"] is True
-            assert result["data"]["success"] is True
+                # Verify successful batch execution
+                assert result["success"] is True
+                assert result["data"]["success"] is True
 
-            # Verify batch summary
-            summary = result["data"]["summary"]
-            assert summary["total_pdfs"] == 3
-            assert summary["successful"] == 2
-            assert summary["failed"] == 1
-            assert summary["total_words_extracted"] == 50
+                # Verify batch summary
+                summary = result["data"]["summary"]
+                assert summary["total_pdfs"] == 3
+                assert summary["successful"] == 2
+                assert summary["failed"] == 1
+                assert summary["total_words_extracted"] == 50
 
-            # Verify individual results
-            results = result["data"]["results"]
-            assert len(results) == 3
-            assert results[0]["success"] is True
-            assert results[1]["success"] is True
-            assert results[2]["success"] is False
+                # Verify individual results
+                results = result["data"]["results"]
+                assert len(results) == 3
+                assert results[0]["success"] is True
+                assert results[1]["success"] is True
+                assert results[2]["success"] is False
 
     @pytest.mark.asyncio
     async def test_pdf_tools_parameter_validation_integration(self, pdf_test_tools):
@@ -181,12 +196,17 @@ class TestPDFToolsIntegration:
         assert "PDF sources list cannot be empty" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_pdf_tools_with_page_range(self, pdf_test_tools, sample_pdf_content):
+    async def test_pdf_tools_with_page_range(
+        self, pdf_test_tools, pdf_processor, sample_pdf_content
+    ):
         """Test PDF tools with page range functionality."""
         convert_tool = pdf_test_tools["convert"]
 
         # Mock PDF processing with page range
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             range_result = {
                 **sample_pdf_content,
                 "success": True,
@@ -211,12 +231,17 @@ class TestPDFToolsIntegration:
             assert kwargs["page_range"] == (1, 3)  # Server converts list to tuple
 
     @pytest.mark.asyncio
-    async def test_pdf_tools_error_handling_integration(self, pdf_test_tools):
+    async def test_pdf_tools_error_handling_integration(
+        self, pdf_test_tools, pdf_processor
+    ):
         """Test comprehensive error handling in PDF tools."""
         convert_tool = pdf_test_tools["convert"]
 
         # Test file not found error
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             mock_process.return_value = {
                 "success": False,
                 "error": "PDF file does not exist",
@@ -234,7 +259,10 @@ class TestPDFToolsIntegration:
             )
 
         # Test URL download failure
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             mock_process.return_value = {
                 "success": False,
                 "error": "Failed to download PDF from URL",
@@ -254,13 +282,16 @@ class TestPDFToolsIntegration:
 
     @pytest.mark.asyncio
     async def test_pdf_tools_with_different_output_formats(
-        self, pdf_test_tools, sample_pdf_content
+        self, pdf_test_tools, pdf_processor, sample_pdf_content
     ):
         """Test PDF tools with different output formats."""
         convert_tool = pdf_test_tools["convert"]
 
         # Test text output format
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             text_result = {
                 **sample_pdf_content,
                 "success": True,
@@ -279,7 +310,10 @@ class TestPDFToolsIntegration:
             assert "markdown" not in result["data"]
 
         # Test markdown output format (default)
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             markdown_result = {
                 **sample_pdf_content,
                 "success": True,
@@ -315,12 +349,15 @@ class TestPDFToolsIntegration:
 
     @pytest.mark.asyncio
     async def test_pdf_tools_concurrent_execution(
-        self, pdf_test_tools, sample_pdf_content
+        self, pdf_test_tools, pdf_processor, sample_pdf_content
     ):
         """Test concurrent execution of PDF tools."""
         convert_tool = pdf_test_tools["convert"]
 
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             mock_process.return_value = {
                 **sample_pdf_content,
                 "success": True,
@@ -365,7 +402,9 @@ class TestPDFIntegrationWithRealProcessing:
 
         try:
             # Mock the PDF extraction methods to avoid needing real PDF libraries
-            with patch("extractor.pdf_processor.fitz") as mock_fitz:
+            with patch("extractor.pdf_processor._import_fitz") as mock_import_fitz:
+                mock_fitz = MagicMock()
+                mock_import_fitz.return_value = mock_fitz
                 # Mock successful PyMuPDF processing
                 mock_doc = MagicMock()
                 mock_doc.page_count = 1
@@ -402,8 +441,16 @@ class TestPDFIntegrationWithRealProcessing:
         fake_path = "/nonexistent/fake.pdf"
 
         try:
+            # Create PDF processor instance for mocking
+            test_pdf_processor = PDFProcessor()
             # Mock the batch processing to handle the mixed scenario
-            with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch:
+            with (
+                patch(
+                    "extractor.server._get_pdf_processor",
+                    return_value=test_pdf_processor,
+                ),
+                patch.object(test_pdf_processor, "batch_process_pdfs") as mock_batch,
+            ):
                 mock_batch.return_value = {
                     "success": True,
                     "results": [
@@ -456,12 +503,17 @@ class TestPDFIntegrationWithRealProcessing:
             os.unlink(real_path)
 
     @pytest.mark.asyncio
-    async def test_pdf_url_download_integration_scenario(self, pdf_test_tools):
+    async def test_pdf_url_download_integration_scenario(
+        self, pdf_test_tools, pdf_processor
+    ):
         """Test PDF processing with URL download scenario."""
         convert_tool = pdf_test_tools["convert"]
 
         # Mock URL detection and download process
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             # Simulate successful URL download and processing
             mock_process.return_value = {
                 "success": True,
@@ -498,7 +550,9 @@ class TestPDFIntegrationWithRealProcessing:
             )
 
     @pytest.mark.asyncio
-    async def test_pdf_integration_memory_usage_monitoring(self, pdf_test_tools):
+    async def test_pdf_integration_memory_usage_monitoring(
+        self, pdf_test_tools, pdf_processor
+    ):
         """Test PDF processing with memory usage monitoring."""
         convert_tool = pdf_test_tools["convert"]
 
@@ -509,7 +563,10 @@ class TestPDFIntegrationWithRealProcessing:
         initial_objects = len(gc.get_objects())
 
         # Perform multiple PDF processing operations
-        with patch.object(pdf_processor, "process_pdf") as mock_process:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "process_pdf") as mock_process,
+        ):
             mock_process.return_value = {
                 "success": True,
                 "text": "Test content " * 100,  # Larger content

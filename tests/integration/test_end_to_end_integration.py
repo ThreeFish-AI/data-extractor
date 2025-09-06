@@ -6,11 +6,16 @@ import asyncio
 import time
 from unittest.mock import patch
 
-from extractor.server import app, web_scraper, pdf_processor
+from extractor.server import app, web_scraper, _get_pdf_processor
 
 
 class TestEndToEndRealWorldScenarios:
     """End-to-end integration tests simulating real-world conditions."""
+
+    @pytest.fixture
+    def pdf_processor(self):
+        """创建 PDF 处理器实例用于测试"""
+        return _get_pdf_processor()
 
     @pytest_asyncio.fixture
     async def e2e_tools(self):
@@ -18,7 +23,9 @@ class TestEndToEndRealWorldScenarios:
         return await app.get_tools()
 
     @pytest.mark.asyncio
-    async def test_complete_document_processing_pipeline(self, e2e_tools):
+    async def test_complete_document_processing_pipeline(
+        self, e2e_tools, pdf_processor
+    ):
         """Test a complete document processing pipeline with realistic conditions."""
         # Simulate processing a research website with mixed content types
 
@@ -426,7 +433,10 @@ Editorial office: +1-555-0123
 
         batch_pdf_tool = e2e_tools["batch_convert_pdfs_to_markdown"]
 
-        with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf:
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
+        ):
             # Simulate realistic batch processing
             async def mock_batch_process(
                 pdf_sources,
@@ -553,7 +563,9 @@ Editorial office: +1-555-0123
         print(f"   - Total processing time: {processing_duration:.2f}s")
 
     @pytest.mark.asyncio
-    async def test_error_recovery_and_resilience_scenarios(self, e2e_tools):
+    async def test_error_recovery_and_resilience_scenarios(
+        self, e2e_tools, pdf_processor
+    ):
         """Test system behavior under various error conditions and recovery scenarios."""
 
         # Scenario 1: Network timeouts and retries
@@ -656,10 +668,13 @@ Editorial office: +1-555-0123
                 },
             }
 
-        with patch.object(
-            pdf_processor,
-            "batch_process_pdfs",
-            side_effect=mock_batch_with_mixed_results,
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(
+                pdf_processor,
+                "batch_process_pdfs",
+                side_effect=mock_batch_with_mixed_results,
+            ),
         ):
             result = await batch_pdf_tool.fn(pdf_sources=mixed_pdf_sources)
 
@@ -789,7 +804,9 @@ Editorial office: +1-555-0123
         print(f"   - Stress test duration: {stress_duration:.2f}s")
 
     @pytest.mark.asyncio
-    async def test_performance_benchmarking_and_optimization(self, e2e_tools):
+    async def test_performance_benchmarking_and_optimization(
+        self, e2e_tools, pdf_processor
+    ):
         """Test system performance under various load conditions."""
 
         # Performance Test 1: Large document processing
@@ -820,8 +837,11 @@ Editorial office: +1-555-0123
             await asyncio.sleep(0.5)  # 500ms for 50-page document
             return large_pdf_content
 
-        with patch.object(
-            pdf_processor, "process_pdf", side_effect=mock_large_pdf_process
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(
+                pdf_processor, "process_pdf", side_effect=mock_large_pdf_process
+            ),
         ):
             start_time = time.time()
             result = await convert_pdf_tool.fn(pdf_source="/large-paper.pdf")
@@ -848,8 +868,11 @@ Editorial office: +1-555-0123
                 "pages_processed": 5,
             }
 
-        with patch.object(
-            pdf_processor, "process_pdf", side_effect=mock_concurrent_pdf_process
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(
+                pdf_processor, "process_pdf", side_effect=mock_concurrent_pdf_process
+            ),
         ):
             # Create concurrent tasks
             for i in range(num_concurrent):
@@ -908,10 +931,13 @@ Editorial office: +1-555-0123
                 },
             }
 
-        with patch.object(
-            pdf_processor,
-            "batch_process_pdfs",
-            side_effect=mock_batch_with_memory_tracking,
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(
+                pdf_processor,
+                "batch_process_pdfs",
+                side_effect=mock_batch_with_memory_tracking,
+            ),
         ):
             start_time = time.time()
             batch_result = await batch_pdf_tool.fn(pdf_sources=large_batch_sources)
@@ -1009,7 +1035,7 @@ Editorial office: +1-555-0123
         )
 
     @pytest.mark.asyncio
-    async def test_data_consistency_and_validation(self, e2e_tools):
+    async def test_data_consistency_and_validation(self, e2e_tools, pdf_processor):
         """Test data consistency and validation across the entire processing pipeline."""
 
         # Test 1: Unicode and special character handling
@@ -1133,8 +1159,11 @@ Editorial office: +1-555-0123
         async def mock_consistent_pdf_process(*args, **kwargs):
             return large_consistent_doc
 
-        with patch.object(
-            pdf_processor, "process_pdf", side_effect=mock_consistent_pdf_process
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(
+                pdf_processor, "process_pdf", side_effect=mock_consistent_pdf_process
+            ),
         ):
             result = await convert_pdf_tool.fn(pdf_source="/consistency-test.pdf")
 
@@ -1186,8 +1215,13 @@ Editorial office: +1-555-0123
                 },
             }
 
-        with patch.object(
-            pdf_processor, "batch_process_pdfs", side_effect=mock_cross_platform_batch
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(
+                pdf_processor,
+                "batch_process_pdfs",
+                side_effect=mock_cross_platform_batch,
+            ),
         ):
             result = await batch_pdf_tool.fn(pdf_sources=mixed_path_sources)
 
@@ -1225,8 +1259,11 @@ Editorial office: +1-555-0123
                 "word_count": 20,
             }
 
-        with patch.object(
-            pdf_processor, "process_pdf", side_effect=mock_concurrent_with_markers
+        with (
+            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch.object(
+                pdf_processor, "process_pdf", side_effect=mock_concurrent_with_markers
+            ),
         ):
             # Create concurrent tasks with unique data
             for source in data_markers.keys():

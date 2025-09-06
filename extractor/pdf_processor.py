@@ -8,9 +8,29 @@ from pathlib import Path
 from urllib.parse import urlparse
 import asyncio
 
-import fitz  # PyMuPDF
-import pypdf
 import aiohttp
+
+
+# 延迟导入 PDF 处理库，避免启动时的 SWIG 警告
+def _import_fitz():
+    """延迟导入 PyMuPDF (fitz) 以避免启动时警告"""
+    try:
+        import fitz
+
+        return fitz
+    except ImportError as e:
+        raise ImportError(f"PyMuPDF (fitz) is required for PDF processing: {e}")
+
+
+def _import_pypdf():
+    """延迟导入 pypdf"""
+    try:
+        import pypdf
+
+        return pypdf
+    except ImportError as e:
+        raise ImportError(f"pypdf is required for PDF processing: {e}")
+
 
 logger = logging.getLogger(__name__)
 
@@ -266,6 +286,7 @@ class PDFProcessor:
     ) -> Dict[str, Any]:
         """Extract text using PyMuPDF (fitz)."""
         try:
+            fitz = _import_fitz()
             doc = fitz.open(str(pdf_path))
 
             # Determine page range
@@ -324,6 +345,7 @@ class PDFProcessor:
         """Extract text using pypdf library."""
         try:
             with open(pdf_path, "rb") as file:
+                pypdf = _import_pypdf()
                 reader = pypdf.PdfReader(file)
                 total_pages = len(reader.pages)
 
