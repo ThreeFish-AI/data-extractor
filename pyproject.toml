@@ -37,7 +37,7 @@ dependencies = [
     "twisted>=24.7.0",
     "ruff>=0.12.12",
     "markdownify>=1.2.0",
-    "pypdf2>=3.0.1",
+    "pypdf>=5.0.0",
     "pymupdf>=1.26.4",
 ]
 
@@ -66,3 +66,11 @@ dev-dependencies = [
     "pre-commit>=3.8.0",
     "types-requests>=2.32.4.20250809",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-p no:warnings -W ignore::DeprecationWarning"
