@@ -544,7 +544,7 @@ class PDFToMarkdownRequest(BaseModel):
 
     pdf_source: str = Field(..., description="PDF URL or local file path")
     method: str = Field(
-        default="auto", description="Extraction method: auto, pymupdf, pypdf2"
+        default="auto", description="Extraction method: auto, pymupdf, pypdf"
     )
     include_metadata: bool = Field(
         default=True, description="Include PDF metadata in result"
@@ -559,8 +559,8 @@ class PDFToMarkdownRequest(BaseModel):
     @field_validator("method")
     def validate_method(cls, v: str) -> str:
         """Validate extraction method."""
-        if v not in ["auto", "pymupdf", "pypdf2"]:
-            raise ValueError("Method must be one of: auto, pymupdf, pypdf2")
+        if v not in ["auto", "pymupdf", "pypdf"]:
+            raise ValueError("Method must be one of: auto, pymupdf, pypdf")
         return v
 
     @field_validator("output_format")
@@ -591,7 +591,7 @@ class BatchPDFToMarkdownRequest(BaseModel):
         ..., description="List of PDF URLs or local file paths"
     )
     method: str = Field(
-        default="auto", description="Extraction method: auto, pymupdf, pypdf2"
+        default="auto", description="Extraction method: auto, pymupdf, pypdf"
     )
     include_metadata: bool = Field(
         default=True, description="Include PDF metadata in results"
@@ -613,8 +613,8 @@ class BatchPDFToMarkdownRequest(BaseModel):
     @field_validator("method")
     def validate_method(cls, v: str) -> str:
         """Validate extraction method."""
-        if v not in ["auto", "pymupdf", "pypdf2"]:
-            raise ValueError("Method must be one of: auto, pymupdf, pypdf2")
+        if v not in ["auto", "pymupdf", "pypdf"]:
+            raise ValueError("Method must be one of: auto, pymupdf, pypdf")
         return v
 
     @field_validator("output_format")
@@ -1346,7 +1346,7 @@ async def convert_pdf_to_markdown(
 
     Args:
         pdf_source: PDF URL or local file path
-        method: Extraction method: auto, pymupdf, pypdf2 (default: auto)
+        method: Extraction method: auto, pymupdf, pypdf (default: auto)
         include_metadata: Include PDF metadata in result (default: True)
         page_range: Page range [start, end] for partial extraction (optional)
         output_format: Output format: markdown, text (default: markdown)
@@ -1354,7 +1354,7 @@ async def convert_pdf_to_markdown(
     This tool can process PDF files from URLs or local file paths:
     - auto: Automatically choose the best extraction method
     - pymupdf: Use PyMuPDF (fitz) library for extraction
-    - pypdf2: Use PyPDF2 library for extraction
+    - pypdf: Use pypdf library for extraction
 
     Features:
     - Support for PDF URLs and local file paths
@@ -1365,10 +1365,10 @@ async def convert_pdf_to_markdown(
     """
     try:
         # Validate inputs
-        if method not in ["auto", "pymupdf", "pypdf2"]:
+        if method not in ["auto", "pymupdf", "pypdf"]:
             return {
                 "success": False,
-                "error": "Method must be one of: auto, pymupdf, pypdf2",
+                "error": "Method must be one of: auto, pymupdf, pypdf",
                 "pdf_source": pdf_source,
             }
 
@@ -1478,7 +1478,7 @@ async def batch_convert_pdfs_to_markdown(
 
     Args:
         pdf_sources: List of PDF URLs or local file paths
-        method: Extraction method: auto, pymupdf, pypdf2 (default: auto)
+        method: Extraction method: auto, pymupdf, pypdf (default: auto)
         include_metadata: Include PDF metadata in results (default: True)
         page_range: Page range [start, end] for all PDFs (optional)
         output_format: Output format: markdown, text (default: markdown)
@@ -1499,10 +1499,10 @@ async def batch_convert_pdfs_to_markdown(
         if not pdf_sources:
             return {"success": False, "error": "PDF sources list cannot be empty"}
 
-        if method not in ["auto", "pymupdf", "pypdf2"]:
+        if method not in ["auto", "pymupdf", "pypdf"]:
             return {
                 "success": False,
-                "error": "Method must be one of: auto, pymupdf, pypdf2",
+                "error": "Method must be one of: auto, pymupdf, pypdf",
             }
 
         if output_format not in ["markdown", "text"]:

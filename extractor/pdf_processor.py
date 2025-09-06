@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 import asyncio
 
 import fitz  # PyMuPDF
-import PyPDF2
+import pypdf
 import aiohttp
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class PDFProcessor:
     """PDF processor for extracting text and converting to Markdown."""
 
     def __init__(self):
-        self.supported_methods = ["pymupdf", "pypdf2", "auto"]
+        self.supported_methods = ["pymupdf", "pypdf", "auto"]
         self.temp_dir = tempfile.mkdtemp(prefix="pdf_extractor_")
 
     async def process_pdf(
@@ -35,7 +35,7 @@ class PDFProcessor:
 
         Args:
             pdf_source: URL or local file path to PDF
-            method: Extraction method: auto, pymupdf, pypdf2 (default: auto)
+            method: Extraction method: auto, pymupdf, pypdf (default: auto)
             include_metadata: Include PDF metadata in result (default: True)
             page_range: Tuple of (start_page, end_page) for partial extraction (optional)
             output_format: Output format: markdown, text (default: markdown)
@@ -81,8 +81,8 @@ class PDFProcessor:
                 extraction_result = await self._extract_with_pymupdf(
                     pdf_path, page_range, include_metadata
                 )
-            elif method == "pypdf2":
-                extraction_result = await self._extract_with_pypdf2(
+            elif method == "pypdf":
+                extraction_result = await self._extract_with_pypdf(
                     pdf_path, page_range, include_metadata
                 )
 
@@ -240,22 +240,22 @@ class PDFProcessor:
                 result["method_used"] = "pymupdf"
                 return result
         except Exception as e:
-            logger.warning(f"PyMuPDF failed for {pdf_path}, trying PyPDF2: {str(e)}")
+            logger.warning(f"PyMuPDF failed for {pdf_path}, trying pypdf: {str(e)}")
 
-        # Fall back to PyPDF2
+        # Fall back to pypdf
         try:
-            result = await self._extract_with_pypdf2(
+            result = await self._extract_with_pypdf(
                 pdf_path, page_range, include_metadata
             )
             if result.get("success"):
-                result["method_used"] = "pypdf2"
+                result["method_used"] = "pypdf"
                 return result
         except Exception as e:
             logger.error(f"Both methods failed for {pdf_path}: {str(e)}")
 
         return {
             "success": False,
-            "error": "Both PyMuPDF and PyPDF2 extraction methods failed",
+            "error": "Both PyMuPDF and pypdf extraction methods failed",
         }
 
     async def _extract_with_pymupdf(
@@ -315,16 +315,16 @@ class PDFProcessor:
         except Exception as e:
             return {"success": False, "error": f"PyMuPDF extraction failed: {str(e)}"}
 
-    async def _extract_with_pypdf2(
+    async def _extract_with_pypdf(
         self,
         pdf_path: Path,
         page_range: Optional[tuple] = None,
         include_metadata: bool = True,
     ) -> Dict[str, Any]:
-        """Extract text using PyPDF2."""
+        """Extract text using pypdf library."""
         try:
             with open(pdf_path, "rb") as file:
-                reader = PyPDF2.PdfReader(file)
+                reader = pypdf.PdfReader(file)
                 total_pages = len(reader.pages)
 
                 # Determine page range
@@ -370,7 +370,7 @@ class PDFProcessor:
                 return result
 
         except Exception as e:
-            return {"success": False, "error": f"PyPDF2 extraction failed: {str(e)}"}
+            return {"success": False, "error": f"pypdf extraction failed: {str(e)}"}
 
     def _convert_to_markdown(self, text: str) -> str:
         """Convert extracted text to Markdown format."""
