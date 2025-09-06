@@ -9,11 +9,11 @@ description = "A robust web scraping MCP server based on Scrapy and FastMCP"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Aurelius", email = "aureliusshu@gmail.com" }]
+license = "MIT"
 keywords = ["mcp", "scraping", "scrapy", "web-crawler"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -68,9 +68,7 @@ dev-dependencies = [
 ]
 
 [tool.pytest.ini_options]
-filterwarnings = [
-    "ignore::DeprecationWarning",
-]
+filterwarnings = ["ignore::DeprecationWarning"]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-p no:warnings -W ignore::DeprecationWarning"

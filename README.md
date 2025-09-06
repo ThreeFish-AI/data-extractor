@@ -979,6 +979,93 @@ async def fill_and_submit_form(url: str, form_data: Dict,
     """
 ```
 
+## 🔄 CI/CD 与发布流程
+
+### 自动化工作流
+
+项目配置了完整的 GitHub Actions 工作流，提供自动化的测试、构建和发布功能：
+
+#### 🧪 持续集成 (CI)
+
+- **多平台测试**: Ubuntu, Windows, macOS
+- **多版本支持**: Python 3.12, 3.13
+- **代码质量**: Ruff linting, MyPy type checking
+- **安全扫描**: Bandit security analysis
+- **覆盖率报告**: Codecov integration
+
+#### 📦 自动发布
+
+- **标签发布**: 推送 `v*.*.*` 标签自动触发发布
+- **PyPI 发布**: 使用 OIDC trusted publishing，无需 API 密钥
+- **GitHub Releases**: 自动生成 release notes
+- **构建验证**: 发布前完整测试套件验证
+
+#### 🔧 依赖管理
+
+- **每周更新**: 自动检查依赖项更新
+- **安全审计**: 定期安全漏洞扫描
+- **自动 PR**: 依赖更新通过 PR 提交
+
+### 发布新版本
+
+1. **更新版本号**:
+
+```bash
+# 编辑 pyproject.toml
+vim pyproject.toml
+# 更新 version = "x.y.z"
+```
+
+2. **更新变更日志**:
+
+```bash
+# 编辑 CHANGELOG.md，添加新版本条目
+vim CHANGELOG.md
+```
+
+3. **创建发布标签**:
+
+```bash
+git add pyproject.toml CHANGELOG.md
+git commit -m "chore: bump version to v1.2.3"
+git tag v1.2.3
+git push origin main --tags
+```
+
+4. **自动化流程**:
+
+- ✅ 运行完整测试套件
+- ✅ 构建分发包
+- ✅ 创建 GitHub Release
+- ✅ 发布到 PyPI
+- ✅ 更新文档
+
+### 开发工作流
+
+```bash
+# 1. 创建功能分支
+git checkout -b feature/new-feature
+
+# 2. 开发和测试
+uv sync --extra dev
+uv run pytest
+
+# 3. 代码质量检查
+uv run ruff check extractor/
+uv run ruff format extractor/
+uv run mypy extractor/
+
+# 4. 提交PR
+git push origin feature/new-feature
+# 创建PR，CI自动运行测试
+```
+
+### 监控和维护
+
+- **CI 状态**: [![CI](https://github.com/ThreeFish-AI/data-extractor/actions/workflows/ci.yml/badge.svg)](https://github.com/ThreeFish-AI/data-extractor/actions/workflows/ci.yml)
+- **发布状态**: [![Release](https://github.com/ThreeFish-AI/data-extractor/actions/workflows/release.yml/badge.svg)](https://github.com/ThreeFish-AI/data-extractor/actions/workflows/release.yml)
+- **依赖更新**: [![Dependencies](https://github.com/ThreeFish-AI/data-extractor/actions/workflows/dependencies.yml/badge.svg)](https://github.com/ThreeFish-AI/data-extractor/actions/workflows/dependencies.yml)
+
 ## 🚀 实现与使用指南
 
 ### Data Extractor 核心引擎使用方式

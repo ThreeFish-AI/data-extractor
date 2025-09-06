@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 #### Released on 2025/09/06
 
-版本管理统一化重构：实现基于 pyproject.toml 的单一版本源管理，消除版本号分散问题。通过动态版本读取机制，确保项目所有位置版本号自动同步，简化版本更新流程。测试系统全面修复：解决了 27 个集成测试失败问题，修复了 PDF 处理器相关的导入错误和模块属性访问错误。强化集成测试体系：从 37 项扩展至 93 项（增长 151%），新增 PDF 工具实际执行验证、跨工具协作流程测试、端到端现实场景测试，项目总测试数量达到 219 个，通过率从 88% 提升至 98.6%。
+版本管理统一化重构：实现基于 pyproject.toml 的单一版本源管理，消除版本号分散问题。通过动态版本读取机制，确保项目所有位置版本号自动同步，简化版本更新流程。测试系统全面修复：解决了 27 个集成测试失败问题，修复了 PDF 处理器相关的导入错误和模块属性访问错误。强化集成测试体系：从 37 项扩展至 93 项（增长 151%），新增 PDF 工具实际执行验证、跨工具协作流程测试、端到端现实场景测试，项目总测试数量达到 219 个，通过率从 88% 提升至 98.6%。完整的 GitHub Actions CI/CD 自动化体系建设：实现跨平台测试、自动发布、依赖管理等全流程自动化。
 
 ### 新增
 
@@ -64,6 +64,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - 文本提取优化：页面标记、空内容过滤、编码处理
   - 元数据标准化：统一 PyMuPDF 和 pypdf 的元数据格式
   - 临时文件管理：自动创建临时目录，处理完成后自动清理
+- **GitHub Actions CI/CD 自动化体系**
+  - **.github/workflows/ci.yml**: 持续集成工作流
+    - 跨平台测试支持：Ubuntu、Windows、macOS 三大操作系统
+    - 多 Python 版本兼容性测试：Python 3.12、3.13 版本覆盖
+    - 代码质量检查：ruff 代码风格检查、mypy 类型检查、bandit 安全扫描
+    - 测试覆盖率报告：自动生成覆盖率报告并上传到 Codecov
+    - 构建验证：确保包构建和安装过程正确无误
+  - **.github/workflows/release.yml**: 自动发布工作流
+    - Git 标签触发：监听 `v*.*.*` 格式标签自动创建发布
+    - 变更日志提取：自动从 CHANGELOG.md 提取对应版本的发布说明
+    - GitHub 发布创建：自动创建 GitHub Release 并附加发布说明
+    - PyPI 发布：通过 OIDC 信任发布机制安全发布到 PyPI
+  - **.github/workflows/publish.yml**: 综合发布工作流
+    - 双阶段发布：TestPyPI 预发布验证 → PyPI 正式发布
+    - 完整测试验证：发布前执行全套测试确保质量
+    - 包验证检查：使用 twine 验证包结构和元数据正确性
+    - 变更日志维护：发布后自动更新 CHANGELOG.md
+  - **.github/workflows/dependencies.yml**: 依赖管理自动化
+    - 定时依赖更新：每周一自动检查依赖更新
+    - 安全审计：依赖安全漏洞扫描和报告
+    - 自动 PR 创建：依赖更新自动创建拉取请求供审核
+  - **.github/workflows/README.md**: 工作流文档
+    - 完整的工作流使用指南和配置说明
+    - PyPI 信任发布配置步骤和最佳实践
+    - 故障排除指南和常见问题解决方案
 
 ### 变更
 
@@ -119,6 +144,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - 修复版本读取缓存问题：通过环境变量注入和实例重新创建确保版本同步
     - 完善异常处理：确保版本读取失败时有合适的备用机制
     - 优化路径解析：统一使用 `Path(__file__).resolve()` 确保路径解析准确性
+- **构建系统现代化**
+  - **pyproject.toml 许可证配置更新**
+    - 修复 `uv build` 构建警告：将过时的 `"License :: OSI Approved :: MIT License"` 分类器移除
+    - 采用现代 SPDX 许可证表达式：`license = "MIT"` 替代传统分类器方式
+    - 消除 setuptools 废弃警告，确保构建过程无警告输出
 - **测试系统全面修复**
   - **PDF 处理器导入错误修复**: 修复集成测试中 pdf_processor 未定义的 NameError
     - tests/integration/test_cross_tool_integration.py: 更新导入方式，使用 \_get_pdf_processor 替代直接导入
