@@ -34,7 +34,7 @@ class TestPDFProcessor:
 
     def test_init(self, pdf_processor):
         """Test PDFProcessor initialization."""
-        assert pdf_processor.supported_methods == ["pymupdf", "pypdf2", "auto"]
+        assert pdf_processor.supported_methods == ["pymupdf", "pypdf", "auto"]
         assert pdf_processor.temp_dir is not None
         assert os.path.exists(pdf_processor.temp_dir)
 
@@ -143,13 +143,13 @@ class TestPDFProcessor:
             assert result["total_pages"] == 10
 
     @pytest.mark.asyncio
-    async def test_extract_with_pypdf2_success(self, pdf_processor, tmp_path):
-        """Test successful PyPDF2 extraction."""
+    async def test_extract_with_pypdf_success(self, pdf_processor, tmp_path):
+        """Test successful pypdf extraction."""
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
         with (
-            patch("extractor.pdf_processor.PyPDF2") as mock_pypdf2,
+            patch("extractor.pdf_processor.pypdf") as mock_pypdf,
             patch("builtins.open", mock_open(read_data=b"mock pdf")),
         ):
             mock_reader = MagicMock()
@@ -159,9 +159,9 @@ class TestPDFProcessor:
             for page in mock_reader.pages:
                 page.extract_text.return_value = "Extracted text"
 
-            mock_pypdf2.PdfReader.return_value = mock_reader
+            mock_pypdf.PdfReader.return_value = mock_reader
 
-            result = await pdf_processor._extract_with_pypdf2(pdf_path, None, True)
+            result = await pdf_processor._extract_with_pypdf(pdf_path, None, True)
 
             assert result["success"] is True
             assert "text" in result
@@ -170,21 +170,21 @@ class TestPDFProcessor:
             assert result["total_pages"] == 3
 
     @pytest.mark.asyncio
-    async def test_extract_with_pypdf2_failure(self, pdf_processor, tmp_path):
-        """Test PyPDF2 extraction failure."""
+    async def test_extract_with_pypdf_failure(self, pdf_processor, tmp_path):
+        """Test pypdf extraction failure."""
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
         with (
-            patch("extractor.pdf_processor.PyPDF2") as mock_pypdf2,
+            patch("extractor.pdf_processor.pypdf") as mock_pypdf,
             patch("builtins.open", mock_open()),
         ):
-            mock_pypdf2.PdfReader.side_effect = Exception("PDF reading failed")
+            mock_pypdf.PdfReader.side_effect = Exception("PDF reading failed")
 
-            result = await pdf_processor._extract_with_pypdf2(pdf_path, None, True)
+            result = await pdf_processor._extract_with_pypdf(pdf_path, None, True)
 
             assert result["success"] is False
-            assert "PyPDF2 extraction failed" in result["error"]
+            assert "pypdf extraction failed" in result["error"]
 
     @pytest.mark.asyncio
     async def test_auto_extract_pymupdf_success(self, pdf_processor, tmp_path):
@@ -206,17 +206,17 @@ class TestPDFProcessor:
             mock_pymupdf.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_auto_extract_fallback_to_pypdf2(self, pdf_processor, tmp_path):
-        """Test auto extraction fallback to PyPDF2."""
+    async def test_auto_extract_fallback_to_pypdf(self, pdf_processor, tmp_path):
+        """Test auto extraction fallback to pypdf."""
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"mock pdf content")
 
         with (
             patch.object(pdf_processor, "_extract_with_pymupdf") as mock_pymupdf,
-            patch.object(pdf_processor, "_extract_with_pypdf2") as mock_pypdf2,
+            patch.object(pdf_processor, "_extract_with_pypdf") as mock_pypdf,
         ):
             mock_pymupdf.side_effect = Exception("PyMuPDF failed")
-            mock_pypdf2.return_value = {
+            mock_pypdf.return_value = {
                 "success": True,
                 "text": "Extracted text",
                 "pages_processed": 3,
@@ -225,9 +225,9 @@ class TestPDFProcessor:
             result = await pdf_processor._auto_extract(pdf_path, None, True)
 
             assert result["success"] is True
-            assert result["method_used"] == "pypdf2"
+            assert result["method_used"] == "pypdf"
             mock_pymupdf.assert_called_once()
-            mock_pypdf2.assert_called_once()
+            mock_pypdf.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_auto_extract_both_methods_fail(self, pdf_processor, tmp_path):
@@ -237,17 +237,15 @@ class TestPDFProcessor:
 
         with (
             patch.object(pdf_processor, "_extract_with_pymupdf") as mock_pymupdf,
-            patch.object(pdf_processor, "_extract_with_pypdf2") as mock_pypdf2,
+            patch.object(pdf_processor, "_extract_with_pypdf") as mock_pypdf,
         ):
             mock_pymupdf.side_effect = Exception("PyMuPDF failed")
-            mock_pypdf2.side_effect = Exception("PyPDF2 failed")
+            mock_pypdf.side_effect = Exception("pypdf failed")
 
             result = await pdf_processor._auto_extract(pdf_path, None, True)
 
             assert result["success"] is False
-            assert (
-                "Both PyMuPDF and PyPDF2 extraction methods failed" in result["error"]
-            )
+            assert "Both PyMuPDF and pypdf extraction methods failed" in result["error"]
 
     def test_convert_to_markdown_simple(self, pdf_processor):
         """Test simple text to markdown conversion."""
@@ -428,9 +426,9 @@ class TestPDFProcessor:
             assert result["success"] is True
             assert "metadata" not in result
 
-        # Test PyPDF2 without metadata
+        # Test pypdf without metadata
         with (
-            patch("extractor.pdf_processor.PyPDF2") as mock_pypdf2,
+            patch("extractor.pdf_processor.pypdf") as mock_pypdf,
             patch("builtins.open", mock_open(read_data=b"mock pdf")),
         ):
             mock_reader = MagicMock()
@@ -438,9 +436,9 @@ class TestPDFProcessor:
             mock_reader.metadata = None
 
             mock_reader.pages[0].extract_text.return_value = "Sample text"
-            mock_pypdf2.PdfReader.return_value = mock_reader
+            mock_pypdf.PdfReader.return_value = mock_reader
 
-            result = await pdf_processor._extract_with_pypdf2(pdf_path, None, False)
+            result = await pdf_processor._extract_with_pypdf(pdf_path, None, False)
 
             assert result["success"] is True
             assert "metadata" not in result
