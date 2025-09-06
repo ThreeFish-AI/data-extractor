@@ -99,7 +99,7 @@ if not hasattr(settings, '_version_set'):
    ```bash
    # 只需要修改 pyproject.toml 中的版本号
    vim pyproject.toml
-   # 将 version = "0.1.4" 修改为 version = "0.1.5"
+   # 将 version = "0.1.3" 修改为 version = "0.1.4"
    ```
 
 2. **验证更新效果**：
@@ -198,8 +198,8 @@ def test_version_consistency():
 4. **提交变更**：
    ```bash
    git add pyproject.toml CHANGELOG.md
-   git commit -m "chore(release): bump version to v0.1.5"
-   git tag -a v0.1.5 -m "Release version 0.1.5"
+   git commit -m "chore(release): bump version to v0.1.4"
+   git tag -a v0.1.4 -m "Release version 0.1.4"
    ```
 
 ### 开发环境配置

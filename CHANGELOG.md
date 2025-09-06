@@ -4,46 +4,11 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.1.5
-
-#### Released on 2025/01/08
-
-测试系统全面修复：解决了 27 个集成测试失败问题，修复了 PDF 处理器相关的导入错误和模块属性访问错误。通过重构测试 mock 机制和修复延迟导入模式，确保所有 PDF 相关测试正常运行。测试通过率从 88% 提升至 99.9%（216 个通过，3 个跳过），系统稳定性和可靠性大幅提升。
-
-### 修复
-
-- **测试系统全面修复**
-  - **PDF 处理器导入错误修复**: 修复集成测试中 pdf_processor 未定义的 NameError
-    - tests/integration/test_cross_tool_integration.py: 更新导入方式，使用 \_get_pdf_processor 替代直接导入
-    - tests/integration/test_end_to_end_integration.py: 修复 PDF 处理器 fixture 引用问题
-    - tests/integration/test_mcp_tools.py: 更新 PDF 处理器资源清理测试的导入方式
-    - 所有集成测试文件统一使用延迟加载的 PDF 处理器实例
-  - **PDF 模块属性访问错误修复**: 解决 fitz 和 pypdf 模块属性不存在的 AttributeError
-    - tests/unit/test_pdf_processor.py: 将 extractor.pdf_processor.fitz 改为 \_import_fitz 延迟导入模式
-    - tests/unit/test_pdf_processor.py: 将 extractor.pdf_processor.pypdf 改为 \_import_pypdf 延迟导入模式
-    - tests/integration/test_pdf_integration.py: 修复 PDF 库 mock 调用，统一使用延迟导入函数
-    - 所有测试文件统一 mock 模式，确保与实际代码的延迟导入机制一致
-  - **测试 Mock 机制重构**: 统一 PDF 处理器测试的 mock 模式
-    - 修复 test_pdf_batch_integration_with_file_mix 测试中的 mock 配置错误
-    - 确保所有 PDF 相关测试正确使用 \_get_pdf_processor() 函数获取处理器实例
-    - 统一延迟导入库的 mock 调用模式，避免直接访问未加载的模块属性
-
-### 变更
-
-- **测试稳定性提升**
-  - **测试通过率**: 从 88% (189/216 通过) 提升至 99.9% (216/219 通过)
-  - **失败测试清零**: 解决了所有 27 个失败的集成测试，错误类型包括：
-    - 10 个 NameError: name 'pdf_processor' is not defined 错误
-    - 15 个 AttributeError: module 'extractor.pdf_processor' has no attribute 错误
-    - 2 个测试断言失败错误
-  - **测试执行时间优化**: 完整测试套件执行时间稳定在 48 秒左右
-  - **警告信息处理**: 保留必要的 PyMuPDF SWIG 模块警告，过滤不影响功能的提示信息
-
 ## v0.1.4
 
 #### Released on 2025/09/06
 
-版本管理统一化重构：实现基于 pyproject.toml 的单一版本源管理，消除版本号分散问题。通过动态版本读取机制，确保项目所有位置版本号自动同步，简化版本更新流程。同时强化集成测试体系：从 37 项扩展至 93 项（增长 151%），新增 PDF 工具实际执行验证、跨工具协作流程测试、端到端现实场景测试，项目总测试数量达到 191 个，通过率保持在 95%+。
+版本管理统一化重构：实现基于 pyproject.toml 的单一版本源管理，消除版本号分散问题。通过动态版本读取机制，确保项目所有位置版本号自动同步，简化版本更新流程。测试系统全面修复：解决了 27 个集成测试失败问题，修复了 PDF 处理器相关的导入错误和模块属性访问错误。强化集成测试体系：从 37 项扩展至 93 项（增长 151%），新增 PDF 工具实际执行验证、跨工具协作流程测试、端到端现实场景测试，项目总测试数量达到 219 个，通过率从 88% 提升至 98.6%。
 
 ### 新增
 
@@ -79,6 +44,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - 错误恢复和韧性测试：网络中断恢复、部分失败场景处理、超时和重试机制验证
     - 性能和可扩展性基准测试：并发处理性能基准、大量数据批处理、内存使用监控
     - 数据完整性和一致性验证：跨工具数据一致性检查、编码格式完整性、并发安全性验证
+- **PDF 转 Markdown 工具集**
+  - **convert_pdf_to_markdown**: 单 PDF 文档转 Markdown 工具
+    - 支持 URL 和本地文件路径输入
+    - 双引擎支持：PyMuPDF (fitz) 和 pypdf，自动选择最佳方案
+    - 智能回退机制：PyMuPDF 失败时自动切换到 pypdf
+    - 页面范围选择：支持部分页面提取（page_range 参数）
+    - 元数据提取：包含作者、标题、创建日期、页数、文件大小等完整信息
+    - 自动文本转 Markdown 格式化：标题识别、章节分割、格式优化
+  - **batch_convert_pdfs_to_markdown**: 批量 PDF 转 Markdown 工具
+    - 并发处理多个 PDF 文件，提升批量转换效率
+    - 详细统计摘要：总数、成功数、失败数、总页数、总字数等
+    - 错误隔离：单个 PDF 失败不影响其他文件处理
+    - 统一配置：所有 PDF 使用相同的处理参数确保一致性
+- **PDFProcessor 核心处理引擎**
+  - extractor/pdf_processor.py: 新增专用 PDF 处理模块（418 行代码）
+  - 异步下载支持：URL 自动下载到临时文件，处理后自动清理
+  - 方法选择逻辑：auto（智能选择）、pymupdf（高性能）、pypdf（兼容性）
+  - 文本提取优化：页面标记、空内容过滤、编码处理
+  - 元数据标准化：统一 PyMuPDF 和 pypdf 的元数据格式
+  - 临时文件管理：自动创建临时目录，处理完成后自动清理
 
 ### 变更
 
@@ -97,17 +82,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - `DATA_EXTRACTOR_SERVER_VERSION=0.1.3` 更改为注释说明
     - 新增版本自动读取机制说明：`# 版本号自动从 pyproject.toml 读取，无需手动配置`
     - 简化配置流程，减少用户手动维护版本号的负担
+- **测试稳定性提升**
+  - **测试通过率**: 从 88% (189/216 通过) 提升至 98.6% (216/219 通过)
+  - **失败测试清零**: 解决了所有 27 个失败的集成测试，错误类型包括：
+    - 10 个 NameError: name 'pdf_processor' is not defined 错误
+    - 15 个 AttributeError: module 'extractor.pdf_processor' has no attribute 错误
+    - 2 个测试断言失败错误
+  - **测试执行时间优化**: 完整测试套件执行时间稳定在 48 秒左右
+  - **警告信息处理**: 保留必要的 PyMuPDF SWIG 模块警告，过滤不影响功能的提示信息
 - **项目结构文档更新**
   - **README.md**: 项目结构和测试统计全面更新
-    - 测试体系描述：从 "162 个测试" 更新为 "191 个测试"
+    - 测试体系描述：从 "162 个测试" 更新为 "219 个测试"
     - 集成测试详情：从 31 项扩展到 93 项，增加三个新测试文件描述
     - 测试类型重组：从 6 类扩展为 8 类，新增 PDF 工具实际调用、跨工具协作、端到端现实场景测试
     - 里程碑成就更新：添加 "集成测试强化" 里程碑说明
-    - 当前状态更新：测试覆盖率更新为 "95%+ (强化集成测试覆盖)"
+    - 当前状态更新：测试覆盖率更新为 "98.6%+ (强化集成测试覆盖)"
   - **TESTING.md**: 测试文档体系完善
     - 新增三个集成测试套件详细描述和测试覆盖范围说明
-    - 测试质量提升成果统计：测试覆盖率提升 151%，通过率 93.7%
+    - 测试质量提升成果统计：测试覆盖率提升 151%，通过率 98.6%
     - 强化测试方法和场景覆盖说明
+- **依赖管理更新**
+  - **pyproject.toml**: 新增 PDF 处理依赖
+    - `PyMuPDF>=1.21.0`: 高性能 PDF 文本提取引擎
+    - `pypdf>=3.0.0`: 兼容性 PDF 处理库（从 PyPDF2 升级）
+    - 确保测试依赖 `pytest>=8.0.0` 和 `pytest-asyncio>=0.23.0` 配置正确
 
 ### 修复
 
@@ -121,83 +119,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - 修复版本读取缓存问题：通过环境变量注入和实例重新创建确保版本同步
     - 完善异常处理：确保版本读取失败时有合适的备用机制
     - 优化路径解析：统一使用 `Path(__file__).resolve()` 确保路径解析准确性
+- **测试系统全面修复**
+  - **PDF 处理器导入错误修复**: 修复集成测试中 pdf_processor 未定义的 NameError
+    - tests/integration/test_cross_tool_integration.py: 更新导入方式，使用 \_get_pdf_processor 替代直接导入
+    - tests/integration/test_end_to_end_integration.py: 修复 PDF 处理器 fixture 引用问题
+    - tests/integration/test_mcp_tools.py: 更新 PDF 处理器资源清理测试的导入方式
+    - 所有集成测试文件统一使用延迟加载的 PDF 处理器实例
+  - **PDF 模块属性访问错误修复**: 解决 fitz 和 pypdf 模块属性不存在的 AttributeError
+    - tests/unit/test_pdf_processor.py: 将 extractor.pdf_processor.fitz 改为 \_import_fitz 延迟导入模式
+    - tests/unit/test_pdf_processor.py: 将 extractor.pdf_processor.pypdf 改为 \_import_pypdf 延迟导入模式
+    - tests/integration/test_pdf_integration.py: 修复 PDF 库 mock 调用，统一使用延迟导入函数
+    - 所有测试文件统一 mock 模式，确保与实际代码的延迟导入机制一致
+  - **测试 Mock 机制重构**: 统一 PDF 处理器测试的 mock 模式
+    - 修复 test_pdf_batch_integration_with_file_mix 测试中的 mock 配置错误
+    - 确保所有 PDF 相关测试正确使用 \_get_pdf_processor() 函数获取处理器实例
+    - 统一延迟导入库的 mock 调用模式，避免直接访问未加载的模块属性
 - **代码质量问题解决**
   - 修复 `test_cross_tool_integration.py` 中缺失的 `unittest.mock.patch` 导入
   - 移除未使用变量 `markdown_result`，使用 `_` 占位符避免 Ruff 警告
   - 修复 `test_end_to_end_integration.py` 中 11 个 f-string 格式问题
   - 解决所有 Pylance 和 Ruff 诊断问题，提升代码规范性
-
-## v0.1.4 (之前版本)
-
-#### Released on 2025/09/06
-
-重大功能更新：新增 PDF 文档转 Markdown 功能，支持 URL 和本地文件处理，提供双引擎支持（PyMuPDF + PyPDF2）和智能回退机制。实现批量处理能力，支持多个 PDF 文件并发转换。完整测试体系扩展至 193 个测试用例，通过率 98.4%，MCP 工具数量从 12 个增加到 14 个，进一步巩固生产就绪标准。
-
-### 新增
-
-- **PDF 转 Markdown 工具集**
-  - **convert_pdf_to_markdown**: 单 PDF 文档转 Markdown 工具
-    - 支持 URL 和本地文件路径输入
-    - 双引擎支持：PyMuPDF (fitz) 和 PyPDF2，自动选择最佳方案
-    - 智能回退机制：PyMuPDF 失败时自动切换到 PyPDF2
-    - 页面范围选择：支持部分页面提取（page_range 参数）
-    - 元数据提取：包含作者、标题、创建日期、页数、文件大小等完整信息
-    - 自动文本转 Markdown 格式化：标题识别、章节分割、格式优化
-  - **batch_convert_pdfs_to_markdown**: 批量 PDF 转 Markdown 工具
-    - 并发处理多个 PDF 文件，提升批量转换效率
-    - 详细统计摘要：总数、成功数、失败数、总页数、总字数等
-    - 错误隔离：单个 PDF 失败不影响其他文件处理
-    - 统一配置：所有 PDF 使用相同的处理参数确保一致性
-- **PDFProcessor 核心处理引擎**
-  - extractor/pdf_processor.py: 新增专用 PDF 处理模块（418 行代码）
-  - 异步下载支持：URL 自动下载到临时文件，处理后自动清理
-  - 方法选择逻辑：auto（智能选择）、pymupdf（高性能）、pypdf2（兼容性）
-  - 文本提取优化：页面标记、空内容过滤、编码处理
-  - 元数据标准化：统一 PyMuPDF 和 PyPDF2 的元数据格式
-  - 临时文件管理：自动创建临时目录，处理完成后自动清理
-- **完整测试覆盖体系**
-  - tests/unit/test_pdf_processor.py: PDF 处理器单元测试（25 个测试用例）
-    - TestPDFProcessor: 核心功能测试（初始化、配置、方法选择）
-    - TestPDFProcessorProcessing: 处理流程测试（本地文件、URL 下载、错误处理）
-    - TestPDFProcessorExtractionMethods: 引擎测试（PyMuPDF、PyPDF2、自动选择）
-    - TestPDFProcessorBatchProcessing: 批量处理测试（并发执行、统计摘要、异常处理）
-    - TestPDFProcessorHelperMethods: 辅助功能测试（URL 检测、下载、清理）
-  - tests/integration/test_mcp_tools.py: MCP 工具集成测试扩展
-    - 工具数量从 12 个更新为 14 个
-    - 新增 PDF 工具注册验证
-    - 工具参数模式完整性检查
-
-### 变更
-
-- **文档体系全面更新**
-  - **README.md**: MCP 工具列表和功能说明
-    - 工具数量从 12 个更新为 14 个，新增工具 13-14
-    - 新增 PDF 转换工具详细文档：参数说明、功能特性、使用示例
-    - 完整的 JSON 请求和响应示例，涵盖单文件和批量处理场景
-    - 技术特性说明：双引擎支持、智能回退、并发处理、元数据提取
-  - **TESTING.md**: 测试文档结构和内容扩展
-    - 测试用例统计更新：从 162 个扩展到 193 个
-    - 新增 PDF 处理器测试章节：5 个主要测试类别详细说明
-    - 测试覆盖范围表格更新：包含 PDF 功能的完整测试覆盖
-  - **TEST_RESULTS.md**: 测试执行结果报告更新
-    - 测试概览：总测试数从 162 个扩展到 193 个，通过率 98.4%
-    - 详细测试结果：新增 PDF 处理器测试（25 个测试，23 个通过，2 个跳过）
-    - MCP 工具验证：从 12 个工具更新为 14 个工具
-    - 执行时间更新：2025-09-06
-- **pyproject.toml**: 新增 PDF 处理依赖
-  - `PyMuPDF>=1.21.0`: 高性能 PDF 文本提取引擎
-  - `PyPDF2>=3.0.0`: 兼容性 PDF 处理库
-
-### 修复
-
-- **PDF 处理器实现优化**
-  - 修复导入清理警告：移除未使用的 Union、markdownify 导入
-  - 修复变量作用域问题：pdf_path 变量在 try 块外初始化防止未绑定错误
-  - 修复异常处理规范：bare except 替换为 except Exception 提升错误处理准确性
-- **测试稳定性改进**
-  - 修复 aiohttp 异步上下文管理器模拟复杂性：跳过复杂 HTTP 下载测试场景
-  - 修复 MCP 工具直接调用错误：更新集成测试验证工具注册而非直接执行
-  - 修复测试数量验证错误：集成测试期望工具数量从 12 更新为 14
 
 ## v0.1.3
 

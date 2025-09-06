@@ -98,7 +98,7 @@ data-extractor/
 ### 已完成的里程碑 ✅
 
 - ✅ **v0.1.4 稳定版发布**: 基于 Scrapy + FastMCP 构建的企业级网页抓取 MCP Server
-- ✅ **完整测试体系**: 191 个测试用例，通过率 95%+，包含单元测试和强化集成测试
+- ✅ **完整测试体系**: 219 个测试用例，通过率 98.6%+，包含单元测试和强化集成测试
 - ✅ **集成测试强化**: 新增 PDF 工具实际执行验证、跨工具协作流程、端到端现实场景测试
 - ✅ **代码质量优化**: 类型注解完善，从 black 迁移到 ruff 格式化
 - ✅ **配置统一**: 项目名称从 scrapy-mcp 更名为 data-extractor，配置前缀统一
@@ -108,7 +108,7 @@ data-extractor/
 
 - **版本**: v0.1.4 ✨
 - **功能状态**: 14 个 MCP 工具 + Markdown 转换功能完整 + PDF 转换功能完整
-- **测试覆盖率**: 95%+ (191 个测试用例，强化集成测试覆盖)
+- **测试覆盖率**: 98.6%+ (219 个测试用例，强化集成测试覆盖)
 - **质量评级**: A+ (生产就绪标准)
 - **代码格式化**: ruff
 - **包管理**: uv
@@ -179,7 +179,7 @@ pip install -e ".[dev]"
 ```bash
 # 服务器设置
 DATA_EXTRACTOR_SERVER_NAME=data-extractor
-DATA_EXTRACTOR_SERVER_VERSION=0.1.4
+# DATA_EXTRACTOR_SERVER_VERSION=auto  # 版本号自动从 pyproject.toml 读取，无需手动配置
 
 # 并发和延迟设置
 DATA_EXTRACTOR_CONCURRENT_REQUESTS=16
