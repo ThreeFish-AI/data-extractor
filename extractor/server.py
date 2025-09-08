@@ -1115,6 +1115,8 @@ async def convert_webpage_to_markdown(
     custom_options: Optional[Dict[str, Any]] = None,
     wait_for_element: Optional[str] = None,
     formatting_options: Optional[Dict[str, bool]] = None,
+    embed_images: bool = False,
+    embed_options: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Scrape a webpage and convert it to Markdown format.
@@ -1137,6 +1139,8 @@ async def convert_webpage_to_markdown(
     - Metadata extraction (title, description, word count, etc.)
     - Support for all scraping methods
     """
+
+    start_time = time.time()
     try:
         # Validate inputs
         parsed = urlparse(url)
@@ -1150,7 +1154,6 @@ async def convert_webpage_to_markdown(
                 "url": url,
             }
 
-        start_time = time.time()
         logger.info(f"Converting webpage to Markdown: {url} with method: {method}")
 
         # Apply rate limiting
@@ -1179,6 +1182,8 @@ async def convert_webpage_to_markdown(
             include_metadata=include_metadata,
             custom_options=custom_options,
             formatting_options=formatting_options,
+            embed_images=embed_images,
+            embed_options=embed_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -1237,6 +1242,8 @@ async def batch_convert_webpages_to_markdown(
     include_metadata: bool = True,
     custom_options: Optional[Dict[str, Any]] = None,
     formatting_options: Optional[Dict[str, bool]] = None,
+    embed_images: bool = False,
+    embed_options: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Scrape multiple webpages and convert them to Markdown format.
@@ -1292,6 +1299,8 @@ async def batch_convert_webpages_to_markdown(
             include_metadata=include_metadata,
             custom_options=custom_options,
             formatting_options=formatting_options,
+            embed_images=embed_images,
+            embed_options=embed_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)

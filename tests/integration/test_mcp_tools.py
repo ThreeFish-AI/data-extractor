@@ -225,6 +225,24 @@ class TestMarkdownConversionToolIntegration:
             assert "batch" in batch_tool.description.lower()
 
     @pytest.mark.asyncio
+    async def test_markdown_tools_parameters_embed_images(self):
+        """Ensure new embed_images parameters are exposed."""
+        tools = await app.get_tools()
+        convert_tool = tools["convert_webpage_to_markdown"]
+        batch_tool = tools["batch_convert_webpages_to_markdown"]
+
+        # Tool should accept embed_images and embed_options in parameters
+        if hasattr(convert_tool, "parameters"):
+            params = convert_tool.parameters.get("properties", {})
+            assert "embed_images" in params
+            assert "embed_options" in params
+
+        if hasattr(batch_tool, "parameters"):
+            params = batch_tool.parameters.get("properties", {})
+            assert "embed_images" in params
+            assert "embed_options" in params
+
+    @pytest.mark.asyncio
     async def test_markdown_converter_component_integration(self):
         """Test that MarkdownConverter integrates properly with the system."""
         # Test direct MarkdownConverter functionality

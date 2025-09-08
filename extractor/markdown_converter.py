@@ -7,6 +7,9 @@ from urllib.parse import urljoin, urlparse
 
 from markdownify import markdownify as md
 from bs4 import BeautifulSoup, Comment
+import base64
+import mimetypes
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +206,97 @@ class MarkdownConverter:
         except Exception as e:
             logger.warning(f"Error post-processing Markdown: {str(e)}")
             return markdown_content
+
+    def _embed_images_in_markdown(
+        self,
+        markdown_content: str,
+        *,
+        max_images: int = 50,
+        max_bytes_per_image: int = 2_000_000,
+        timeout_seconds: int = 10,
+    ) -> Dict[str, Any]:
+        """Embed remote images referenced in Markdown as data URIs.
+
+        Best-effort: on failure or limits exceeded, preserves original links.
+        Returns new markdown and embedding stats for diagnostics.
+        """
+        try:
+            pattern = re.compile(r"!\[(.*?)\]\((.*?)\)")
+
+            embedded_count = 0
+            attempted = 0
+            skipped_large = 0
+            skipped_errors = 0
+
+            def replacer(match: re.Match) -> str:
+                nonlocal embedded_count, attempted, skipped_large, skipped_errors
+                if embedded_count >= max_images:
+                    return match.group(0)
+
+                alt_text = match.group(1)
+                image_url = match.group(2)
+
+                attempted += 1
+
+                try:
+                    resp = requests.get(image_url, timeout=timeout_seconds, stream=True)
+                    resp.raise_for_status()
+
+                    content_type = resp.headers.get("Content-Type", "")
+                    if not content_type.startswith("image/"):
+                        guessed, _ = mimetypes.guess_type(image_url)
+                        if not (guessed and guessed.startswith("image/")):
+                            return match.group(0)
+                        content_type = guessed
+
+                    # Guard by Content-Length if present
+                    length_header = resp.headers.get("Content-Length")
+                    if length_header is not None:
+                        try:
+                            content_length = int(length_header)
+                            if content_length > max_bytes_per_image:
+                                skipped_large += 1
+                                return match.group(0)
+                        except Exception:
+                            pass
+
+                    content = resp.content
+                    if len(content) > max_bytes_per_image:
+                        skipped_large += 1
+                        return match.group(0)
+
+                    b64 = base64.b64encode(content).decode("ascii")
+                    data_uri = f"data:{content_type};base64,{b64}"
+                    embedded_count += 1
+                    return f"![{alt_text}]({data_uri})"
+                except Exception:
+                    skipped_errors += 1
+                    return match.group(0)
+
+            new_md = pattern.sub(replacer, markdown_content)
+
+            return {
+                "markdown": new_md,
+                "stats": {
+                    "attempted": attempted,
+                    "embedded": embedded_count,
+                    "skipped_large": skipped_large,
+                    "skipped_errors": skipped_errors,
+                    "max_images": max_images,
+                    "max_bytes_per_image": max_bytes_per_image,
+                },
+            }
+        except Exception as e:
+            logger.warning(f"Error embedding images: {str(e)}")
+            return {
+                "markdown": markdown_content,
+                "stats": {
+                    "attempted": 0,
+                    "embedded": 0,
+                    "skipped_large": 0,
+                    "skipped_errors": 1,
+                },
+            }
 
     def _format_tables(self, markdown_content: str) -> str:
         """Format and align Markdown tables."""
@@ -537,6 +631,9 @@ class MarkdownConverter:
         include_metadata: bool = True,
         custom_options: Optional[Dict[str, Any]] = None,
         formatting_options: Optional[Dict[str, bool]] = None,
+        *,
+        embed_images: bool = False,
+        embed_options: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Convert a scraped webpage result to Markdown format.
@@ -629,6 +726,19 @@ class MarkdownConverter:
                 if original_formatting_options:
                     self.formatting_options = original_formatting_options
 
+            # Optionally embed images as data URIs for portability
+            embed_stats = None
+            if embed_images:
+                opts = embed_options or {}
+                embed_result = self._embed_images_in_markdown(
+                    markdown_content,
+                    max_images=int(opts.get("max_images", 50)),
+                    max_bytes_per_image=int(opts.get("max_bytes_per_image", 2_000_000)),
+                    timeout_seconds=int(opts.get("timeout_seconds", 10)),
+                )
+                markdown_content = embed_result.get("markdown", markdown_content)
+                embed_stats = embed_result.get("stats")
+
             # Prepare result
             result = {
                 "success": True,
@@ -639,6 +749,8 @@ class MarkdownConverter:
                     "include_metadata": include_metadata,
                     "custom_options": custom_options or {},
                     "formatting_options": formatting_options or {},
+                    "embed_images": embed_images,
+                    "embed_options": embed_options or {},
                 },
             }
 
@@ -657,6 +769,9 @@ class MarkdownConverter:
                     metadata["links_count"] = len(content_data["links"])
                 if "images" in content_data:
                     metadata["images_count"] = len(content_data["images"])
+
+                if embed_stats is not None:
+                    metadata["image_embedding"] = embed_stats
 
                 result["metadata"] = metadata
 
@@ -677,6 +792,9 @@ class MarkdownConverter:
         include_metadata: bool = True,
         custom_options: Optional[Dict[str, Any]] = None,
         formatting_options: Optional[Dict[str, bool]] = None,
+        *,
+        embed_images: bool = False,
+        embed_options: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Convert multiple scraped webpage results to Markdown format.
@@ -703,6 +821,8 @@ class MarkdownConverter:
                     include_metadata,
                     custom_options,
                     formatting_options,
+                    embed_images=embed_images,
+                    embed_options=embed_options,
                 )
 
                 if conversion_result.get("success"):

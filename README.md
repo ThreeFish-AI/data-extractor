@@ -509,6 +509,12 @@ uv run pytest tests/unit/ -v
   - `format_lists`: 列表格式化 (默认 true)
   - `format_headings`: 标题格式化和间距 (默认 true)
   - `apply_typography`: 排版优化 (智能引号、破折号等，默认 true)
+  - 新增图片嵌入选项:
+    - `embed_images` (boolean): 是否将页面中的图片以 data URI 形式嵌入 Markdown (默认 false)
+    - `embed_options` (object): 图片嵌入行为配置
+      - `max_images` (int): 最大嵌入图片数量 (默认 50)
+      - `max_bytes_per_image` (int): 单张图片最大字节数上限，超过则保留原链接 (默认 2,000,000)
+      - `timeout_seconds` (int): 下载图片的超时时间 (默认 10)
 
 **功能特性:**
 
@@ -545,6 +551,12 @@ uv run pytest tests/unit/ -v
     "detect_code_language": true,
     "enhance_images": true,
     "apply_typography": false
+  },
+  "embed_images": true,
+  "embed_options": {
+    "max_images": 10,
+    "max_bytes_per_image": 1500000,
+    "timeout_seconds": 8
   }
 }
 ```
@@ -580,6 +592,7 @@ uv run pytest tests/unit/ -v
 - `include_metadata`: 是否包含页面元数据 (默认 true)
 - `custom_options`: 自定义 Markdown 转换选项 (可选)
 - `formatting_options`: 高级格式化选项 (与单页转换相同配置)
+ - `embed_images` / `embed_options`: 与单页相同，用于批量图片嵌入
 
 **功能特性:**
 

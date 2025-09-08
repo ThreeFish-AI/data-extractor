@@ -5,7 +5,7 @@
       "args": [
         "run",
         "--with",
-        "git+https://github.com/ThreeFish-AI/data-extractor.git",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.4",
         "data-extractor"
       ]
     },

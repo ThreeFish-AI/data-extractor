@@ -4,6 +4,45 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### 新增
+
+- **图片嵌入功能扩展**
+  - **MarkdownConverter 图片嵌入引擎**: 新增 `_embed_images_in_markdown()` 方法
+    - 支持将网页中的远程图片以 data URI 形式嵌入到 Markdown 文档中
+    - 智能图片大小检测：通过 Content-Length 头部预检查，避免下载超大图片
+    - 多格式支持：自动识别 PNG、JPEG、GIF、WebP 等常见图片格式
+    - 失败回退机制：下载失败或超限时保留原始图片链接
+    - 详细统计信息：提供嵌入成功数、跳过数、错误数等诊断数据
+  - **MCP 工具集成图片嵌入功能**
+    - `convert_webpage_to_markdown`: 新增 `embed_images` 和 `embed_options` 参数支持
+    - `batch_convert_webpages_to_markdown`: 批量转换工具同步支持图片嵌入功能
+    - 配置化嵌入选项：
+      - `max_images`: 最大嵌入图片数量限制（默认 50）
+      - `max_bytes_per_image`: 单张图片大小上限（默认 2MB）
+      - `timeout_seconds`: 图片下载超时控制（默认 10秒）
+  - **图片嵌入测试体系**: 新增 TestImageEmbedding 测试类
+    - 成功嵌入小图片测试：验证 base64 编码和 data URI 生成
+    - 大图片跳过测试：验证通过 Content-Length 头部检测超限图片
+    - 下载失败处理测试：验证网络错误时的回退机制
+    - 超时处理测试：验证请求超时时的异常处理
+    - 统计数据验证：测试嵌入统计信息的准确性和完整性
+
+### 变更
+
+- **文档体系更新**
+  - **README.md**: 新增图片嵌入功能文档
+    - 详细的 `embed_images` 和 `embed_options` 参数说明
+    - 完整的 JSON 配置示例，展示图片嵌入参数使用方法
+    - 图片嵌入限制和最佳实践说明
+  - **TESTING.md**: 更新测试覆盖范围
+    - 新增图片嵌入功能测试类别描述
+    - 测试用例数量统计更新
+  - **TEST_RESULTS.md**: 测试结果报告更新
+    - 反映新增图片嵌入测试的执行结果
+    - 测试通过率和覆盖范围统计更新
+
 ## v0.1.4
 
 #### Released on 2025/09/06

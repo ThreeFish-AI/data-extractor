@@ -774,3 +774,87 @@ class TestAdvancedFormattingFeatures:
         assert converter._format_lists("") == ""
         assert converter._format_headings("") == ""
         assert converter._apply_typography_fixes("") == ""
+
+
+class TestImageEmbedding:
+    """Tests for embedding images as data URIs in MarkdownConverter."""
+
+    def test_embed_images_success_small_image(self, monkeypatch):
+        converter = MarkdownConverter()
+
+        class MockResp:
+            def __init__(self):
+                self.headers = {"Content-Type": "image/png", "Content-Length": "10"}
+                self.content = b"\x89PNGsmall"  # fake small content
+
+            def raise_for_status(self):
+                return None
+
+        def mock_get(url, timeout=10, stream=True):
+            return MockResp()
+
+        monkeypatch.setattr("extractor.markdown_converter.requests.get", mock_get)
+
+        md_in = "Image: ![Alt](http://example.com/a.png)"
+        embed_result = converter._embed_images_in_markdown(md_in, max_images=5)
+
+        assert embed_result["markdown"].count("data:image/png;base64,") == 1
+        assert embed_result["stats"]["embedded"] == 1
+
+    def test_embed_images_skip_large_by_header(self, monkeypatch):
+        converter = MarkdownConverter()
+
+        class MockResp:
+            def __init__(self):
+                self.headers = {
+                    "Content-Type": "image/jpeg",
+                    "Content-Length": str(5_000_000),
+                }
+                self.content = b"x" * 5_000_000
+
+            def raise_for_status(self):
+                return None
+
+        def mock_get(url, timeout=10, stream=True):
+            return MockResp()
+
+        monkeypatch.setattr("extractor.markdown_converter.requests.get", mock_get)
+
+        md_in = "![Large](http://example.com/large.jpg)"
+        out = converter._embed_images_in_markdown(md_in, max_bytes_per_image=2_000_000)
+
+        assert "data:image/jpeg;base64," not in out["markdown"]
+        assert out["stats"]["skipped_large"] == 1
+
+    def test_convert_with_embed_images_flow(self, monkeypatch):
+        converter = MarkdownConverter()
+
+        class MockResp:
+            def __init__(self):
+                self.headers = {"Content-Type": "image/png"}
+                self.content = b"\x89PNGsmall"
+
+            def raise_for_status(self):
+                return None
+
+        def mock_get(url, timeout=10, stream=True):
+            return MockResp()
+
+        monkeypatch.setattr("extractor.markdown_converter.requests.get", mock_get)
+
+        scrape_result = {
+            "url": "https://example.com",
+            "title": "With Image",
+            "content": {
+                "html": "<html><body><img src='http://example.com/i.png' alt='A'></body></html>"
+            },
+        }
+
+        result = converter.convert_webpage_to_markdown(
+            scrape_result, embed_images=True, embed_options={"max_images": 10}
+        )
+
+        assert result["success"] is True
+        assert "data:image/png;base64," in result["markdown"]
+        assert result["conversion_options"]["embed_images"] is True
+        assert "image_embedding" in result.get("metadata", {})

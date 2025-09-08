@@ -247,6 +247,7 @@ def test_cache_expiration(self, temp_cache_dir):
 - **部分失败**: 测试部分 URL 失败时的错误处理
 - **统计信息**: 测试成功/失败统计和成功率计算
 - **空列表处理**: 测试空 URL 列表的错误处理
+ - **图片嵌入参数**: 验证批量工具暴露 `embed_images` 与 `embed_options` 参数模式，确保与单页一致
 
 #### 13. convert_pdf_to_markdown - PDF 转 Markdown
 
@@ -368,6 +369,12 @@ def test_cache_expiration(self, temp_cache_dir):
   - 空内容处理：测试空字符串和 None 值的处理
   - 恶意内容：测试包含特殊字符的内容处理
   - 性能测试：测试大量内容的格式化性能
+
+#### 9. 图片嵌入测试 (TestImageEmbedding)
+
+- **小图嵌入**: 模拟 `requests.get` 返回小图片，验证被转换为 `data:image/*;base64,` 数据 URI 并统计 `embedded=1`
+- **大图跳过**: 当 `Content-Length` 或实际内容超过 `max_bytes_per_image` 时，应跳过嵌入并统计 `skipped_large=1`
+- **转换流程集成**: 在 `convert_webpage_to_markdown(..., embed_images=True, embed_options={...})` 下，验证返回的 `markdown` 含 data URI，`conversion_options.embed_images=true`，且 `metadata.image_embedding` 包含统计信息
 
 ```python
 # 示例集成测试用例
