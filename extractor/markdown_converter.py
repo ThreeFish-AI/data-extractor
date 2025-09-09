@@ -28,7 +28,7 @@ class MarkdownConverter:
             "autolinks": True,  # Convert plain URLs to links
             "wrap": False,  # Disable wrapping
             "strip": ["script", "style"],  # Strip unwanted tags
-            "default_title": True,  # Use default title handling
+            "default_title": False,  # Don't include title in links
             "escape_asterisks": False,  # Don't escape asterisks in text
             "escape_underscores": False,  # Don't escape underscores in text
         }
@@ -117,11 +117,19 @@ class MarkdownConverter:
 
             # Mark paragraph boundaries for later processing
             for i, tag in enumerate(soup.find_all("p")):
-                if tag.get_text(strip=True):  # Only if paragraph has content
-                    # Add a special marker to identify paragraph boundaries
-                    tag.string = (
-                        f"PARAGRAPH_START_{i} " + tag.get_text() + f" PARAGRAPH_END_{i}"
-                    )
+                text_content = tag.get_text(strip=True)
+                if text_content:  # Only if paragraph has content
+                    # Check if paragraph contains only images or other media without text
+                    media_tags = tag.find_all(["img", "video", "audio"])
+                    if media_tags and not text_content:
+                        # Skip paragraphs that only contain media elements
+                        continue
+
+                    # Simple and safe approach: add markers around the entire paragraph
+                    from bs4 import NavigableString
+
+                    tag.insert(0, NavigableString(f"PARAGRAPH_START_{i} "))
+                    tag.append(NavigableString(f" PARAGRAPH_END_{i}"))
 
             # Clean up empty paragraphs and divs
             for tag in soup.find_all(["p", "div"]):
