@@ -577,11 +577,19 @@ class MarkdownConverter:
         """Apply basic cleanup operations while preserving paragraph structure."""
         try:
             # Restore paragraph boundaries from markers
+            # Handle both complete and partial markers
             markdown_content = re.sub(
                 r"PARAGRAPH_START_\d+ (.*?) PARAGRAPH_END_\d+",
                 r"\1\n\n",
                 markdown_content,
+                flags=re.DOTALL,
             )
+
+            # Clean up any remaining markers that weren't matched
+            markdown_content = re.sub(
+                r"PARAGRAPH_START_\d+[.?]?\s*", "", markdown_content
+            )
+            markdown_content = re.sub(r"\s*PARAGRAPH_END_\d+", "\n\n", markdown_content)
 
             # Clean up excessive spaces but preserve line structure
             lines = []
@@ -604,6 +612,79 @@ class MarkdownConverter:
         except Exception as e:
             logger.warning(f"Error in basic cleanup: {str(e)}")
             return markdown_content
+
+    def _split_text_into_paragraphs(self, text_content: str) -> list:
+        """
+        Split text content into paragraphs using various heuristics.
+
+        Args:
+            text_content: Raw text content
+
+        Returns:
+            List of paragraph strings
+        """
+        try:
+            # First, try to split by common paragraph indicators
+
+            # Split by double newlines (most common)
+            parts = text_content.split("\n\n")
+            if len(parts) > 1:
+                return [part.replace("\n", " ") for part in parts if part.strip()]
+
+            # Split by single newlines followed by capital letters or numbers
+            import re
+
+            # Look for sentence endings followed by capital letters
+            sentence_pattern = r"([.!?])\s*\n\s*([A-Z])"
+            text_with_markers = re.sub(
+                sentence_pattern, r"\1\n\nPARAGRAPH_SPLIT\n\n\2", text_content
+            )
+
+            if "PARAGRAPH_SPLIT" in text_with_markers:
+                parts = text_with_markers.split("\n\nPARAGRAPH_SPLIT\n\n")
+                return [
+                    part.replace("\n", " ").strip() for part in parts if part.strip()
+                ]
+
+            # Try to split by periods followed by multiple spaces or newlines
+            period_pattern = r"([.!?])\s{2,}"
+            parts = re.split(period_pattern, text_content)
+
+            # Reconstruct sentences
+            reconstructed = []
+            for i in range(0, len(parts) - 1, 2):
+                sentence = parts[i] + (parts[i + 1] if i + 1 < len(parts) else "")
+                if sentence.strip():
+                    reconstructed.append(sentence.strip())
+
+            if len(reconstructed) > 1:
+                return reconstructed
+
+            # Fallback: split by sentence-like patterns with reasonable length
+            sentences = re.split(r"([.!?])\s+", text_content)
+            paragraphs = []
+            current_paragraph = ""
+
+            for i, part in enumerate(sentences):
+                current_paragraph += part
+
+                # If we have a sentence ending and the paragraph is getting long
+                if part in ".!?" and len(current_paragraph) > 100:
+                    paragraphs.append(current_paragraph)
+                    current_paragraph = ""
+                elif len(current_paragraph) > 300:  # Force split if too long
+                    paragraphs.append(current_paragraph)
+                    current_paragraph = ""
+
+            if current_paragraph:
+                paragraphs.append(current_paragraph)
+
+            return paragraphs if len(paragraphs) > 1 else [text_content]
+
+        except Exception as e:
+            logger.warning(f"Error splitting text into paragraphs: {str(e)}")
+            # Fallback: return original text as single paragraph
+            return [text_content]
 
     def extract_content_area(self, html_content: str) -> str:
         """
@@ -710,8 +791,16 @@ class MarkdownConverter:
                     html_parts.append(f"<title>{title}</title>")
                 html_parts.append("</head><body>")
 
-                # Add main text content
-                html_parts.append(f"<div class='main-content'>{text_content}</div>")
+                # Add main text content with smart paragraph splitting
+                html_parts.append("<div class='main-content'>")
+
+                # Smart paragraph detection and splitting
+                paragraphs = self._split_text_into_paragraphs(text_content)
+                for paragraph in paragraphs:
+                    if paragraph.strip():  # Skip empty paragraphs
+                        html_parts.append(f"<p>{paragraph.strip()}</p>")
+
+                html_parts.append("</div>")
 
                 # Add links if available
                 if links:
