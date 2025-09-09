@@ -27,6 +27,10 @@ class MarkdownConverter:
             "link_style": "INLINE",  # Use inline links [text](url)
             "autolinks": True,  # Convert plain URLs to links
             "wrap": False,  # Disable wrapping
+            "strip": ["script", "style"],  # Strip unwanted tags
+            "default_title": True,  # Use default title handling
+            "escape_asterisks": False,  # Don't escape asterisks in text
+            "escape_underscores": False,  # Don't escape underscores in text
         }
 
         # Advanced formatting options
@@ -110,6 +114,14 @@ class MarkdownConverter:
                             ("http://", "https://")
                         ):
                             img["src"] = urljoin(base_url, src)
+
+            # Mark paragraph boundaries for later processing
+            for i, tag in enumerate(soup.find_all("p")):
+                if tag.get_text(strip=True):  # Only if paragraph has content
+                    # Add a special marker to identify paragraph boundaries
+                    tag.string = (
+                        f"PARAGRAPH_START_{i} " + tag.get_text() + f" PARAGRAPH_END_{i}"
+                    )
 
             # Clean up empty paragraphs and divs
             for tag in soup.find_all(["p", "div"]):
@@ -452,7 +464,7 @@ class MarkdownConverter:
             return markdown_content
 
     def _format_lists(self, markdown_content: str) -> str:
-        """Improve list formatting and nesting."""
+        """Improve list formatting and nesting while preserving paragraph structure."""
         try:
             lines = markdown_content.split("\n")
             formatted_lines = []
@@ -466,14 +478,9 @@ class MarkdownConverter:
 
                 formatted_lines.append(line)
 
-            # Clean up empty list items
+            # Clean up empty list items only if they're truly empty
             markdown_content = "\n".join(formatted_lines)
-            markdown_content = re.sub(r"\n[-*+]\s*\n", "\n", markdown_content)
-
-            # Ensure proper spacing around lists
-            markdown_content = re.sub(
-                r"(^[-*+\d]+\.?\s+.+$)", r"\n\1", markdown_content, flags=re.MULTILINE
-            )
+            markdown_content = re.sub(r"\n[-*+]\s*\n(?=\n)", "\n", markdown_content)
 
             return markdown_content
         except Exception as e:
@@ -481,7 +488,7 @@ class MarkdownConverter:
             return markdown_content
 
     def _format_headings(self, markdown_content: str) -> str:
-        """Improve heading formatting and hierarchy."""
+        """Improve heading formatting and hierarchy while preserving paragraph structure."""
         try:
             lines = markdown_content.split("\n")
             formatted_lines = []
@@ -491,17 +498,21 @@ class MarkdownConverter:
                     # Ensure proper heading spacing
                     heading = line.strip()
 
-                    # Add spacing before headings (except if first line or after another heading)
-                    if i > 0 and not re.match(r"^#{1,6}\s", lines[i - 1]):
+                    # Add spacing before headings (except if first line or after blank line)
+                    if (
+                        i > 0
+                        and lines[i - 1].strip() != ""
+                        and not re.match(r"^#{1,6}\s", lines[i - 1])
+                    ):
                         formatted_lines.append("")  # Add blank line before heading
 
                     formatted_lines.append(heading)
 
-                    # Add spacing after headings
+                    # Add spacing after headings (except if next line is blank)
                     if i < len(lines) - 1 and lines[i + 1].strip() != "":
                         formatted_lines.append("")  # Add blank line after heading
                 else:
-                    # Always append non-heading lines (including empty lines for proper spacing)
+                    # Always append non-heading lines preserving original structure
                     formatted_lines.append(line)
 
             return "\n".join(formatted_lines)
@@ -510,7 +521,7 @@ class MarkdownConverter:
             return markdown_content
 
     def _apply_typography_fixes(self, markdown_content: str) -> str:
-        """Apply typography improvements like smart quotes, em dashes, etc."""
+        """Apply typography improvements while preserving paragraph structure."""
         try:
             # Convert double hyphens to em dashes
             markdown_content = re.sub(r"(?<!\-)\-\-(?!\-)", "—", markdown_content)
@@ -535,10 +546,17 @@ class MarkdownConverter:
                 flags=re.MULTILINE,
             )
 
-            # Fix multiple spaces
-            markdown_content = re.sub(r" {2,}", " ", markdown_content)
+            # Fix multiple spaces within lines (but not between lines)
+            lines = markdown_content.split("\n")
+            fixed_lines = []
+            for line in lines:
+                # Only fix multiple spaces within content lines, preserve empty lines
+                if line.strip():
+                    line = re.sub(r" {2,}", " ", line)
+                fixed_lines.append(line)
+            markdown_content = "\n".join(fixed_lines)
 
-            # Fix spacing around punctuation
+            # Fix spacing around punctuation within lines
             markdown_content = re.sub(r"\s+([.!?:;,])", r"\1", markdown_content)
             markdown_content = re.sub(r"([.!?])\s*([A-Z])", r"\1 \2", markdown_content)
 
@@ -548,12 +566,16 @@ class MarkdownConverter:
             return markdown_content
 
     def _basic_cleanup(self, markdown_content: str) -> str:
-        """Apply basic cleanup operations (original postprocessing logic)."""
+        """Apply basic cleanup operations while preserving paragraph structure."""
         try:
-            # Remove excessive blank lines (more than 2 consecutive)
-            markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
+            # Restore paragraph boundaries from markers
+            markdown_content = re.sub(
+                r"PARAGRAPH_START_\d+ (.*?) PARAGRAPH_END_\d+",
+                r"\1\n\n",
+                markdown_content,
+            )
 
-            # Clean up excessive spaces
+            # Clean up excessive spaces but preserve line structure
             lines = []
             for line in markdown_content.split("\n"):
                 # Remove trailing spaces but preserve intentional line breaks
@@ -561,6 +583,10 @@ class MarkdownConverter:
                 lines.append(cleaned_line)
 
             markdown_content = "\n".join(lines)
+
+            # Remove excessive blank lines (more than 2 consecutive) while preserving paragraph breaks
+            # This removes multiple consecutive empty lines but keeps essential paragraph separators
+            markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
 
             # Remove leading/trailing whitespace
             markdown_content = markdown_content.strip()
