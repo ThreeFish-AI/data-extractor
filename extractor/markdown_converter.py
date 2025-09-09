@@ -624,67 +624,408 @@ class MarkdownConverter:
             List of paragraph strings
         """
         try:
-            # First, try to split by common paragraph indicators
-
-            # Split by double newlines (most common)
-            parts = text_content.split("\n\n")
-            if len(parts) > 1:
-                return [part.replace("\n", " ") for part in parts if part.strip()]
-
-            # Split by single newlines followed by capital letters or numbers
             import re
 
-            # Look for sentence endings followed by capital letters
-            sentence_pattern = r"([.!?])\s*\n\s*([A-Z])"
+            # Pre-processing: clean up text
+            text = text_content.strip()
+
+            # Step 1: Split by double newlines (most reliable)
+            parts = text.split("\n\n")
+            if len(parts) > 1:
+                paragraphs = []
+                for part in parts:
+                    part = part.replace("\n", " ").strip()
+                    if part:
+                        # Further split long parts
+                        paragraphs.extend(self._split_long_text(part))
+                return paragraphs
+
+            # Step 2: Split by newline + capital letter patterns
+            sentence_pattern = r"([.!?])\s*\n+\s*([A-Z])"
             text_with_markers = re.sub(
-                sentence_pattern, r"\1\n\nPARAGRAPH_SPLIT\n\n\2", text_content
+                sentence_pattern, r"\1\n\nPARAGRAPH_SPLIT\n\n\2", text
             )
 
             if "PARAGRAPH_SPLIT" in text_with_markers:
                 parts = text_with_markers.split("\n\nPARAGRAPH_SPLIT\n\n")
-                return [
-                    part.replace("\n", " ").strip() for part in parts if part.strip()
-                ]
+                paragraphs = []
+                for part in parts:
+                    part = part.replace("\n", " ").strip()
+                    if part:
+                        paragraphs.extend(self._split_long_text(part))
+                return paragraphs
 
-            # Try to split by periods followed by multiple spaces or newlines
-            period_pattern = r"([.!?])\s{2,}"
-            parts = re.split(period_pattern, text_content)
+            # Step 3: Split by semantic patterns (topic transitions)
+            paragraphs = self._split_by_semantic_patterns(text)
+            if len(paragraphs) > 1:
+                return paragraphs
 
-            # Reconstruct sentences
-            reconstructed = []
-            for i in range(0, len(parts) - 1, 2):
-                sentence = parts[i] + (parts[i + 1] if i + 1 < len(parts) else "")
-                if sentence.strip():
-                    reconstructed.append(sentence.strip())
-
-            if len(reconstructed) > 1:
-                return reconstructed
-
-            # Fallback: split by sentence-like patterns with reasonable length
-            sentences = re.split(r"([.!?])\s+", text_content)
-            paragraphs = []
-            current_paragraph = ""
-
-            for i, part in enumerate(sentences):
-                current_paragraph += part
-
-                # If we have a sentence ending and the paragraph is getting long
-                if part in ".!?" and len(current_paragraph) > 100:
-                    paragraphs.append(current_paragraph)
-                    current_paragraph = ""
-                elif len(current_paragraph) > 300:  # Force split if too long
-                    paragraphs.append(current_paragraph)
-                    current_paragraph = ""
-
-            if current_paragraph:
-                paragraphs.append(current_paragraph)
-
-            return paragraphs if len(paragraphs) > 1 else [text_content]
+            # Step 4: Split by sentence boundaries with smart grouping
+            return self._split_by_sentences(text)
 
         except Exception as e:
             logger.warning(f"Error splitting text into paragraphs: {str(e)}")
-            # Fallback: return original text as single paragraph
             return [text_content]
+
+    def _split_long_text(self, text: str, max_length: int = 150) -> list:
+        """Split text that's too long into smaller chunks."""
+        import re
+
+        if len(text) <= max_length:
+            return [text]
+
+        # Split by sentences first
+        sentences = re.split(r"([.!?])\s+", text)
+
+        paragraphs = []
+        current_chunk = ""
+
+        i = 0
+        while i < len(sentences):
+            sentence = sentences[i]
+            ending = sentences[i + 1] if i + 1 < len(sentences) else ""
+            full_sentence = sentence + ending
+
+            if len(current_chunk + full_sentence) > max_length and current_chunk:
+                paragraphs.append(current_chunk.strip())
+                current_chunk = full_sentence
+            else:
+                current_chunk += full_sentence
+
+            i += 2 if ending else 1
+
+        if current_chunk:
+            paragraphs.append(current_chunk.strip())
+
+        return paragraphs
+
+    def _split_by_semantic_patterns(self, text: str) -> list:
+        """Split text by semantic patterns like topic changes."""
+        import re
+
+        # Patterns that indicate new topics/sections
+        topic_patterns = [
+            r"([.!?])\s+(However|Therefore|Furthermore|Moreover|Additionally|Meanwhile|In contrast|For example|Similarly|On the other hand|In fact|Indeed|Specifically|Generally|Overall|Finally)",
+            r"([.!?])\s+(The\s+[A-Z][a-z]+)",
+            r"([.!?])\s+([A-Z][a-z]+\s+(agents?|tools?|methods?|approaches?|strategies?|techniques?|systems?|models?|applications?))",
+        ]
+
+        for pattern in topic_patterns:
+            if re.search(pattern, text):
+                parts = re.split(pattern, text)
+                if len(parts) > 3:  # We have actual splits
+                    paragraphs = []
+                    current = ""
+
+                    for i in range(
+                        0, len(parts), 4
+                    ):  # Groups of 4 due to capturing groups
+                        if i + 3 < len(parts):
+                            segment = (
+                                parts[i] + parts[i + 1] + parts[i + 2] + parts[i + 3]
+                            )
+                        else:
+                            segment = "".join(parts[i:])
+
+                        if current and len(current + segment) > 200:
+                            paragraphs.extend(self._split_long_text(current.strip()))
+                            current = segment
+                        else:
+                            current += segment
+
+                    if current:
+                        paragraphs.extend(self._split_long_text(current.strip()))
+
+                    if len(paragraphs) > 1:
+                        return paragraphs
+
+        return [text]
+
+    def _split_by_sentences(self, text: str) -> list:
+        """Split text by sentences with intelligent grouping."""
+        import re
+
+        # Split by sentence boundaries
+        sentences = re.split(r"([.!?])\s+", text)
+
+        paragraphs = []
+        current_paragraph = ""
+
+        i = 0
+        while i < len(sentences):
+            sentence = sentences[i]
+            ending = sentences[i + 1] if i + 1 < len(sentences) else ""
+            full_sentence = sentence + ending
+
+            # Rules for paragraph boundaries:
+            should_break = False
+
+            if current_paragraph:
+                # Check length (ultra aggressive threshold)
+                if len(current_paragraph) > 90:
+                    should_break = True
+
+                # Force break after any sentence if the paragraph already has content
+                # This handles the worst cases with many sentences crammed together
+                if current_paragraph.strip() and "." in current_paragraph:
+                    sentence_count = (
+                        current_paragraph.count(".")
+                        + current_paragraph.count("!")
+                        + current_paragraph.count("?")
+                    )
+                    if sentence_count >= 1 and len(current_paragraph) > 80:
+                        should_break = True
+
+                # Check for transition words (expanded list)
+                transition_words = [
+                    "However",
+                    "Therefore",
+                    "Furthermore",
+                    "Moreover",
+                    "Meanwhile",
+                    "Additionally",
+                    "In contrast",
+                    "For example",
+                    "Similarly",
+                    "The",
+                    "This",
+                    "These",
+                    "That",
+                    "Agents",
+                    "Context",
+                    "Memory",
+                    "Tools",
+                    "When",
+                    "Where",
+                    "Why",
+                    "How",
+                    "First",
+                    "Second",
+                    "Third",
+                    "Finally",
+                    "Also",
+                    "But",
+                    "So",
+                    "And",
+                    "As",
+                    "If",
+                    "With",
+                    "For",
+                    "To",
+                    "In",
+                    "On",
+                    "At",
+                    "By",
+                    "From",
+                    "What",
+                    "Which",
+                    "Who",
+                    "ChatGPT",
+                    "Claude",
+                    "GPT",
+                    "AI",
+                    "LLM",
+                    "Another",
+                    "One",
+                    "Many",
+                    "Some",
+                    "All",
+                    "Most",
+                    "Few",
+                    "Several",
+                    "Each",
+                    "Every",
+                    "Any",
+                    "Other",
+                    "Both",
+                    "Either",
+                    "Neither",
+                ]
+
+                for word in transition_words:
+                    if full_sentence.strip().startswith(word + " "):
+                        should_break = True
+                        break
+
+                # Additional rules for better splitting
+                # Break after questions
+                if (
+                    current_paragraph.strip().endswith("?")
+                    and len(current_paragraph) > 60
+                ):
+                    should_break = True
+
+                # Break before quotes
+                if (
+                    full_sentence.strip().startswith('"')
+                    and len(current_paragraph) > 50
+                ):
+                    should_break = True
+
+                # Break on topic shifts (detect capitalized nouns)
+                import re
+
+                if (
+                    re.match(r"^[A-Z][a-z]+\s+[a-z]+", full_sentence.strip())
+                    and len(current_paragraph) > 80
+                ):
+                    should_break = True
+
+                # Break on specific patterns that indicate new topics
+                topic_starters = [
+                    "LangGraph",
+                    "Claude Code",
+                    "ChatGPT",
+                    "Anthropic",
+                    "OpenAI",
+                    "Cognition",
+                    "HuggingFace",
+                    "Scrapy",
+                    "Selenium",
+                ]
+                for starter in topic_starters:
+                    if (
+                        full_sentence.strip().startswith(starter)
+                        and len(current_paragraph) > 60
+                    ):
+                        should_break = True
+                        break
+
+            if should_break and current_paragraph.strip():
+                paragraphs.append(current_paragraph.strip())
+                current_paragraph = full_sentence
+            else:
+                current_paragraph += full_sentence
+
+            i += 2 if ending else 1
+
+        if current_paragraph.strip():
+            paragraphs.append(current_paragraph.strip())
+
+        # Final pass: split any remaining long paragraphs (ultra aggressive)
+        final_paragraphs = []
+        for para in paragraphs if len(paragraphs) > 1 else [text]:
+            if len(para) > 150:  # Very low threshold for ultra aggressive splitting
+                final_paragraphs.extend(self._force_split_long_paragraph(para))
+            elif (
+                len(para) > 120 and para.count(".") > 1
+            ):  # Split multi-sentence short paras too
+                final_paragraphs.extend(self._force_split_long_paragraph(para))
+            else:
+                final_paragraphs.append(para)
+
+        return final_paragraphs
+
+    def _force_split_long_paragraph(self, text: str) -> list:
+        """Force split very long paragraphs that other methods missed."""
+        import re
+
+        if len(text) <= 180:
+            return [text]
+
+        # Strategy 1: Split by sentences more aggressively
+        sentences = re.split(r"([.!?])\s+", text)
+        if len(sentences) > 2:
+            paragraphs = []
+            current = ""
+
+            i = 0
+            while i < len(sentences):
+                sentence = sentences[i]
+                ending = sentences[i + 1] if i + 1 < len(sentences) else ""
+                full_sentence = sentence + ending
+
+                # Ultra aggressive: break after every sentence if current has any content
+                # This handles cases where multiple sentences are crammed together
+                if current and (
+                    len(current + full_sentence) > 120 or current.count(".") >= 1
+                ):
+                    paragraphs.append(current.strip())
+                    current = full_sentence
+                else:
+                    current += full_sentence
+
+                i += 2 if ending else 1
+
+            if current:
+                paragraphs.append(current.strip())
+
+            if len(paragraphs) > 1:
+                return paragraphs
+
+        # Strategy 2: Split at commas followed by space and capital letters
+        comma_splits = re.split(r"(,\s+)(?=[A-Z])", text)
+        if len(comma_splits) > 2:
+            paragraphs = []
+            current = ""
+            for i in range(0, len(comma_splits), 2):
+                chunk = comma_splits[i] + (
+                    comma_splits[i + 1] if i + 1 < len(comma_splits) else ""
+                )
+                if len(current + chunk) > 160 and current:
+                    paragraphs.append(current.strip())
+                    current = chunk
+                else:
+                    current += chunk
+            if current:
+                paragraphs.append(current.strip())
+            if len(paragraphs) > 1:
+                return paragraphs
+
+        # Strategy 3: Split at colons (often indicate lists or definitions)
+        colon_splits = re.split(r"(:)\s+", text)
+        if len(colon_splits) > 2:
+            paragraphs = []
+            current = ""
+            for i in range(0, len(colon_splits), 2):
+                chunk = colon_splits[i] + (
+                    colon_splits[i + 1] if i + 1 < len(colon_splits) else ""
+                )
+                if len(current + chunk) > 160 and current:
+                    paragraphs.append(current.strip())
+                    current = chunk
+                else:
+                    current += chunk
+            if current:
+                paragraphs.append(current.strip())
+            if len(paragraphs) > 1:
+                return paragraphs
+
+        # Strategy 4: Split at semicolons
+        semi_splits = text.split(";")
+        if len(semi_splits) > 1:
+            paragraphs = []
+            current = ""
+            for chunk in semi_splits:
+                chunk = (
+                    chunk.strip() + ";" if chunk != semi_splits[-1] else chunk.strip()
+                )
+                if len(current + chunk) > 160 and current:
+                    paragraphs.append(current.strip())
+                    current = chunk
+                else:
+                    current += " " + chunk if current else chunk
+            if current:
+                paragraphs.append(current.strip())
+            if len(paragraphs) > 1:
+                return paragraphs
+
+        # Strategy 5: Split at word boundaries (last resort)
+        words = text.split()
+        paragraphs = []
+        current = ""
+
+        for word in words:
+            if len(current + " " + word) > 150 and current:  # Even more aggressive
+                paragraphs.append(current.strip())
+                current = word
+            else:
+                current += " " + word if current else word
+
+        if current:
+            paragraphs.append(current.strip())
+
+        return paragraphs if len(paragraphs) > 1 else [text]
 
     def extract_content_area(self, html_content: str) -> str:
         """
