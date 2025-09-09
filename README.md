@@ -4,37 +4,136 @@
 
 ## 🛠️ MCP Server 核心工具 (14 个)
 
-| 工具名称                               | 功能描述           | 使用场景                          |
+### 网页抓取工具
+
+| 工具名称                               | 功能描述           | 主要参数                          |
 | -------------------------------------- | ------------------ | --------------------------------- |
-| **scrape_webpage**                     | 单页面抓取         | 基础数据提取，支持配置化选择器    |
-| **scrape_multiple_webpages**           | 批量页面抓取       | 并发处理多个 URL，提升效率        |
-| **scrape_with_stealth**                | 反检测抓取         | 应对反爬虫保护的高难度网站        |
-| **fill_and_submit_form**               | 表单自动化         | 登录表单、联系表单等交互操作      |
-| **extract_links**                      | 专业链接提取       | 网站地图生成，链接分析            |
-| **extract_structured_data**            | 结构化数据提取     | JSON-LD、微数据、Open Graph 解析  |
-| **get_page_info**                      | 页面信息获取       | 快速获取标题、状态码、元数据      |
-| **check_robots_txt**                   | 爬虫规则检查       | 遵守网站爬取规范，合规性检查      |
-| **get_server_metrics**                 | 性能指标监控       | 服务器状态监控，性能调优          |
-| **clear_cache**                        | 缓存管理           | 释放内存，清理过期数据            |
-| **convert_webpage_to_markdown**        | 页面转 Markdown    | 将网页内容转换为 Markdown 格式    |
-| **batch_convert_webpages_to_markdown** | 批量 Markdown 转换 | 批量处理多个网页的 Markdown 转换  |
-| **convert_pdf_to_markdown**            | PDF 转 Markdown    | 将 PDF 文档转换为 Markdown 格式   |
-| **batch_convert_pdfs_to_markdown**     | 批量 PDF 转换      | 批量处理多个 PDF 的 Markdown 转换 |
+| **scrape_webpage**                     | 单页面抓取         | `url`, `method`(自动选择), `extract_config`(选择器配置), `wait_for_element`(CSS选择器) |
+| **scrape_multiple_webpages**           | 批量页面抓取       | `urls`(列表), `method`(统一方法), `extract_config`(全局配置) |
+| **scrape_with_stealth**                | 反检测抓取         | `url`, `method`(selenium/playwright), `scroll_page`(滚动加载), `wait_for_element` |
+| **fill_and_submit_form**               | 表单自动化         | `url`, `form_data`(选择器:值), `submit`(是否提交), `submit_button_selector` |
+| **extract_links**                      | 专业链接提取       | `url`, `filter_domains`(域名过滤), `exclude_domains`(排除域名), `internal_only`(仅内部) |
+| **extract_structured_data**            | 结构化数据提取     | `url`, `data_type`(all/contact/social/content/products/addresses) |
 
-### 核心功能
+### 页面信息工具
 
-- **多种爬取方法**: 支持简单 HTTP 请求、Scrapy 框架和浏览器自动化
-- **智能方法选择**: 自动选择最适合的爬取方法
-- **并发处理**: 支持多个 URL 的并发爬取
-- **配置化提取**: 灵活的数据提取配置系统
+| 工具名称                               | 功能描述           | 主要参数                          |
+| -------------------------------------- | ------------------ | --------------------------------- |
+| **get_page_info**                      | 页面信息获取       | `url`(目标URL) - 返回标题、状态码、元数据 |
+| **check_robots_txt**                   | 爬虫规则检查       | `url`(域名URL) - 检查robots.txt规则 |
 
-### 高级功能
+### Markdown转换工具
 
-- **反反爬虫**: 使用 undetected-chromedriver 和 Playwright 的隐身技术
-- **表单处理**: 自动填写和提交各种类型的表单
-- **JavaScript 支持**: 完整的浏览器渲染支持
-- **智能重试**: 指数退避重试机制
-- **结果缓存**: 内存缓存提升性能
+| 工具名称                               | 功能描述           | 主要参数                          |
+| -------------------------------------- | ------------------ | --------------------------------- |
+| **convert_webpage_to_markdown**        | 页面转 Markdown    | `url`, `method`, `extract_main_content`(提取主内容), `embed_images`(嵌入图片), `formatting_options` |
+| **batch_convert_webpages_to_markdown** | 批量 Markdown 转换 | `urls`(列表), `method`, `extract_main_content`, `embed_images`, `embed_options` |
+| **convert_pdf_to_markdown**            | PDF 转 Markdown    | `pdf_source`(URL/路径), `method`(auto/pymupdf/pypdf), `page_range`, `output_format` |
+| **batch_convert_pdfs_to_markdown**     | 批量PDF转换      | `pdf_sources`(列表), `method`, `page_range`, `output_format`, `include_metadata` |
+
+### 服务管理工具
+
+| 工具名称                               | 功能描述           | 主要参数                          |
+| -------------------------------------- | ------------------ | --------------------------------- |
+| **get_server_metrics**                 | 性能指标监控       | 无参数 - 返回请求统计、性能指标、缓存情况 |
+| **clear_cache**                        | 缓存管理           | 无参数 - 清空所有缓存数据 |
+
+### 参数说明详解
+
+#### 抓取方法 (method)
+- **auto**: 智能选择最佳方法，基于网站特性自动判断
+- **simple**: 快速HTTP请求，不支持JavaScript，适合静态网页
+- **scrapy**: Scrapy框架，适合大规模数据抓取和复杂页面
+- **selenium**: 浏览器渲染，支持JavaScript和动态内容
+
+#### 数据提取配置 (extract_config)
+```json
+{
+  "title": "h1",
+  "content": {
+    "selector": ".content p", 
+    "multiple": true, 
+    "attr": "text"
+  },
+  "links": {
+    "selector": "a", 
+    "multiple": true, 
+    "attr": "href"
+  }
+}
+```
+
+#### 等待元素 (wait_for_element)
+- `.content` - 类选择器
+- `#main-article` - ID选择器
+- `[data-loaded]` - 属性选择器
+- `button[type="submit"]` - 复合选择器
+
+#### 表单数据 (form_data)
+```json
+{
+  "#username": "用户名",
+  "input[name=\"password\"]": "密码",
+  "select[name=country]": "China",
+  "input[value=male]": "click",
+  "input[name=agree]": true
+}
+```
+
+### 图片嵌入选项 (embed_options)
+```json
+{
+  "max_images": 50,
+  "max_bytes_per_image": 2000000,
+  "timeout_seconds": 10
+}
+```
+
+#### PDF处理方法 (method)
+- **auto**: 自动选择最佳提取方法
+- **pymupdf**: PyMuPDF引擎，适合复杂布局和图表
+- **pypdf**: PyPDF引擎，适合简单纯文本文档
+
+#### 页面范围 (page_range)
+- `[0, 10]` - 提取第0-10页（页码从0开始）
+- `[5, -1]` - 从第5页到最后一页
+- `null` - 提取所有页面（默认）
+
+#### 结构化数据类型 (data_type)
+- **all**: 提取所有类型数据（默认）
+- **contact**: 仅提取联系方式（邮箱、电话、传真）
+- **social**: 仅提取社交媒体链接和账号
+- **content**: 仅提取文章内容和元数据
+- **products**: 仅提取产品和价格信息
+- **addresses**: 仅提取地址相关信息
+
+### 高级功能参数
+
+#### 格式化选项 (formatting_options)
+```json
+{
+  "format_tables": true,
+  "detect_code_language": true,
+  "format_quotes": true,
+  "enhance_images": true,
+  "optimize_links": true,
+  "format_lists": true
+}
+```
+
+#### 隐身抓取参数
+- **scroll_page**: 滚动页面加载动态内容
+- **method**: selenium(推荐) 或 playwright
+- **wait_for_element**: 建议设置以提高成功率
+
+#### 域名过滤示例
+```json
+{
+  "filter_domains": ["example.com", "blog.example.com"],
+  "exclude_domains": ["ads.com", "tracker.net"],
+  "internal_only": false
+}
+```
 
 ### 企业级特性
 
@@ -43,6 +142,8 @@
 - **速率限制**: 防止服务器过载
 - **代理支持**: 支持 HTTP 代理配置
 - **随机 UA**: 防检测的用户代理轮换
+- **智能重试**: 指数退避重试机制
+- **结果缓存**: 内存缓存提升性能
 
 ## 📋 项目现状
 
@@ -592,7 +693,7 @@ uv run pytest tests/unit/ -v
 - `include_metadata`: 是否包含页面元数据 (默认 true)
 - `custom_options`: 自定义 Markdown 转换选项 (可选)
 - `formatting_options`: 高级格式化选项 (与单页转换相同配置)
- - `embed_images` / `embed_options`: 与单页相同，用于批量图片嵌入
+- `embed_images` / `embed_options`: 与单页相同，用于批量图片嵌入
 
 **功能特性:**
 

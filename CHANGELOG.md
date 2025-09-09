@@ -4,25 +4,58 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## v0.1.5
+
+#### Released on 2025/09/09
+
+### 变更
+
+- **MCP 工具参数说明系统性优化**
+  - **全面升级 14 个 MCP 工具参数文档**: 对所有 `@app.tool()` 装饰器标记的 MCP 工具参数提供详细说明
+  - **核心工具优化完成**:
+    - `scrape_webpage` - 单页面抓取工具参数增强
+    - `scrape_multiple_webpages` - 批量页面抓取工具参数完善
+    - `extract_links` - 链接提取工具参数详细化
+    - `get_page_info` - 页面信息获取工具参数说明
+    - `check_robots_txt` - robots.txt 检查工具参数优化
+    - `scrape_with_stealth` - 反检测抓取工具参数增强
+    - `fill_and_submit_form` - 表单自动化工具参数完善
+    - `get_server_metrics` - 服务器指标工具参数说明
+    - `clear_cache` - 缓存清理工具参数优化
+    - `extract_structured_data` - 结构化数据提取工具参数详细化
+    - `convert_webpage_to_markdown` - 网页转 Markdown 工具参数增强
+    - `batch_convert_webpages_to_markdown` - 批量网页转 Markdown 工具参数完善
+    - `convert_pdf_to_markdown` - PDF 转 Markdown 工具参数详细化
+    - `batch_convert_pdfs_to_markdown` - 批量 PDF 转 Markdown 工具参数优化
+  - **参数说明特点**:
+    - **中文友好**: 所有参数使用详细中文描述，提升易用性
+    - **类型标注**: 明确标注参数类型 (str, List[str], Dict, bool) 和默认值
+    - **选项枚举**: 详细列举方法选择 (auto/simple/scrapy/selenium) 和格式选项 (markdown/text)
+    - **实际示例**: 提供具体 JSON 配置示例和使用场景说明
+    - **高级功能**: 详细说明图片嵌入、格式化选项、页面范围等高级参数
+    - **返回值说明**: 明确说明返回数据结构和错误处理格式
+  - **文档同步更新**:
+    - **extractor/server.py**: 所有工具函数和 Pydantic 请求模型参数文档字符串优化
+    - **README.md**: MCP 工具参数说明章节同步更新
+    - **tests/TESTING.md**: 测试文档的参数说明章节同步完善
 
 ### 修复
 
 - **Markdown 段落格式保持优化 - 超强算法升级**
   - **问题大幅改善**: 修复页面转 Markdown 工具输出格式问题，实现超强智能段落分割
-  - **核心技术升级**: 
-    - **超强智能分段**: 升级 `_split_text_into_paragraphs()` 方法，实现5层分割策略
+  - **核心技术升级**:
+    - **超强智能分段**: 升级 `_split_text_into_paragraphs()` 方法，实现 5 层分割策略
     - **多策略段落检测**: 双换行符、句号+大写字母、语义模式、过渡词检测等
     - **新增强制分割**: `_force_split_long_paragraph()` 方法处理极难分割的长段落
-    - **超激进分割策略**: 长度阈值从250→150→120→90字符，解决多句合并问题  
-    - **过渡词智能扩展**: 从15个扩展到25+个常见过渡词，改善主题切换识别
-    - **多种分割模式**: 支持句子、逗号、分号、冒号、词边界等5种强制分割策略
-  - **卓越效果验证**: 
+    - **超激进分割策略**: 长度阈值从 250→150→120→90 字符，解决多句合并问题
+    - **过渡词智能扩展**: 从 15 个扩展到 25+个常见过渡词，改善主题切换识别
+    - **多种分割模式**: 支持句子、逗号、分号、冒号、词边界等 5 种强制分割策略
+  - **卓越效果验证**:
     - **真实测试**: 使用 https://blog.langchain.com/context-engineering-for-agents/ 验证
-    - **效果对比**: 从16390字符1行 → 16464字符149行74段落
-    - **长行优化**: 200字符以上长行从初始值降至28行，大幅改善可读性
-    - **多句优化**: 多句合并行从初始值降至42行，明显改善段落结构  
-    - **分隔完善**: 74个空行提供良好段落间分隔，提升阅读体验
+    - **效果对比**: 从 16390 字符 1 行 → 16464 字符 149 行 74 段落
+    - **长行优化**: 200 字符以上长行从初始值降至 28 行，大幅改善可读性
+    - **多句优化**: 多句合并行从初始值降至 42 行，明显改善段落结构
+    - **分隔完善**: 74 个空行提供良好段落间分隔，提升阅读体验
   - **全面测试**: 所有单元测试通过，确保功能稳定性和兼容性
 
 ### 整理
@@ -34,20 +67,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - **优化文件处理**: 使用临时文件替代工作目录文件创建，避免测试污染
   - **新增独立脚本**: 创建 `scripts/test_langchain_blog.py` 提供手动测试功能
   - **清理测试环境**: 移除测试目录下的遗留 Markdown 输出文件
-  - **测试验证**: 221个测试全部通过，确保无回归问题
+  - **测试验证**: 221 个测试全部通过，确保无回归问题
 
 ### 技术细节
 
 - **超强段落分割算法实现**:
-  - `_split_text_into_paragraphs()`: 主分割逻辑，包含4个分割策略
-  - `_split_long_text()`: 处理超长文本分块（最大150字符，从250字符优化）
+  - `_split_text_into_paragraphs()`: 主分割逻辑，包含 4 个分割策略
+  - `_split_long_text()`: 处理超长文本分块（最大 150 字符，从 250 字符优化）
   - `_split_by_semantic_patterns()`: 基于语义模式的主题转换检测
-  - `_split_by_sentences()`: 句子边界检测与智能分组（阈值90字符，从150字符优化）
-  - `_force_split_long_paragraph()`: 强制分割极长段落，支持5种策略（句子、逗号、冒号、分号、词边界）
+  - `_split_by_sentences()`: 句子边界检测与智能分组（阈值 90 字符，从 150 字符优化）
+  - `_force_split_long_paragraph()`: 强制分割极长段落，支持 5 种策略（句子、逗号、冒号、分号、词边界）
 - **优化分割阈值**:
-  - 主要长度限制从250→180→150字符
-  - 句子分组从150→120→100→90字符
-  - 强制分割从200→180→150字符，更激进的处理策略
+  - 主要长度限制从 250→180→150 字符
+  - 句子分组从 150→120→100→90 字符
+  - 强制分割从 200→180→150 字符，更激进的处理策略
 - **扩展过渡词检测**: 新增"Each", "Every", "Any", "Other"等高频过渡词
 - **增强主题识别**: 支持"LangGraph", "Claude Code", "ChatGPT"等专有名词主题切换检测
 
@@ -66,7 +99,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - 配置化嵌入选项：
       - `max_images`: 最大嵌入图片数量限制（默认 50）
       - `max_bytes_per_image`: 单张图片大小上限（默认 2MB）
-      - `timeout_seconds`: 图片下载超时控制（默认 10秒）
+      - `timeout_seconds`: 图片下载超时控制（默认 10 秒）
   - **图片嵌入测试体系**: 新增 TestImageEmbedding 测试类
     - 成功嵌入小图片测试：验证 base64 编码和 data URI 生成
     - 大图片跳过测试：验证通过 Content-Length 头部检测超限图片

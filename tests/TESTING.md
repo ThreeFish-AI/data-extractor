@@ -162,6 +162,21 @@ def test_cache_expiration(self, temp_cache_dir):
 
 #### 1. scrape_webpage - 单页面抓取
 
+**核心参数详解**:
+
+- **url** (必需): 目标网页 URL，必须包含协议前缀 (http:// 或 https://)
+- **method** (可选, 默认 "auto"): 抓取方法选择
+  - `auto`: 自动选择最佳方法（根据页面特征智能判断）
+  - `simple`: 快速 HTTP 请求（不支持 JavaScript，适合静态内容）
+  - `scrapy`: Scrapy 框架（适合大规模抓取，支持复杂场景）
+  - `selenium`: 浏览器渲染（支持 JavaScript 和动态内容加载）
+- **extract_config** (可选): 数据提取配置，支持 CSS 选择器和属性提取
+  - 简单格式: `{"title": "h1", "content": "p"}`
+  - 复杂格式: `{"products": {"selector": ".product", "multiple": true, "attr": "text"}}`
+- **wait_for_element** (可选): CSS 选择器，仅 Selenium 方法生效，等待特定元素出现
+
+**测试覆盖**:
+
 - **成功抓取**: 测试正常网页抓取返回数据结构
 - **URL 验证**: 测试无效 URL 错误处理
 - **方法验证**: 测试无效抓取方法错误处理
@@ -170,12 +185,29 @@ def test_cache_expiration(self, temp_cache_dir):
 
 #### 2. scrape_multiple_webpages - 批量页面抓取
 
+**核心参数详解**:
+
+- **urls** (必需): URL 列表，每个 URL 必须包含协议前缀
+- **method** (可选, 默认 "auto"): 批量抓取方法，应用于所有 URL
+- **extract_config** (可选): 统一的数据提取配置，应用于所有页面
+
+**测试覆盖**:
+
 - **批量成功**: 测试多 URL 并发抓取
 - **空列表处理**: 测试空 URL 列表错误处理
 - **部分失败**: 测试部分 URL 无效时的处理
 - **结果汇总**: 测试批量抓取结果统计
 
 #### 3. extract_links - 链接提取
+
+**核心参数详解**:
+
+- **url** (必需): 目标网页 URL，从中提取链接
+- **filter_domains** (可选): 白名单域名列表，只包含这些域名的链接
+- **exclude_domains** (可选): 黑名单域名列表，排除这些域名的链接  
+- **internal_only** (可选, 默认 false): 仅提取内部链接（同域名）
+
+**测试覆盖**:
 
 - **链接解析**: 测试 HTML 中 `<a>` 标签链接提取
 - **域名过滤**: 测试 `filter_domains` 白名单过滤
@@ -184,12 +216,24 @@ def test_cache_expiration(self, temp_cache_dir):
 
 #### 4. get_page_info - 页面信息获取
 
+**核心参数详解**:
+
+- **url** (必需): 目标网页 URL，获取基础信息和元数据
+
+**测试覆盖**:
+
 - **基础信息**: 测试标题、状态码、内容长度获取
 - **元数据提取**: 测试响应时间、内容类型获取
 - **错误页面**: 测试 404、500 等错误页面处理
 - **重定向处理**: 测试 HTTP 重定向跟踪
 
 #### 5. check_robots_txt - robots.txt 检查
+
+**核心参数详解**:
+
+- **url** (必需): 网站域名 URL，检查其 robots.txt 文件
+
+**测试覆盖**:
 
 - **robots.txt 存在**: 测试正常 robots.txt 解析
 - **文件不存在**: 测试 404 状态处理
@@ -198,12 +242,38 @@ def test_cache_expiration(self, temp_cache_dir):
 
 #### 6. scrape_with_stealth - 反检测抓取
 
+**核心参数详解**:
+
+- **url** (必需): 目标网页 URL，使用反检测技术抓取
+- **method** (可选, 默认 "selenium"): 隐身方法选择
+  - `selenium`: 使用 undetected-chromedriver 反检测
+  - `playwright`: 使用 Playwright 隐身模式
+- **extract_config** (可选): 数据提取配置
+- **wait_for_element** (可选): CSS 选择器，等待特定元素加载
+- **scroll_page** (可选, 默认 false): 是否滚动页面加载动态内容
+
+**测试覆盖**:
+
 - **隐身方法**: 测试 undetected-chrome、playwright 方法
 - **反检测特征**: 测试 User-Agent、Viewport 等反检测设置
 - **JavaScript 渲染**: 测试动态内容抓取
 - **方法验证**: 测试无效隐身方法错误处理
 
 #### 7. fill_and_submit_form - 表单自动化
+
+**核心参数详解**:
+
+- **url** (必需): 包含表单的网页 URL
+- **form_data** (必需): 表单字段数据，格式为 `{"selector": "value"}`
+  - 支持文本框: `{"#username": "admin"}`
+  - 支持下拉框: `{"select[name='country']": "US"}`
+  - 支持复选框: `{"input[type='checkbox']": true}`
+- **submit** (可选, 默认 false): 是否提交表单
+- **submit_button_selector** (可选): 提交按钮的 CSS 选择器
+- **method** (可选, 默认 "selenium"): 自动化方法 (selenium 或 playwright)
+- **wait_for_element** (可选): 表单填写前等待的元素
+
+**测试覆盖**:
 
 - **表单填写**: 测试各种表单字段填写
 - **提交方式**: 测试按钮点击和键盘提交
@@ -212,12 +282,20 @@ def test_cache_expiration(self, temp_cache_dir):
 
 #### 8. get_server_metrics - 服务器指标
 
+**核心参数详解**: 无需参数，返回服务器性能指标
+
+**测试覆盖**:
+
 - **性能指标**: 测试请求数、错误数、成功率统计
 - **响应时间**: 测试平均响应时间计算
 - **错误分类**: 测试超时、连接等错误分类统计
 - **实时更新**: 测试指标实时更新机制
 
 #### 9. clear_cache - 缓存清理
+
+**核心参数详解**: 无需参数，清理全局缓存
+
+**测试覆盖**:
 
 - **缓存清空**: 测试全局缓存清理功能
 - **清理反馈**: 测试清理成功消息返回
@@ -226,12 +304,40 @@ def test_cache_expiration(self, temp_cache_dir):
 
 #### 10. extract_structured_data - 结构化数据提取
 
+**核心参数详解**:
+
+- **url** (必需): 目标网页 URL
+- **data_type** (可选, 默认 "all"): 数据类型过滤
+  - `all`: 提取所有结构化数据
+  - `contact`: 仅提取联系信息（邮箱、电话）
+  - `social`: 仅提取社交媒体链接
+  - `content`: 仅提取文章内容
+  - `products`: 仅提取产品信息
+  - `addresses`: 仅提取地址信息
+
+**测试覆盖**:
+
 - **JSON-LD**: 测试 JSON-LD 格式结构化数据提取
 - **微数据**: 测试 HTML 微数据格式提取
 - **Open Graph**: 测试 OG 标签数据提取
 - **数据类型**: 测试不同数据类型过滤 (all/jsonld/microdata/opengraph)
 
 #### 11. convert_webpage_to_markdown - 页面转 Markdown
+
+**核心参数详解**:
+
+- **url** (必需): 目标网页 URL
+- **method** (可选, 默认 "auto"): 抓取方法选择
+- **extract_main_content** (可选, 默认 true): 仅提取主要内容区域，排除导航、广告等
+- **include_metadata** (可选, 默认 true): 在结果中包含页面元数据
+- **custom_options** (可选): 自定义 Markdown 转换选项
+- **wait_for_element** (可选): CSS 选择器，仅 Selenium 方法生效
+- **formatting_options** (可选): 高级格式化选项
+  - `format_tables`: 表格格式优化
+  - `detect_code_language`: 代码语言自动检测
+  - `apply_typography`: 智能排版增强
+
+**测试覆盖**:
 
 - **HTML 转换**: 测试完整 HTML 内容转换为 Markdown 格式
 - **内容提取**: 测试主要内容区域智能提取功能
@@ -243,13 +349,39 @@ def test_cache_expiration(self, temp_cache_dir):
 
 #### 12. batch_convert_webpages_to_markdown - 批量 Markdown 转换
 
+**核心参数详解**:
+
+- **urls** (必需): URL 列表，批量转换为 Markdown
+- **method** (可选, 默认 "auto"): 批量抓取方法
+- **extract_main_content** (可选, 默认 true): 统一的主要内容提取设置
+- **include_metadata** (可选, 默认 true): 统一的元数据包含设置
+- **custom_options** (可选): 统一的自定义转换选项
+- **formatting_options** (可选): 统一的高级格式化选项
+
+**测试覆盖**:
+
 - **批量处理**: 测试多个 URL 的并发转换处理
 - **部分失败**: 测试部分 URL 失败时的错误处理
 - **统计信息**: 测试成功/失败统计和成功率计算
 - **空列表处理**: 测试空 URL 列表的错误处理
- - **图片嵌入参数**: 验证批量工具暴露 `embed_images` 与 `embed_options` 参数模式，确保与单页一致
+- **图片嵌入参数**: 验证批量工具暴露 `embed_images` 与 `embed_options` 参数模式，确保与单页一致
 
 #### 13. convert_pdf_to_markdown - PDF 转 Markdown
+
+**核心参数详解**:
+
+- **pdf_source** (必需): PDF 来源，可以是 URL 或本地文件路径
+- **method** (可选, 默认 "auto"): PDF 处理引擎选择
+  - `auto`: 自动选择最佳引擎（PyMuPDF → PyPDF2）
+  - `pymupdf`: 使用 PyMuPDF (fitz) 引擎，功能强大
+  - `pypdf`: 使用 PyPDF2 引擎，兼容性好
+- **include_metadata** (可选, 默认 true): 在结果中包含 PDF 元数据
+- **page_range** (可选): 页面范围 [start, end]，用于部分提取
+- **output_format** (可选, 默认 "markdown"): 输出格式选择
+  - `markdown`: Markdown 格式输出
+  - `text`: 纯文本格式输出
+
+**测试覆盖**:
 
 - **双引擎支持**: 测试 PyMuPDF 和 PyPDF2 两种 PDF 处理引擎
 - **智能回退**: 测试 PyMuPDF 失败时自动切换到 PyPDF2
@@ -261,6 +393,16 @@ def test_cache_expiration(self, temp_cache_dir):
 - **错误处理**: 测试文件不存在、下载失败、解析错误等异常场景
 
 #### 14. batch_convert_pdfs_to_markdown - 批量 PDF 转换
+
+**核心参数详解**:
+
+- **pdf_sources** (必需): PDF 来源列表，可混合 URL 和本地文件路径
+- **method** (可选, 默认 "auto"): 批量处理的统一引擎选择
+- **include_metadata** (可选, 默认 true): 统一的元数据包含设置
+- **page_range** (可选): 统一的页面范围设置，应用于所有 PDF
+- **output_format** (可选, 默认 "markdown"): 统一的输出格式设置
+
+**测试覆盖**:
 
 - **并发处理**: 测试多个 PDF 文件的并发转换能力
 - **混合结果**: 测试成功和失败混合的批量处理结果
