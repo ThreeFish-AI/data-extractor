@@ -166,8 +166,8 @@ class TestSeleniumStealth:
             mock_scroll.assert_called_once()
 
     @patch("extractor.advanced_features.uc.Chrome")
-    @patch("selenium.webdriver.support.ui.WebDriverWait")
-    @patch("selenium.webdriver.support.expected_conditions.presence_of_element_located")
+    @patch("extractor.advanced_features.WebDriverWait")
+    @patch("extractor.advanced_features.EC.presence_of_element_located")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_selenium_wait_for_element(
@@ -208,12 +208,15 @@ class TestSeleniumStealth:
 
         # 模拟驱动器
         mock_driver = Mock()
-        mock_driver.execute_script.side_effect = [
-            1000,
-            1000,
-            1200,
-            1200,
-        ]  # scrollHeight变化
+
+        # Mock execute_script to handle multiple calls
+        def mock_execute_script(script):
+            if "scrollHeight" in script:
+                return 1000  # Fixed height to stop scrolling
+            else:
+                return None  # For scrollBy calls
+
+        mock_driver.execute_script.side_effect = mock_execute_script
         self.scraper.driver = mock_driver
 
         await self.scraper._scroll_page_selenium()
@@ -222,7 +225,7 @@ class TestSeleniumStealth:
         assert mock_driver.execute_script.call_count >= 2
         mock_sleep.assert_called()
 
-    @patch("selenium.webdriver.common.action_chains.ActionChains")
+    @patch("extractor.advanced_features.ActionChains")
     @patch("extractor.advanced_features.random.randint")
     @patch("extractor.advanced_features.random.uniform")
     @patch("asyncio.sleep")
@@ -417,9 +420,17 @@ class TestDataExtraction:
         # 模拟meta描述不存在
         from selenium.common.exceptions import NoSuchElementException
 
-        mock_driver.find_element.side_effect = NoSuchElementException()
+        def mock_find_element(by, selector):
+            if "meta[name='description']" in selector:
+                raise NoSuchElementException()
+            # For the link extraction
+            mock_element = Mock()
+            mock_element.get_attribute.return_value = "href_value"
+            return mock_element
 
-        # 模拟元素查找
+        mock_driver.find_element.side_effect = mock_find_element
+
+        # 模拟元素查找（多个元素）
         mock_element = Mock()
         mock_element.text = "Extracted text"
         mock_element.get_attribute.return_value = "href_value"
@@ -616,7 +627,7 @@ class TestFormHandler:
 class TestSeleniumFormHandling:
     """测试Selenium表单处理"""
 
-    @patch("selenium.webdriver.support.ui.Select")
+    @patch("extractor.advanced_features.Select")
     @pytest.mark.asyncio
     async def test_selenium_fill_select_field(self, mock_select):
         """测试Selenium填充选择框"""

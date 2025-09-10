@@ -1,11 +1,10 @@
 """
-单元测试：PDF处理模块
+单元测试：PDF 处理模块
 测试 extractor.pdf_processor 模块的PDF文档处理和转换功能
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 from pathlib import Path
 import tempfile
 import os
@@ -191,7 +190,12 @@ class TestPyMuPDFExtraction:
             mock_page = Mock()
             mock_page.get_text.return_value = f"Page {i + 1} content"
             mock_pages.append(mock_page)
-        mock_doc.load_page.side_effect = mock_pages
+
+        # 正确设置 load_page 的模拟行为
+        def mock_load_page(page_num):
+            return mock_pages[page_num]
+
+        mock_doc.load_page.side_effect = mock_load_page
 
         # 创建临时PDF文件
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:

@@ -5,24 +5,24 @@
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any, List
 
-from extractor.server import (
-    scrape_webpage,
-    scrape_multiple_webpages,
-    extract_links,
-    get_page_info,
-    check_robots_txt,
-    scrape_with_stealth,
-    fill_and_submit_form,
-    get_server_metrics,
-    clear_cache,
-    extract_structured_data,
-    convert_webpage_to_markdown,
-    batch_convert_webpages_to_markdown,
-    convert_pdf_to_markdown,
-    batch_convert_pdfs_to_markdown,
-)
+import extractor.server as server_module
+
+# 获取实际的函数，而不是 FunctionTool 包装器
+scrape_webpage = server_module.scrape_webpage.fn
+scrape_multiple_webpages = server_module.scrape_multiple_webpages.fn
+extract_links = server_module.extract_links.fn
+get_page_info = server_module.get_page_info.fn
+check_robots_txt = server_module.check_robots_txt.fn
+scrape_with_stealth = server_module.scrape_with_stealth.fn
+fill_and_submit_form = server_module.fill_and_submit_form.fn
+get_server_metrics = server_module.get_server_metrics.fn
+clear_cache = server_module.clear_cache.fn
+extract_structured_data = server_module.extract_structured_data.fn
+convert_webpage_to_markdown = server_module.convert_webpage_to_markdown.fn
+batch_convert_webpages_to_markdown = server_module.batch_convert_webpages_to_markdown.fn
+convert_pdf_to_markdown = server_module.convert_pdf_to_markdown.fn
+batch_convert_pdfs_to_markdown = server_module.batch_convert_pdfs_to_markdown.fn
 
 
 class TestMCPToolsScraping:
@@ -38,7 +38,7 @@ class TestMCPToolsScraping:
                 "title": "Test Page",
                 "content": {"text": "Sample content"},
             }
-            mock_scraper.scrape_url.return_value = mock_result
+            mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             result = await scrape_webpage(url="https://example.com", method="simple")
 
@@ -74,7 +74,7 @@ class TestMCPToolsScraping:
                 {"url": "https://example.com/1", "status_code": 200},
                 {"url": "https://example.com/2", "status_code": 200},
             ]
-            mock_scraper.scrape_multiple_urls.return_value = mock_results
+            mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mock_results)
 
             result = await scrape_multiple_webpages(
                 urls=["https://example.com/1", "https://example.com/2"], method="simple"
@@ -104,7 +104,7 @@ class TestMCPToolsScraping:
                     ]
                 }
             }
-            mock_scraper.scrape_url.return_value = mock_result
+            mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             result = await extract_links(url="https://example.com", internal_only=True)
 
@@ -128,7 +128,7 @@ class TestMCPToolsScraping:
                     ]
                 }
             }
-            mock_scraper.scrape_url.return_value = mock_result
+            mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             result = await extract_links(
                 url="https://example.com",
@@ -155,7 +155,7 @@ class TestMCPToolsInformation:
                 "title": "Test Page",
                 "meta_description": "A test page",
             }
-            mock_scraper.simple_scraper.scrape.return_value = mock_result
+            mock_scraper.simple_scraper.scrape = AsyncMock(return_value=mock_result)
 
             result = await get_page_info("https://example.com")
 
@@ -168,7 +168,7 @@ class TestMCPToolsInformation:
         """测试robots.txt检查成功"""
         with patch("extractor.server.web_scraper") as mock_scraper:
             mock_result = {"content": {"text": "User-agent: *\nDisallow: /admin/"}}
-            mock_scraper.simple_scraper.scrape.return_value = mock_result
+            mock_scraper.simple_scraper.scrape = AsyncMock(return_value=mock_result)
 
             result = await check_robots_txt("https://example.com")
 
@@ -180,7 +180,9 @@ class TestMCPToolsInformation:
     async def test_check_robots_txt_not_found(self):
         """测试robots.txt不存在"""
         with patch("extractor.server.web_scraper") as mock_scraper:
-            mock_scraper.simple_scraper.scrape.return_value = {"error": "404 Not Found"}
+            mock_scraper.simple_scraper.scrape = AsyncMock(
+                return_value={"error": "404 Not Found"}
+            )
 
             result = await check_robots_txt("https://example.com")
 
@@ -208,7 +210,7 @@ class TestMCPToolsAdvanced:
                 "status_code": 200,
                 "content": {"text": "Stealth content"},
             }
-            mock_retry.retry_async.return_value = mock_result
+            mock_retry.retry_async = AsyncMock(return_value=mock_result)
 
             result = await scrape_with_stealth(
                 url="https://example.com", method="selenium"
@@ -260,7 +262,7 @@ class TestMCPToolsAdvanced:
                 "title": "Contact Page",
                 "meta_description": "Contact information",
             }
-            mock_scraper.scrape_url.return_value = mock_result
+            mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             result = await extract_structured_data(
                 url="https://example.com/contact", data_type="contact"
@@ -329,7 +331,7 @@ class TestMCPToolsMarkdown:
                 "content": {"html": "<h1>Test</h1><p>Content</p>"},
                 "title": "Test Page",
             }
-            mock_scraper.scrape_url.return_value = mock_scrape_result
+            mock_scraper.scrape_url = AsyncMock(return_value=mock_scrape_result)
 
             mock_conversion_result = {
                 "success": True,
@@ -364,7 +366,9 @@ class TestMCPToolsMarkdown:
                     "content": {"html": "<h1>Page 2</h1>"},
                 },
             ]
-            mock_scraper.scrape_multiple_urls.return_value = mock_scrape_results
+            mock_scraper.scrape_multiple_urls = AsyncMock(
+                return_value=mock_scrape_results
+            )
 
             mock_conversion_result = {
                 "success": True,
