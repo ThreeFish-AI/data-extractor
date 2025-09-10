@@ -170,7 +170,11 @@ async def scrape_webpage(
     try:
         # Validate inputs
         parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
+        if (
+            not parsed.scheme
+            or not parsed.netloc
+            or parsed.scheme.lower() not in ["http", "https"]
+        ):
             return {"success": False, "error": "Invalid URL format", "url": url}
 
         if method not in ["auto", "simple", "scrapy", "selenium"]:
@@ -188,6 +192,10 @@ async def scrape_webpage(
             extract_config=extract_config,
             wait_for_element=wait_for_element,
         )
+
+        # Check if the scraper returned an error
+        if "error" in result:
+            return {"success": False, "error": result["error"], "url": url}
 
         return {"success": True, "data": result, "method_used": method}
 
@@ -364,7 +372,11 @@ async def get_page_info(url: str) -> Dict[str, Any]:
 
         # Validate URL
         parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
+        if (
+            not parsed.scheme
+            or not parsed.netloc
+            or parsed.scheme.lower() not in ["http", "https"]
+        ):
             return {"success": False, "error": "Invalid URL format", "url": url}
 
         # Use simple scraper for quick info
