@@ -57,3 +57,5 @@ htmlcov/
 *.temp
 .scrapy/
 tests/reports/*
+coverage.json
+coverage.xml
