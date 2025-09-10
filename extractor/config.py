@@ -33,7 +33,7 @@ class DataExtractorSettings(BaseSettings):
     """Settings for the Data Extractor MCP Server."""
 
     # Server settings
-    server_name: str = Field(default="Data Extractor")
+    server_name: str = Field(default="data-extractor")
     server_version: str = Field(default_factory=_get_dynamic_version)
 
     # Data Extractor settings
