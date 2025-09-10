@@ -593,11 +593,23 @@ class TestSecurityAndCompliance:
             "rules": [{"user_agent": "*", "disallow": ["/private/"], "crawl_delay": 1}],
         }
 
-        with patch("extractor.scraper.WebScraper.check_robots_txt") as mock_robots:
-            mock_robots.return_value = robots_result
+        with patch(
+            "extractor.server.web_scraper.simple_scraper.scrape", new_callable=AsyncMock
+        ) as mock_scrape:
+            # Mock the robots.txt scraping result - no error means success
+            mock_scrape.return_value = {
+                "content": {"text": robots_result["content"]},
+                "status_code": 200,
+            }
 
-            robots_tool = await app.get_tool("check_robots_txt")
-            assert robots_tool is not None
+            # Get the check_robots_txt tool from the FastMCP app
+            from extractor.server import check_robots_txt
+
+            result = await check_robots_txt.fn(url="https://example.com")
+
+            assert result["success"] is True
+            assert "robots.txt" in result["data"]["robots_url"]
+            assert "Disallow: /private/" in result["data"]["content"]
 
     @pytest.mark.asyncio
     async def test_user_agent_and_rate_limiting(self):

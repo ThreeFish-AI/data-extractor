@@ -181,9 +181,11 @@ class TestUpdatedMCPToolsIntegration:
     @pytest.mark.asyncio
     async def test_tool_error_handling(self):
         """测试工具错误处理"""
+        from fastmcp.exceptions import NotFoundError
+
         # 测试不存在的工具
-        nonexistent_tool = await app.get_tool("nonexistent_tool")
-        assert nonexistent_tool is None
+        with pytest.raises(NotFoundError, match="Unknown tool: nonexistent_tool"):
+            await app.get_tool("nonexistent_tool")
 
     @pytest.mark.asyncio
     async def test_app_metadata(self):
