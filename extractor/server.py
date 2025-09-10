@@ -1398,23 +1398,23 @@ async def batch_convert_webpages_to_markdown(
     Scrape multiple webpages and convert them to Markdown format.
 
     Args:
-        - urls (List[str]): URL列表，每个URL必须包含协议前缀，将批量转换为Markdown格式
-        - method (str, optional): 批量抓取方法，默认值："auto"，应用于所有URL
-            - "auto": 自动选择最佳方法
-            - "simple": 快速HTTP请求（适合静态内容）
-            - "scrapy": Scrapy框架（适合大规模抓取）
-            - "selenium": 浏览器渲染（支持JavaScript）
-        - extract_main_content (bool, optional): 统一的主要内容提取设置，默认值：True
-            应用于所有页面，排除导航和广告
-        - include_metadata (bool, optional): 统一的元数据包含设置，默认值：True
-            为每个页面包含标题、描述等元数据
-        - custom_options (Dict[str, Any], optional): 统一的自定义转换选项，应用于所有页面。
-            示例：{"strip": ["nav", "footer"], "convert": ["article"]}
-        - formatting_options (Dict[str, bool], optional): 统一的高级格式化选项。
-            选项：format_tables, detect_code_language, apply_typography等
-        - embed_images (bool, optional): 是否在所有页面中嵌入图片，默认值：False
-        - embed_options (Dict[str, Any], optional): 统一的图片嵌入配置。
-            示例：{"max_bytes_per_image": 100000}
+    - urls (List[str]): URL列表，每个URL必须包含协议前缀，将批量转换为Markdown格式
+    - method (str, optional): 批量抓取方法，默认值："auto"，应用于所有URL
+        - "auto": 自动选择最佳方法
+        - "simple": 快速HTTP请求（适合静态内容）
+        - "scrapy": Scrapy框架（适合大规模抓取）
+        - "selenium": 浏览器渲染（支持JavaScript）
+    - extract_main_content (bool, optional): 统一的主要内容提取设置，默认值：True
+        应用于所有页面，排除导航和广告
+    - include_metadata (bool, optional): 统一的元数据包含设置，默认值：True
+        为每个页面包含标题、描述等元数据
+    - custom_options (Dict[str, Any], optional): 统一的自定义转换选项，应用于所有页面。
+        示例：{"strip": ["nav", "footer"], "convert": ["article"]}
+    - formatting_options (Dict[str, bool], optional): 统一的高级格式化选项。
+        选项：format_tables, detect_code_language, apply_typography等
+    - embed_images (bool, optional): 是否在所有页面中嵌入图片，默认值：False
+    - embed_options (Dict[str, Any], optional): 统一的图片嵌入配置。
+        示例：{"max_bytes_per_image": 100000}
 
     This tool provides batch processing for converting multiple webpages to Markdown.
     It processes all URLs concurrently for better performance.
