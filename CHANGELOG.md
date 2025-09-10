@@ -4,6 +4,51 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.6
+
+#### Released on 2025/09/10
+
+### 新增
+
+- **综合测试系统全面优化**
+  - **新增 5 个单元测试文件**: 完整覆盖所有核心模块和组件
+    - `tests/unit/test_server_mcp_tools.py` - 14个MCP工具完整单元测试覆盖
+    - `tests/unit/test_config.py` - 配置管理模块全面测试验证
+    - `tests/unit/test_markdown_converter.py` - Markdown转换器功能完整测试
+    - `tests/unit/test_pdf_processor.py` - PDF处理器功能全面测试
+    - `tests/unit/test_advanced_features.py` - 高级功能模块综合测试
+  - **新增 2 个集成测试文件**: 现代化端到端测试覆盖
+    - `tests/integration/test_updated_mcp_tools.py` - 更新的MCP工具集成测试
+    - `tests/integration/test_updated_comprehensive_integration.py` - 综合集成测试套件
+  - **新增 TESTING.md 文档**: 67KB综合测试指导文档
+    - 快速开始指南和测试架构说明
+    - 详细运行指南和故障排除手册
+    - 版本对比功能和性能基准说明
+  - **新增测试运行脚本**: `scripts/run-tests.sh` 多模式测试执行
+    - 6种运行模式：单元、集成、完整、快速、性能、清理
+    - 彩色输出、依赖检查和自动报告生成
+
+### 变更
+
+- **pyproject.toml 测试配置全面升级**
+  - **pytest配置优化**: 新增测试路径、标记系统、asyncio支持
+  - **覆盖率配置完善**: HTML、XML、JSON多格式报告生成
+  - **测试标记系统**: slow、integration、unit、requires_network等标记
+  - **开发依赖更新**: 新增pytest-html、pytest-json-report、pytest-mock等
+- **测试基础设施现代化**
+  - **从基础测试到企业级测试系统**: 330个测试用例全覆盖
+  - **多种报告格式支持**: HTML可视化、XML CI/CD集成、JSON版本对比
+  - **并行测试执行**: pytest-xdist支持加速测试运行
+  - **自动化测试流程**: 依赖检查、清理、执行、报告一体化
+
+### 修复
+
+- **集成测试方法引用路径修复**
+  - **Mock路径纠正**: 修复`extractor.scraper.WebScraper`到`extractor.server`的方法引用
+  - **依赖缺失处理**: 为psutil缺失情况添加优雅跳过处理
+  - **配置文件重复修复**: 移除pyproject.toml中重复的pytest配置段
+  - **包发现错误修复**: 配置setuptools正确排除tests、reports、htmlcov、scripts目录
+
 ## v0.1.5
 
 #### Released on 2025/09/09
