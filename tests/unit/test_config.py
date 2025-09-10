@@ -19,8 +19,8 @@ class TestDataExtractorSettings:
         config = DataExtractorSettings()
 
         # 测试默认值（考虑环境变量覆盖）
-        assert config.server_name == "Data Extractor"
-        assert config.server_version == "0.1.4"
+        assert config.server_name == "data-extractor"
+        assert config.server_version == "0.1.5"
         assert config.enable_javascript is False
         assert config.concurrent_requests == 16
         assert config.request_timeout == 30.0
@@ -342,7 +342,7 @@ class TestConfigurationEdgeCases:
         with patch.dict(os.environ, {}, clear=True):
             config = DataExtractorSettings()
             # 应该使用默认值
-            assert config.server_name == "Data Extractor"
+            assert config.server_name == "data-extractor"
             assert config.enable_javascript is False
             assert config.concurrent_requests == 16
 
