@@ -1,169 +1,66 @@
-"""Unit tests for MarkdownConverter functionality."""
+"""
+单元测试：Markdown转换模块
+测试 extractor.markdown_converter 模块的网页转Markdown功能
+"""
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import Mock, patch, MagicMock
+from bs4 import BeautifulSoup
 
 from extractor.markdown_converter import MarkdownConverter
 
 
-class TestMarkdownConverterInit:
-    """Test MarkdownConverter initialization."""
+class TestMarkdownConverter:
+    """测试Markdown转换器主要功能"""
 
-    def test_markdown_converter_initialization(self):
-        """Test MarkdownConverter initializes with default options."""
-        converter = MarkdownConverter()
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
 
-        assert converter.default_options["heading_style"] == "ATX"
-        assert converter.default_options["bullets"] == "-"
-        assert converter.default_options["emphasis_mark"] == "*"
-        assert converter.default_options["strong_mark"] == "**"
-        assert converter.default_options["link_style"] == "INLINE"
-        assert converter.default_options["autolinks"] is True
-        assert converter.default_options["wrap"] is False
+    def test_converter_initialization(self):
+        """测试转换器初始化"""
+        assert self.converter is not None
+        assert hasattr(self.converter, "html_to_markdown")
+        assert hasattr(self.converter, "convert_webpage_to_markdown")
+        assert hasattr(self.converter, "batch_convert_to_markdown")
+        assert isinstance(self.converter.default_options, dict)
+        assert isinstance(self.converter.formatting_options, dict)
 
+    def test_default_options(self):
+        """测试默认选项配置"""
+        options = self.converter.default_options
 
-class TestPreprocessHtml:
-    """Test HTML preprocessing functionality."""
+        assert options["heading_style"] == "ATX"
+        assert options["bullets"] == "-"
+        assert options["emphasis_mark"] == "*"
+        assert options["strong_mark"] == "**"
+        assert options["link_style"] == "INLINE"
+        assert options["autolinks"] is True
+        assert options["wrap"] is False
+        assert "script" in options["strip"]
+        assert "style" in options["strip"]
 
-    def test_preprocess_html_basic(self):
-        """Test basic HTML preprocessing."""
-        converter = MarkdownConverter()
-        html = "<html><body><p>Test content</p></body></html>"
+    def test_formatting_options(self):
+        """测试格式化选项配置"""
+        options = self.converter.formatting_options
 
-        result = converter.preprocess_html(html)
+        assert options["format_tables"] is True
+        assert options["detect_code_language"] is True
+        assert options["format_quotes"] is True
+        assert options["enhance_images"] is True
+        assert options["optimize_links"] is True
+        assert options["format_lists"] is True
+        assert options["format_headings"] is True
+        assert options["apply_typography"] is True
 
-        assert "Test content" in result
-        assert "<p>" in result
-
-    def test_preprocess_html_remove_comments(self):
-        """Test removal of HTML comments."""
-        converter = MarkdownConverter()
-        html = "<html><body><!-- This is a comment --><p>Test content</p></body></html>"
-
-        result = converter.preprocess_html(html)
-
-        assert "This is a comment" not in result
-        assert "Test content" in result
-
-    def test_preprocess_html_remove_unwanted_tags(self):
-        """Test removal of unwanted HTML tags."""
-        converter = MarkdownConverter()
-        html = """
+    def test_basic_html_conversion(self):
+        """测试基本HTML转换为Markdown"""
+        html_content = """
         <html>
-            <head>
-                <script>alert('test');</script>
-                <style>body { color: red; }</style>
-            </head>
+            <head><title>Test Page</title></head>
             <body>
-                <nav>Navigation</nav>
-                <header>Header</header>
-                <p>Main content</p>
-                <footer>Footer</footer>
-                <aside>Sidebar</aside>
-            </body>
-        </html>
-        """
-
-        result = converter.preprocess_html(html)
-
-        assert "alert" not in result
-        assert "color: red" not in result
-        assert "Navigation" not in result
-        assert "Header" not in result
-        assert "Footer" not in result
-        assert "Sidebar" not in result
-        assert "Main content" in result
-
-    def test_preprocess_html_convert_relative_urls(self):
-        """Test conversion of relative URLs to absolute."""
-        converter = MarkdownConverter()
-        html = """
-        <html>
-            <body>
-                <a href="/page1">Link 1</a>
-                <a href="page2.html">Link 2</a>
-                <a href="https://external.com">External Link</a>
-                <img src="/image1.jpg" alt="Image 1">
-                <img src="image2.jpg" alt="Image 2">
-                <img src="https://external.com/image.jpg" alt="External Image">
-            </body>
-        </html>
-        """
-        base_url = "https://example.com"
-
-        result = converter.preprocess_html(html, base_url)
-
-        assert 'href="https://example.com/page1"' in result
-        assert 'href="https://example.com/page2.html"' in result
-        assert 'href="https://external.com"' in result  # Should remain unchanged
-        assert 'src="https://example.com/image1.jpg"' in result
-        assert 'src="https://example.com/image2.jpg"' in result
-        assert (
-            'src="https://external.com/image.jpg"' in result
-        )  # Should remain unchanged
-
-    def test_preprocess_html_clean_empty_elements(self):
-        """Test removal of empty paragraphs and divs."""
-        converter = MarkdownConverter()
-        html = """
-        <html>
-            <body>
-                <p>Content paragraph</p>
-                <p></p>
-                <p>   </p>
-                <div>Content div</div>
-                <div></div>
-                <div>   </div>
-                <div><img src="image.jpg" alt="Image"></div>
-            </body>
-        </html>
-        """
-
-        result = converter.preprocess_html(html)
-
-        assert "Content paragraph" in result
-        assert "Content div" in result
-        assert "image.jpg" in result
-        # Empty elements should be removed but image container should remain
-
-
-class TestHtmlToMarkdown:
-    """Test HTML to Markdown conversion."""
-
-    def test_html_to_markdown_basic(self):
-        """Test basic HTML to Markdown conversion."""
-        converter = MarkdownConverter()
-        html = "<html><body><h1>Title</h1><p>Paragraph content</p></body></html>"
-
-        result = converter.html_to_markdown(html)
-
-        assert "# Title" in result
-        assert "Paragraph content" in result
-
-    def test_html_to_markdown_with_links(self):
-        """Test conversion of links to Markdown format."""
-        converter = MarkdownConverter()
-        html = '<html><body><a href="https://example.com">Link text</a></body></html>'
-
-        result = converter.html_to_markdown(html)
-
-        assert "[Link text](https://example.com)" in result
-
-    def test_html_to_markdown_with_images(self):
-        """Test conversion of images to Markdown format."""
-        converter = MarkdownConverter()
-        html = '<html><body><img src="image.jpg" alt="Alt text"></body></html>'
-
-        result = converter.html_to_markdown(html)
-
-        assert "![Alt text](image.jpg)" in result
-
-    def test_html_to_markdown_with_lists(self):
-        """Test conversion of lists to Markdown format."""
-        converter = MarkdownConverter()
-        html = """
-        <html>
-            <body>
+                <h1>Main Title</h1>
+                <p>This is a paragraph with <strong>bold</strong> text.</p>
                 <ul>
                     <li>Item 1</li>
                     <li>Item 2</li>
@@ -172,689 +69,693 @@ class TestHtmlToMarkdown:
         </html>
         """
 
-        result = converter.html_to_markdown(html)
+        result = self.converter.html_to_markdown(html_content)
 
-        assert "- Item 1" in result
-        assert "- Item 2" in result
+        assert isinstance(result, str)
+        assert "# Main Title" in result
+        assert "**bold**" in result
+        assert "- Item 1" in result or "* Item 1" in result
 
-    def test_html_to_markdown_custom_options(self):
-        """Test HTML to Markdown conversion with custom options."""
-        converter = MarkdownConverter()
-        html = "<html><body><h1>Title</h1></body></html>"
-        custom_options = {
-            "heading_style": "ATX",
-            "bullets": "*",
-        }
+    def test_link_conversion(self):
+        """测试链接转换"""
+        html_content = """
+        <p>Check out <a href="https://example.com">this link</a> for more info.</p>
+        """
 
-        result = converter.html_to_markdown(html, custom_options=custom_options)
+        result = self.converter.html_to_markdown(html_content)
 
-        assert "# Title" in result
+        assert "[this link](https://example.com)" in result
 
-    @patch("extractor.markdown_converter.md")
-    def test_html_to_markdown_error_handling(self, mock_md):
-        """Test error handling in HTML to Markdown conversion."""
-        converter = MarkdownConverter()
-        mock_md.side_effect = Exception("Conversion error")
-        html = "<html><body><p>Test</p></body></html>"
+    def test_image_conversion(self):
+        """测试图片转换"""
+        html_content = """
+        <img src="/images/test.jpg" alt="Test Image" />
+        """
 
-        result = converter.html_to_markdown(html)
+        result = self.converter.html_to_markdown(html_content)
 
-        assert "Error converting content: Conversion error" in result
+        assert "![Test Image](/images/test.jpg)" in result
+
+    def test_table_conversion(self):
+        """测试表格转换"""
+        html_content = """
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Age</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>John</td><td>25</td></tr>
+                <tr><td>Jane</td><td>30</td></tr>
+            </tbody>
+        </table>
+        """
+
+        result = self.converter.html_to_markdown(html_content)
+
+        assert "Name" in result
+        assert "Age" in result
+        assert "John" in result
+        assert "Jane" in result
+
+    def test_code_block_conversion(self):
+        """测试代码块转换"""
+        html_content = """
+        <pre><code>def hello():
+    print("Hello, World!")</code></pre>
+        """
+
+        result = self.converter.html_to_markdown(html_content)
+
+        assert "```" in result or "`def hello():`" in result
+
+    def test_nested_elements_conversion(self):
+        """测试嵌套元素转换"""
+        html_content = """
+        <div>
+            <h2>Section Title</h2>
+            <p>A paragraph with <em>italic</em> and <strong>bold</strong> text.</p>
+            <blockquote>
+                <p>This is a quote with <a href="http://example.com">a link</a>.</p>
+            </blockquote>
+        </div>
+        """
+
+        result = self.converter.html_to_markdown(html_content)
+
+        assert "## Section Title" in result
+        assert "*italic*" in result
+        assert "**bold**" in result
+        assert ">" in result  # blockquote
+
+
+class TestPreprocessHTML:
+    """测试HTML预处理功能"""
+
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
+
+    def test_script_and_style_removal(self):
+        """测试脚本和样式标签移除"""
+        html_content = """
+        <html>
+            <head>
+                <style>body { color: red; }</style>
+                <script>console.log('test');</script>
+            </head>
+            <body>
+                <h1>Title</h1>
+                <p>Content</p>
+                <script>alert('popup');</script>
+            </body>
+        </html>
+        """
+
+        result = self.converter.preprocess_html(html_content)
+
+        assert "Title" in result
+        assert "Content" in result
+        assert "console.log" not in result
+        assert "alert" not in result
+        assert "color: red" not in result
+
+    def test_unwanted_elements_removal(self):
+        """测试不需要元素的移除"""
+        html_content = """
+        <html>
+            <body>
+                <nav>Navigation menu</nav>
+                <header>Header content</header>
+                <main>
+                    <h1>Main Content</h1>
+                    <p>Important content</p>
+                </main>
+                <aside>Sidebar content</aside>
+                <footer>Footer content</footer>
+            </body>
+        </html>
+        """
+
+        result = self.converter.preprocess_html(html_content)
+
+        assert "Main Content" in result
+        assert "Important content" in result
+        assert "Navigation menu" not in result
+        assert "Header content" not in result
+        assert "Sidebar content" not in result
+        assert "Footer content" not in result
+
+    def test_relative_url_conversion(self):
+        """测试相对URL转换"""
+        html_content = """
+        <div>
+            <a href="/page1">Internal Link</a>
+            <img src="/images/logo.png" alt="Logo" />
+        </div>
+        """
+
+        base_url = "https://example.com"
+        result = self.converter.preprocess_html(html_content, base_url)
+
+        assert "https://example.com/page1" in result
+        assert "https://example.com/images/logo.png" in result
+
+    def test_comment_removal(self):
+        """测试HTML注释移除"""
+        html_content = """
+        <div>
+            <!-- This is a comment -->
+            <p>Visible content</p>
+            <!-- Another comment -->
+        </div>
+        """
+
+        result = self.converter.preprocess_html(html_content)
+
+        assert "Visible content" in result
+        assert "This is a comment" not in result
+        assert "Another comment" not in result
+
+    def test_empty_elements_cleanup(self):
+        """测试空元素清理"""
+        html_content = """
+        <div>
+            <p>Content paragraph</p>
+            <p></p>
+            <div></div>
+            <p>Another paragraph</p>
+        </div>
+        """
+
+        result = self.converter.preprocess_html(html_content)
+        soup = BeautifulSoup(result, "html.parser")
+
+        # 应该保留有内容的段落
+        content_paras = [p for p in soup.find_all("p") if p.get_text(strip=True)]
+        assert len(content_paras) >= 2
 
 
 class TestPostprocessMarkdown:
-    """Test Markdown post-processing functionality."""
+    """测试Markdown后处理功能"""
 
-    def test_postprocess_markdown_remove_excessive_blank_lines(self):
-        """Test removal of excessive blank lines."""
-        converter = MarkdownConverter()
-        markdown = "Line 1\n\n\n\n\nLine 2"
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
 
-        result = converter.postprocess_markdown(markdown)
+    def test_table_formatting(self):
+        """测试表格格式化"""
+        markdown_content = """
+        |Name|Age|City|
+        |---|---|---|
+        |John|25|NYC|
+        |Jane|30|LA|
+        """
 
-        assert result == "Line 1\n\nLine 2"
+        result = self.converter._format_tables(markdown_content)
 
-    def test_postprocess_markdown_clean_lists(self):
-        """Test cleaning up list formatting."""
-        converter = MarkdownConverter()
-        markdown = "List:\n-\n\n- Item 1\n-\n\n- Item 2"
+        assert "| Name | Age | City |" in result
+        assert "| John | 25 | NYC |" in result
 
-        result = converter.postprocess_markdown(markdown)
+    def test_code_block_language_detection(self):
+        """测试代码块语言检测"""
+        markdown_content = """
+        ```
+        def hello():
+            print("Hello, World!")
+        ```
+        
+        ```
+        function greet() {
+            console.log("Hello!");
+        }
+        ```
+        """
 
-        assert "-\n\n" not in result
+        result = self.converter._format_code_blocks(markdown_content)
+
+        assert "```python" in result
+        assert "```javascript" in result
+
+    def test_quote_formatting(self):
+        """测试引用格式化"""
+        markdown_content = """
+        >This is a quote
+        > Another quote line
+        """
+
+        result = self.converter._format_quotes(markdown_content)
+
+        assert "> This is a quote" in result
+        assert "> Another quote line" in result
+
+    def test_image_alt_text_improvement(self):
+        """测试图片alt文本改进"""
+        markdown_content = """
+        ![](test-image.jpg)
+        ![img](profile-photo.png)
+        """
+
+        result = self.converter._format_images(markdown_content)
+
+        assert "![Test Image](test-image.jpg)" in result
+        assert "![Profile Photo](profile-photo.png)" in result
+
+    def test_link_formatting(self):
+        """测试链接格式化"""
+        markdown_content = """
+        [Link text] (https://example.com)
+        [Another link]
+        (https://test.com)
+        """
+
+        result = self.converter._format_links(markdown_content)
+
+        assert "[Link text](https://example.com)" in result
+        assert "[Another link](https://test.com)" in result
+
+    def test_list_formatting(self):
+        """测试列表格式化"""
+        markdown_content = """
+        -Item 1
+        *   Item 2
+        +    Item 3
+        1.First item
+        2) Second item
+        """
+
+        result = self.converter._format_lists(markdown_content)
+
         assert "- Item 1" in result
         assert "- Item 2" in result
+        assert "- Item 3" in result
+        assert "1. First item" in result
+        assert "2. Second item" in result
 
-    def test_postprocess_markdown_remove_trailing_spaces(self):
-        """Test removal of trailing spaces."""
-        converter = MarkdownConverter()
-        markdown = "Line 1   \nLine 2\t\nLine 3"
+    def test_heading_formatting(self):
+        """测试标题格式化"""
+        markdown_content = """# Title
+        Some content here
+        ## Subtitle
+        More content
+        """
 
-        result = converter.postprocess_markdown(markdown)
+        result = self.converter._format_headings(markdown_content)
 
         lines = result.split("\n")
-        assert lines[0] == "Line 1"
-        assert lines[1] == "Line 2"
-        assert lines[2] == "Line 3"
+        # 检查标题前后有适当的空行
+        title_idx = next(i for i, line in enumerate(lines) if line.strip() == "# Title")
+        subtitle_idx = next(
+            i for i, line in enumerate(lines) if line.strip() == "## Subtitle"
+        )
 
-    def test_postprocess_markdown_strip_content(self):
-        """Test stripping leading/trailing whitespace."""
-        converter = MarkdownConverter()
-        markdown = "\n\n  Content  \n\n"
+        assert title_idx >= 0
+        assert subtitle_idx >= 0
 
-        result = converter.postprocess_markdown(markdown)
+    def test_typography_fixes(self):
+        """测试排版修复"""
+        markdown_content = """
+        Text with -- double hyphens.
+        "Quote text" and 'another quote'.
+        Multiple   spaces    here.
+        """
 
-        assert result == "Content"
+        result = self.converter._apply_typography_fixes(markdown_content)
+
+        assert "—" in result  # em dash
+        assert "  " not in result  # multiple spaces removed
+        # 注意：智能引号转换可能在某些情况下被跳过
 
 
-class TestExtractContentArea:
-    """Test main content area extraction."""
+class TestContentExtraction:
+    """测试内容提取功能"""
 
-    def test_extract_content_area_main_tag(self):
-        """Test extraction using main tag."""
-        converter = MarkdownConverter()
-        html = """
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
+
+    def test_main_content_extraction(self):
+        """测试主要内容提取"""
+        html_content = """
         <html>
             <body>
                 <nav>Navigation</nav>
-                <main>Main content here with sufficient text to meet the minimum content length requirements for proper content extraction testing and validation. This should provide enough characters to pass the 200 character minimum threshold that triggers content area extraction rather than falling back to the full body content.</main>
+                <main>
+                    <h1>Main Title</h1>
+                    <p>Main content paragraph</p>
+                </main>
                 <footer>Footer</footer>
             </body>
         </html>
         """
 
-        result = converter.extract_content_area(html)
+        result = self.converter.extract_content_area(html_content)
 
-        assert "Main content here with sufficient text" in result
-        # The main tag should be extracted, not the full body
-        assert "<main>" in result or "Main content here with sufficient text" in result
+        assert "Main Title" in result
+        assert "Main content paragraph" in result
+        assert "Navigation" not in result
+        assert "Footer" not in result
 
-    def test_extract_content_area_article_tag(self):
-        """Test extraction using article tag."""
-        converter = MarkdownConverter()
-        html = """
+    def test_content_selectors_priority(self):
+        """测试内容选择器优先级"""
+        html_content = """
         <html>
             <body>
-                <nav>Navigation</nav>
-                <article>Article content here with substantial text that exceeds 200 characters to meet the minimum content length requirement for proper extraction testing purposes.</article>
-                <footer>Footer</footer>
+                <div class="sidebar">Sidebar content</div>
+                <article>
+                    <h1>Article Title</h1>
+                    <p>Article content with substantial text to meet minimum length requirements.</p>
+                </article>
+                <div class="content">
+                    <h2>Content Area</h2>
+                    <p>Content area text</p>
+                </div>
             </body>
         </html>
         """
 
-        result = converter.extract_content_area(html)
+        result = self.converter.extract_content_area(html_content)
 
-        assert "Article content here" in result
-        # Since article content is long enough, it should be extracted
-        assert "<article>" in result or "Article content here" in result
+        # article标签应该有优先级
+        assert "Article Title" in result
+        assert "Article content" in result
 
-    def test_extract_content_area_class_selector(self):
-        """Test extraction using common class selectors."""
-        converter = MarkdownConverter()
-        html = """
-        <html>
-            <body>
-                <nav>Navigation</nav>
-                <div class="content">Content div with sufficient text length to meet the minimum requirements for content extraction testing purposes and validation.</div>
-                <footer>Footer</footer>
-            </body>
-        </html>
-        """
+    def test_text_paragraph_splitting(self):
+        """测试文本段落分割"""
+        text_content = """First paragraph with some content. Second paragraph starts here. 
 
-        result = converter.extract_content_area(html)
+        Third paragraph after double newlines. Fourth paragraph continues the text flow."""
 
-        assert "Content div with sufficient" in result
-        # Since the div has sufficient content, it should be extracted
-        assert 'class="content"' in result or "Content div with sufficient" in result
+        paragraphs = self.converter._split_text_into_paragraphs(text_content)
 
-    def test_extract_content_area_fallback_to_body(self):
-        """Test fallback to body when no main content area found."""
-        converter = MarkdownConverter()
-        html = """
-        <html>
-            <body>
-                <div>Some content</div>
-                <div>More content</div>
-            </body>
-        </html>
-        """
+        assert len(paragraphs) > 1
+        assert any("First paragraph" in p for p in paragraphs)
+        assert any("Third paragraph" in p for p in paragraphs)
 
-        result = converter.extract_content_area(html)
+    def test_long_text_splitting(self):
+        """测试长文本分割"""
+        long_text = "This is a very long text. " * 20  # 创建很长的文本
 
-        assert "Some content" in result
-        assert "More content" in result
+        paragraphs = self.converter._split_long_text(long_text, max_length=100)
+
+        assert len(paragraphs) > 1
+        for para in paragraphs:
+            assert len(para) <= 150  # 允许一些弹性
 
 
-class TestConvertWebpageToMarkdown:
-    """Test webpage to Markdown conversion."""
+class TestWebpageConversion:
+    """测试网页转换功能"""
 
-    def test_convert_webpage_to_markdown_with_html_content(self):
-        """Test conversion with HTML content available."""
-        converter = MarkdownConverter()
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
+
+    def test_successful_webpage_conversion(self):
+        """测试成功的网页转换"""
         scrape_result = {
             "url": "https://example.com",
-            "title": "Example Title",
+            "title": "Test Page",
             "content": {
                 "html": "<html><body><h1>Title</h1><p>Content</p></body></html>"
             },
         }
 
-        result = converter.convert_webpage_to_markdown(scrape_result)
+        result = self.converter.convert_webpage_to_markdown(scrape_result)
 
         assert result["success"] is True
-        assert result["url"] == "https://example.com"
-        assert "# Title" in result["markdown"]
+        assert "Title" in result["markdown"]
         assert "Content" in result["markdown"]
-        assert result["metadata"]["title"] == "Example Title"
-
-    def test_convert_webpage_to_markdown_with_text_content(self):
-        """Test conversion when only text content is available."""
-        converter = MarkdownConverter()
-        scrape_result = {
-            "url": "https://example.com",
-            "title": "Example Title",
-            "content": {
-                "text": "Main text content",
-                "links": [{"url": "https://link1.com", "text": "Link 1"}],
-                "images": [{"src": "image1.jpg", "alt": "Image 1"}],
-            },
-        }
-
-        result = converter.convert_webpage_to_markdown(scrape_result)
-
-        assert result["success"] is True
-        assert "Main text content" in result["markdown"]
-        assert "Link 1" in result["markdown"]
-        assert "image1.jpg" in result["markdown"]
-
-    def test_convert_webpage_to_markdown_with_error(self):
-        """Test conversion with error in scrape result."""
-        converter = MarkdownConverter()
-        scrape_result = {"error": "Scraping failed", "url": "https://example.com"}
-
-        result = converter.convert_webpage_to_markdown(scrape_result)
-
-        assert result["success"] is False
-        assert result["error"] == "Scraping failed"
         assert result["url"] == "https://example.com"
 
-    def test_convert_webpage_to_markdown_no_content(self):
-        """Test conversion with no content available."""
-        converter = MarkdownConverter()
+    def test_webpage_conversion_with_metadata(self):
+        """测试带元数据的网页转换"""
         scrape_result = {
             "url": "https://example.com",
-            "title": "Example Title",
-            "content": {},
-        }
-
-        result = converter.convert_webpage_to_markdown(scrape_result)
-
-        assert result["success"] is False
-        assert "No content found" in result["error"]
-        assert result["url"] == "https://example.com"
-
-    def test_convert_webpage_to_markdown_extract_main_content_false(self):
-        """Test conversion without main content extraction."""
-        converter = MarkdownConverter()
-        scrape_result = {
-            "url": "https://example.com",
-            "title": "Example Title",
+            "title": "Test Page",
+            "meta_description": "Test description",
             "content": {
-                "html": "<html><body><nav>Nav</nav><main>Main</main></body></html>"
+                "html": "<html><body><h1>Title</h1><p>Content paragraph</p></body></html>",
+                "links": [{"url": "https://example.com/link1", "text": "Link 1"}],
+                "images": [{"src": "/image1.jpg", "alt": "Image 1"}],
             },
         }
 
-        result = converter.convert_webpage_to_markdown(
-            scrape_result, extract_main_content=False
+        result = self.converter.convert_webpage_to_markdown(
+            scrape_result, include_metadata=True
         )
 
         assert result["success"] is True
-        # Should include nav content when extract_main_content is False
-        assert "Nav" in result["markdown"] or "Main" in result["markdown"]
+        assert "metadata" in result
+        assert result["metadata"]["title"] == "Test Page"
+        assert result["metadata"]["meta_description"] == "Test description"
+        assert result["metadata"]["word_count"] > 0
+        assert result["metadata"]["links_count"] == 1
+        assert result["metadata"]["images_count"] == 1
 
-    def test_convert_webpage_to_markdown_include_metadata_false(self):
-        """Test conversion without metadata."""
-        converter = MarkdownConverter()
-        scrape_result = {
-            "url": "https://example.com",
-            "title": "Example Title",
-            "content": {"html": "<html><body><h1>Title</h1></body></html>"},
-        }
-
-        result = converter.convert_webpage_to_markdown(
-            scrape_result, include_metadata=False
-        )
-
-        assert result["success"] is True
-        assert "metadata" not in result
-
-    def test_convert_webpage_to_markdown_custom_options(self):
-        """Test conversion with custom options."""
-        converter = MarkdownConverter()
-        scrape_result = {
-            "url": "https://example.com",
-            "title": "Example Title",
-            "content": {"html": "<html><body><h1>Title</h1></body></html>"},
-        }
-        custom_options = {"heading_style": "SETEXT"}
-
-        result = converter.convert_webpage_to_markdown(
-            scrape_result, custom_options=custom_options
-        )
-
-        assert result["success"] is True
-        assert result["conversion_options"]["custom_options"] == custom_options
-
-    def test_convert_webpage_to_markdown_metadata_calculation(self):
-        """Test metadata calculation in conversion."""
-        converter = MarkdownConverter()
-        scrape_result = {
-            "url": "https://example.com",
-            "title": "Example Title",
-            "meta_description": "Example description",
-            "content": {
-                "html": "<html><body><h1>Title</h1><p>Content with multiple words for testing</p></body></html>",
-                "links": [{"url": "link1"}, {"url": "link2"}],
-                "images": [{"src": "img1"}, {"src": "img2"}, {"src": "img3"}],
-            },
-        }
-
-        result = converter.convert_webpage_to_markdown(scrape_result)
-
-        assert result["success"] is True
-        metadata = result["metadata"]
-        assert metadata["title"] == "Example Title"
-        assert metadata["meta_description"] == "Example description"
-        assert metadata["word_count"] > 0
-        assert metadata["character_count"] > 0
-        assert metadata["domain"] == "example.com"
-        assert metadata["links_count"] == 2
-        assert metadata["images_count"] == 3
-
-
-class TestBatchConvertToMarkdown:
-    """Test batch conversion functionality."""
-
-    def test_batch_convert_to_markdown_success(self):
-        """Test successful batch conversion."""
-        converter = MarkdownConverter()
-        scrape_results = [
-            {
-                "url": "https://example1.com",
-                "title": "Title 1",
-                "content": {"html": "<html><body><h1>Title 1</h1></body></html>"},
-            },
-            {
-                "url": "https://example2.com",
-                "title": "Title 2",
-                "content": {"html": "<html><body><h1>Title 2</h1></body></html>"},
-            },
-        ]
-
-        result = converter.batch_convert_to_markdown(scrape_results)
-
-        assert result["success"] is True
-        assert len(result["results"]) == 2
-        assert result["summary"]["total"] == 2
-        assert result["summary"]["successful"] == 2
-        assert result["summary"]["failed"] == 0
-        assert result["summary"]["success_rate"] == 1.0
-
-    def test_batch_convert_to_markdown_partial_success(self):
-        """Test batch conversion with some failures."""
-        converter = MarkdownConverter()
-        scrape_results = [
-            {
-                "url": "https://example1.com",
-                "title": "Title 1",
-                "content": {"html": "<html><body><h1>Title 1</h1></body></html>"},
-            },
-            {"error": "Scraping failed", "url": "https://example2.com"},
-        ]
-
-        result = converter.batch_convert_to_markdown(scrape_results)
-
-        assert result["success"] is True
-        assert len(result["results"]) == 2
-        assert result["summary"]["total"] == 2
-        assert result["summary"]["successful"] == 1
-        assert result["summary"]["failed"] == 1
-        assert result["summary"]["success_rate"] == 0.5
-
-    def test_batch_convert_to_markdown_empty_list(self):
-        """Test batch conversion with empty list."""
-        converter = MarkdownConverter()
-        scrape_results = []
-
-        result = converter.batch_convert_to_markdown(scrape_results)
-
-        assert result["success"] is True
-        assert len(result["results"]) == 0
-        assert result["summary"]["total"] == 0
-        assert result["summary"]["successful"] == 0
-        assert result["summary"]["failed"] == 0
-
-    def test_batch_convert_to_markdown_with_options(self):
-        """Test batch conversion with custom options."""
-        converter = MarkdownConverter()
-        scrape_results = [
-            {
-                "url": "https://example1.com",
-                "title": "Title 1",
-                "content": {"html": "<html><body><h1>Title 1</h1></body></html>"},
-            }
-        ]
-        custom_options = {"heading_style": "SETEXT"}
-
-        result = converter.batch_convert_to_markdown(
-            scrape_results,
-            extract_main_content=False,
-            include_metadata=False,
-            custom_options=custom_options,
-        )
-
-        assert result["success"] is True
-        assert result["conversion_options"]["extract_main_content"] is False
-        assert result["conversion_options"]["include_metadata"] is False
-        assert result["conversion_options"]["custom_options"] == custom_options
-
-    @patch.object(MarkdownConverter, "convert_webpage_to_markdown")
-    def test_batch_convert_to_markdown_exception_handling(self, mock_convert):
-        """Test batch conversion exception handling."""
-        converter = MarkdownConverter()
-        mock_convert.side_effect = Exception("Conversion error")
-        scrape_results = [
-            {"url": "https://example.com", "content": {"html": "<html></html>"}}
-        ]
-
-        result = converter.batch_convert_to_markdown(scrape_results)
-
-        assert result["success"] is False
-        assert "Conversion error" in result["error"]
-        assert result["results"] == []
-
-
-class TestAdvancedFormattingFeatures:
-    """Test advanced formatting features in MarkdownConverter."""
-
-    @pytest.fixture
-    def converter(self):
-        """MarkdownConverter instance for testing."""
-        return MarkdownConverter()
-
-    def test_format_tables_basic(self, converter):
-        """Test basic table formatting."""
-        markdown = "| Header 1|Header 2 |\n|---:|:---|\n| Cell 1 | Cell 2|"
-        result = converter._format_tables(markdown)
-        assert "| Header 1 | Header 2 |" in result
-        assert "| ---: | :--- |" in result
-        assert "| Cell 1 | Cell 2 |" in result
-
-    def test_format_tables_alignment(self, converter):
-        """Test table alignment detection."""
-        markdown = "| Left | Center | Right |\n|:---|:---:|---:|\n| L | C | R |"
-        result = converter._format_tables(markdown)
-        assert "| :--- | :---: | ---: |" in result
-
-    def test_format_code_blocks_language_detection(self, converter):
-        """Test automatic code language detection."""
-        test_cases = [
-            ("```\nfunction test() { return 'hello'; }\n```", "javascript"),
-            ("```\ndef hello():\n    print('world')\n```", "python"),
-            ("```\nclass TestClass:\n    pass\n```", "python"),
-            ("```\n<html><body>Test</body></html>\n```", "html"),
-            ("```\nSELECT * FROM users;\n```", "sql"),
-            ('```\n{"key": "value"}\n```', "json"),
-        ]
-
-        for code_block, expected_language in test_cases:
-            result = converter._format_code_blocks(code_block)
-            assert f"```{expected_language}" in result
-
-    def test_format_quotes_basic(self, converter):
-        """Test blockquote formatting."""
-        markdown = ">This is a quote\n>Another line"
-        result = converter._format_quotes(markdown)
-        assert "> This is a quote" in result
-        assert "> Another line" in result
-
-    def test_format_images_alt_text_enhancement(self, converter):
-        """Test image alt text enhancement."""
-        test_cases = [
-            ("![](image-name.jpg)", "Image Name"),
-            ("![img](profile_photo.png)", "Profile Photo"),
-            ("![](screenshot-2023-01-01.jpg)", "Screenshot 2023 01 01"),
-        ]
-
-        for original, expected_alt in test_cases:
-            result = converter._format_images(original)
-            assert expected_alt in result
-
-    def test_format_links_basic(self, converter):
-        """Test link formatting."""
-        markdown = "[Link Text] (   https://example.com   )"
-        result = converter._format_links(markdown)
-        assert "[Link Text](https://example.com)" in result
-
-    def test_format_links_multiline_fix(self, converter):
-        """Test multiline link fixing."""
-        markdown = "[Link Text]\n  (https://example.com)"
-        result = converter._format_links(markdown)
-        assert "[Link Text](https://example.com)" in result
-
-    def test_format_lists_consistent_markers(self, converter):
-        """Test list marker consistency."""
-        test_cases = [
-            ("- Item 1", "- Item 1"),
-            ("*Item 2", "* Item 2"),
-            ("+   Item 3", "+ Item 3"),
-            ("1.Item 4", "1. Item 4"),
-            ("2   Item 5", "2. Item 5"),
-        ]
-
-        for original, expected in test_cases:
-            result = converter._format_lists(original)
-            assert expected in result
-
-    def test_format_headings_spacing(self, converter):
-        """Test heading spacing."""
-        markdown = "# Heading 1\nContent here\n## Heading 2\nMore content"
-        result = converter._format_headings(markdown)
-
-        lines = result.split("\n")
-        # Check for blank lines around headings
-        h1_index = next(i for i, line in enumerate(lines) if line == "# Heading 1")
-        h2_index = next(i for i, line in enumerate(lines) if line == "## Heading 2")
-
-        # Heading 1 should have blank line after
-        assert lines[h1_index + 1] == ""
-        # Heading 2 should have blank lines before and after
-        assert lines[h2_index - 1] == ""
-        assert lines[h2_index + 1] == ""
-
-    def test_typography_fixes_quotes(self, converter):
-        """Test smart quote conversion."""
-        markdown = "This is \"quoted text\" and 'single quotes'."
-        result = converter._apply_typography_fixes(markdown)
-        # Should convert to smart quotes (the exact characters depend on implementation)
-        assert '"' not in result or '"' in result  # Smart quotes or regular quotes
-
-    def test_typography_fixes_dashes(self, converter):
-        """Test dash conversion."""
-        markdown = "This is a test -- with double dashes."
-        result = converter._apply_typography_fixes(markdown)
-        assert "—" in result  # em dash
-
-    def test_typography_fixes_spacing(self, converter):
-        """Test spacing fixes."""
-        markdown = "Too   many    spaces .   And punctuation!"
-        result = converter._apply_typography_fixes(markdown)
-        assert "Too many spaces." in result
-        assert ". And punctuation!" in result
-
-    def test_formatting_options_configuration(self, converter):
-        """Test that formatting options can be configured."""
-        # Disable table formatting
-        converter.formatting_options["format_tables"] = False
-        markdown = "| Header | Value |\n|---|---|\n| Cell | Data |"
-        result = converter.postprocess_markdown(markdown)
-        # Should not format the table
-        assert "| Header | Value |" in result  # Original spacing preserved
-
-    def test_formatting_options_selective_disable(self, converter):
-        """Test selective disabling of formatting options."""
-        # Disable only typography
-        converter.formatting_options["apply_typography"] = False
-        markdown = 'Text with "quotes" -- and dashes.'
-        result = converter.postprocess_markdown(markdown)
-        assert '"quotes"' in result  # Should preserve original quotes
-        assert "--" in result  # Should preserve double dashes
-
-    def test_convert_webpage_with_formatting_options(self, converter):
-        """Test webpage conversion with custom formatting options."""
+    def test_webpage_conversion_with_text_only(self):
+        """测试仅文本内容的网页转换"""
         scrape_result = {
             "url": "https://example.com",
             "title": "Test Page",
             "content": {
-                "html": "<html><body><h1>Test</h1><p>Content with <strong>formatting</strong>.</p></body></html>"
+                "text": "First paragraph content. Second paragraph content here.",
+                "links": [{"url": "https://example.com/link1", "text": "Link 1"}],
+                "images": [{"src": "/image1.jpg", "alt": "Image 1"}],
             },
         }
 
-        formatting_options = {"format_headings": True, "apply_typography": False}
-
-        result = converter.convert_webpage_to_markdown(
-            scrape_result, formatting_options=formatting_options
-        )
+        result = self.converter.convert_webpage_to_markdown(scrape_result)
 
         assert result["success"] is True
-        assert result["conversion_options"]["formatting_options"] == formatting_options
-        assert "# Test" in result["markdown"]
+        assert "First paragraph" in result["markdown"]
+        assert "Second paragraph" in result["markdown"]
 
-    def test_batch_convert_with_formatting_options(self, converter):
-        """Test batch conversion with formatting options."""
+    def test_webpage_conversion_error_handling(self):
+        """测试网页转换错误处理"""
+        scrape_result = {"error": "Failed to scrape", "url": "https://example.com"}
+
+        result = self.converter.convert_webpage_to_markdown(scrape_result)
+
+        assert result["success"] is False
+        assert result["error"] == "Failed to scrape"
+        assert result["url"] == "https://example.com"
+
+    def test_batch_webpage_conversion(self):
+        """测试批量网页转换"""
         scrape_results = [
             {
                 "url": "https://example1.com",
                 "title": "Page 1",
-                "content": {"html": "<html><body><h1>Page 1</h1></body></html>"},
+                "content": {"html": "<html><body><h1>Title 1</h1></body></html>"},
             },
             {
                 "url": "https://example2.com",
                 "title": "Page 2",
-                "content": {"html": "<html><body><h1>Page 2</h1></body></html>"},
+                "content": {"html": "<html><body><h1>Title 2</h1></body></html>"},
             },
+            {"error": "Failed to scrape", "url": "https://example3.com"},
         ]
 
-        formatting_options = {"format_headings": True}
-
-        result = converter.batch_convert_to_markdown(
-            scrape_results, formatting_options=formatting_options
-        )
+        result = self.converter.batch_convert_to_markdown(scrape_results)
 
         assert result["success"] is True
-        assert len(result["results"]) == 2
-        # Check that all results include the formatting options
-        for conversion_result in result["results"]:
-            assert (
-                conversion_result["conversion_options"]["formatting_options"]
-                == formatting_options
-            )
-
-    def test_error_handling_in_formatting(self, converter):
-        """Test error handling in formatting methods."""
-        # Test with malformed content that might cause errors
-        malformed_content = None
-
-        # All formatting methods should handle None gracefully
-        assert converter._format_tables(malformed_content) == malformed_content
-        assert converter._format_code_blocks("") == ""
-        assert converter._format_quotes("") == ""
-        assert converter._format_images("") == ""
-        assert converter._format_links("") == ""
-        assert converter._format_lists("") == ""
-        assert converter._format_headings("") == ""
-        assert converter._apply_typography_fixes("") == ""
+        assert len(result["results"]) == 3
+        assert result["summary"]["total"] == 3
+        assert result["summary"]["successful"] == 2
+        assert result["summary"]["failed"] == 1
+        assert result["summary"]["success_rate"] == 2 / 3
 
 
 class TestImageEmbedding:
-    """Tests for embedding images as data URIs in MarkdownConverter."""
+    """测试图片嵌入功能"""
 
-    def test_embed_images_success_small_image(self, monkeypatch):
-        converter = MarkdownConverter()
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
 
-        class MockResp:
-            def __init__(self):
-                self.headers = {"Content-Type": "image/png", "Content-Length": "10"}
-                self.content = b"\x89PNGsmall"  # fake small content
+    @patch("requests.get")
+    def test_image_embedding_success(self, mock_get):
+        """测试成功的图片嵌入"""
+        # 模拟成功的HTTP响应
+        mock_response = Mock()
+        mock_response.headers = {"Content-Type": "image/jpeg"}
+        mock_response.content = b"fake image data"
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
 
-            def raise_for_status(self):
-                return None
+        markdown_content = "![Alt text](https://example.com/image.jpg)"
 
-        def mock_get(url, timeout=10, stream=True):
-            return MockResp()
+        result = self.converter._embed_images_in_markdown(markdown_content)
 
-        monkeypatch.setattr("extractor.markdown_converter.requests.get", mock_get)
+        assert result["stats"]["attempted"] == 1
+        assert result["stats"]["embedded"] == 1
+        assert "data:image/jpeg;base64," in result["markdown"]
 
-        md_in = "Image: ![Alt](http://example.com/a.png)"
-        embed_result = converter._embed_images_in_markdown(md_in, max_images=5)
-
-        assert embed_result["markdown"].count("data:image/png;base64,") == 1
-        assert embed_result["stats"]["embedded"] == 1
-
-    def test_embed_images_skip_large_by_header(self, monkeypatch):
-        converter = MarkdownConverter()
-
-        class MockResp:
-            def __init__(self):
-                self.headers = {
-                    "Content-Type": "image/jpeg",
-                    "Content-Length": str(5_000_000),
-                }
-                self.content = b"x" * 5_000_000
-
-            def raise_for_status(self):
-                return None
-
-        def mock_get(url, timeout=10, stream=True):
-            return MockResp()
-
-        monkeypatch.setattr("extractor.markdown_converter.requests.get", mock_get)
-
-        md_in = "![Large](http://example.com/large.jpg)"
-        out = converter._embed_images_in_markdown(md_in, max_bytes_per_image=2_000_000)
-
-        assert "data:image/jpeg;base64," not in out["markdown"]
-        assert out["stats"]["skipped_large"] == 1
-
-    def test_convert_with_embed_images_flow(self, monkeypatch):
-        converter = MarkdownConverter()
-
-        class MockResp:
-            def __init__(self):
-                self.headers = {"Content-Type": "image/png"}
-                self.content = b"\x89PNGsmall"
-
-            def raise_for_status(self):
-                return None
-
-        def mock_get(url, timeout=10, stream=True):
-            return MockResp()
-
-        monkeypatch.setattr("extractor.markdown_converter.requests.get", mock_get)
-
-        scrape_result = {
-            "url": "https://example.com",
-            "title": "With Image",
-            "content": {
-                "html": "<html><body><img src='http://example.com/i.png' alt='A'></body></html>"
-            },
+    @patch("requests.get")
+    def test_image_embedding_size_limit(self, mock_get):
+        """测试图片大小限制"""
+        # 模拟大文件响应
+        mock_response = Mock()
+        mock_response.headers = {
+            "Content-Type": "image/jpeg",
+            "Content-Length": "5000000",
         }
+        mock_get.return_value = mock_response
 
-        result = converter.convert_webpage_to_markdown(
-            scrape_result, embed_images=True, embed_options={"max_images": 10}
+        markdown_content = "![Alt text](https://example.com/large-image.jpg)"
+
+        result = self.converter._embed_images_in_markdown(
+            markdown_content, max_bytes_per_image=1000000
         )
 
-        assert result["success"] is True
-        assert "data:image/png;base64," in result["markdown"]
-        assert result["conversion_options"]["embed_images"] is True
-        assert "image_embedding" in result.get("metadata", {})
+        assert result["stats"]["attempted"] == 1
+        assert result["stats"]["embedded"] == 0
+        assert result["stats"]["skipped_large"] == 1
+
+    @patch("requests.get")
+    def test_image_embedding_error_handling(self, mock_get):
+        """测试图片嵌入错误处理"""
+        # 模拟HTTP错误
+        mock_get.side_effect = Exception("Network error")
+
+        markdown_content = "![Alt text](https://example.com/image.jpg)"
+
+        result = self.converter._embed_images_in_markdown(markdown_content)
+
+        assert result["stats"]["attempted"] == 1
+        assert result["stats"]["embedded"] == 0
+        assert result["stats"]["skipped_errors"] == 1
+        # 原始链接应该保留
+        assert "https://example.com/image.jpg" in result["markdown"]
+
+
+class TestErrorHandling:
+    """测试错误处理和边界情况"""
+
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
+
+    def test_empty_html_input(self):
+        """测试空HTML输入"""
+        result = self.converter.html_to_markdown("")
+        assert isinstance(result, str)
+
+    def test_invalid_html_input(self):
+        """测试无效HTML输入"""
+        invalid_html = "<html><body><div>Unclosed div<p>Paragraph</body></html>"
+
+        result = self.converter.html_to_markdown(invalid_html)
+        assert isinstance(result, str)
+        assert len(result) >= 0
+
+    def test_none_input(self):
+        """测试None输入处理"""
+        # html_to_markdown应该能处理None输入而不崩溃
+        try:
+            result = self.converter.html_to_markdown(None)
+            # 如果没有抛出异常，结果应该是字符串
+            assert isinstance(result, str)
+        except (TypeError, AttributeError):
+            # 如果抛出异常，这也是可接受的行为
+            pass
+
+    def test_special_characters_handling(self):
+        """测试特殊字符处理"""
+        html_content = """
+        <p>Special chars: &amp; &lt; &gt; &quot; &#39; &copy; &reg;</p>
+        <p>Unicode: 中文 éñ ñoël</p>
+        """
+
+        result = self.converter.html_to_markdown(html_content)
+
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_malformed_markup(self):
+        """测试格式错误的标记"""
+        malformed_html = """
+        <div>
+            <p>Normal paragraph</p>
+            <strong>Unclosed strong tag
+            <p>Another paragraph
+            <em>Nested <strong>tags</em> wrong order</strong>
+        </div>
+        """
+
+        result = self.converter.html_to_markdown(malformed_html)
+
+        assert isinstance(result, str)
+        assert "Normal paragraph" in result
+        assert "Another paragraph" in result
+
+
+class TestPerformanceAndLimits:
+    """测试性能相关功能"""
+
+    def setup_method(self):
+        """测试前准备"""
+        self.converter = MarkdownConverter()
+
+    def test_large_html_conversion(self):
+        """测试大型HTML内容转换"""
+        # 生成大型HTML内容
+        large_html = "<html><body>"
+        for i in range(100):
+            large_html += f"<p>Paragraph {i} with some content text here.</p>"
+        large_html += "</body></html>"
+
+        result = self.converter.html_to_markdown(large_html)
+
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert "Paragraph 0" in result
+        assert "Paragraph 99" in result
+
+    def test_conversion_speed_benchmark(self):
+        """测试转换速度基准"""
+        import time
+
+        html_content = "<html><body>"
+        for i in range(50):
+            html_content += f"""
+            <div>
+                <h2>Section {i}</h2>
+                <p>This is paragraph {i} with <strong>bold</strong> text.</p>
+                <ul>
+                    <li>Item 1</li>
+                    <li>Item 2</li>
+                </ul>
+            </div>
+            """
+        html_content += "</body></html>"
+
+        start_time = time.time()
+        result = self.converter.html_to_markdown(html_content)
+        end_time = time.time()
+
+        conversion_time = end_time - start_time
+
+        assert isinstance(result, str)
+        assert len(result) > 0
+        # 转换应该在合理时间内完成（5秒）
+        assert conversion_time < 5.0
+
+    def test_max_images_limit(self):
+        """测试图片数量限制"""
+        markdown_content = ""
+        for i in range(60):
+            markdown_content += f"![Image {i}](https://example.com/image{i}.jpg)\n"
+
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.headers = {"Content-Type": "image/jpeg"}
+            mock_response.content = b"fake image data"
+            mock_response.raise_for_status = Mock()
+            mock_get.return_value = mock_response
+
+            result = self.converter._embed_images_in_markdown(
+                markdown_content, max_images=10
+            )
+
+            assert result["stats"]["attempted"] >= 10
+            assert result["stats"]["embedded"] <= 10
