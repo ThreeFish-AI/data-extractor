@@ -1,7 +1,7 @@
 """Configuration settings for the Data Extractor MCP Server."""
 
-from typing import Dict, Any, Optional
-from pydantic import Field
+from typing import Dict, Any, Optional, Union
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -33,22 +33,40 @@ class DataExtractorSettings(BaseSettings):
     """Settings for the Data Extractor MCP Server."""
 
     # Server settings
-    server_name: str = Field(default="data-extractor")
+    server_name: str = Field(default="Data Extractor")
     server_version: str = Field(default_factory=_get_dynamic_version)
 
     # Data Extractor settings
-    concurrent_requests: int = Field(default=16)
-    download_delay: float = Field(default=1.0)
+    concurrent_requests: int = Field(default=16, gt=0)
+    download_delay: float = Field(default=1.0, ge=0.0)
     randomize_download_delay: bool = Field(default=True)
     autothrottle_enabled: bool = Field(default=True)
-    autothrottle_start_delay: float = Field(default=1.0)
-    autothrottle_max_delay: float = Field(default=60.0)
-    autothrottle_target_concurrency: float = Field(default=1.0)
+    autothrottle_start_delay: float = Field(default=1.0, ge=0.0)
+    autothrottle_max_delay: float = Field(default=60.0, ge=0.0)
+    autothrottle_target_concurrency: float = Field(default=1.0, ge=0.0)
+
+    # Rate limiting settings
+    rate_limit_requests_per_minute: int = Field(default=60, ge=1)
+
+    # Retry settings
+    max_retries: int = Field(default=3, ge=0)
+    retry_delay: float = Field(default=1.0, ge=0.0)
+
+    # Cache settings
+    enable_caching: bool = Field(default=True)
+    cache_ttl_hours: int = Field(default=24, gt=0)
+    cache_max_size: Optional[int] = Field(default=None)
+
+    # Logging settings
+    log_level: str = Field(default="INFO")
+    log_requests: Optional[bool] = Field(default=None)
+    log_responses: Optional[bool] = Field(default=None)
 
     # Browser settings
     enable_javascript: bool = Field(default=False)
     browser_headless: bool = Field(default=True)
-    browser_timeout: int = Field(default=30)
+    browser_timeout: int = Field(default=30, ge=0)
+    browser_window_size: Union[str, tuple] = Field(default="1920x1080")
 
     # User agent settings
     use_random_user_agent: bool = Field(default=True)
@@ -61,15 +79,25 @@ class DataExtractorSettings(BaseSettings):
     proxy_url: Optional[str] = Field(default=None)
 
     # Request settings
-    max_retries: int = Field(default=3)
-    request_timeout: int = Field(default=30)
+    request_timeout: float = Field(default=30.0, gt=0.0)
 
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "extra": "ignore",  # Allow extra environment variables
         "env_prefix": "DATA_EXTRACTOR_",  # Automatically map env vars with this prefix
+        "env_ignore_empty": True,  # Ignore empty environment variables
+        "frozen": True,  # Make instances immutable
     }
+
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, v):
+        """Validate log level is one of the standard logging levels."""
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        if v.upper() not in valid_levels:
+            raise ValueError(f"log_level must be one of: {valid_levels}")
+        return v.upper()
 
     def get_scrapy_settings(self) -> Dict[str, Any]:
         """Get Scrapy-specific settings as a dictionary."""
@@ -87,16 +115,5 @@ class DataExtractorSettings(BaseSettings):
         }
 
 
-# 创建设置实例，并动态设置版本号（如果没有环境变量覆盖的话）
+# 创建全局设置实例
 settings = DataExtractorSettings()
-if not hasattr(settings, "_version_set"):
-    # 如果没有从环境变量读取到版本号，使用动态版本
-    dynamic_version = _get_dynamic_version()
-    if settings.server_version != dynamic_version:
-        # 重新创建实例以使用正确的版本号
-        import os
-
-        if "DATA_EXTRACTOR_SERVER_VERSION" not in os.environ:
-            os.environ["DATA_EXTRACTOR_SERVER_VERSION"] = dynamic_version
-            settings = DataExtractorSettings()
-    setattr(settings, "_version_set", True)

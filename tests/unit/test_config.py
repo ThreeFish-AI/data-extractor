@@ -18,7 +18,7 @@ class TestDataExtractorSettings:
         """测试默认配置值"""
         config = DataExtractorSettings()
 
-        # 测试默认值
+        # 测试默认值（考虑环境变量覆盖）
         assert config.server_name == "Data Extractor"
         assert config.server_version == "0.1.4"
         assert config.enable_javascript is False
