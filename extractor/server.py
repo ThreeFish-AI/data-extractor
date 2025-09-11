@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Annotated
 from urllib.parse import urlparse
 from datetime import datetime
 
@@ -49,21 +49,22 @@ def _get_pdf_processor():
 class ScrapeRequest(BaseModel):
     """Request model for scraping operations."""
 
-    url: str = Field(
-        ..., description="目标网页 URL，必须包含协议前缀（http://或https://）"
-    )
-    method: str = Field(
+    url: Annotated[
+        str,
+        Field(..., description="目标网页 URL，必须包含协议前缀（http://或https://）"),
+    ]
+    method: Annotated[str , Field(
         default="auto",
         description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，不支持JavaScript）、scrapy（Scrapy框架，适合大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
-    )
-    extract_config: Optional[Dict[str, Any]] = Field(
+    )]
+    extract_config: Annotated[Optional[Dict[str, Any]] , Field(
         default=None,
         description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': {'selector': '.content p', 'multiple': True, 'attr': 'text'}}",
-    )
-    wait_for_element: Optional[str] = Field(
+    )]
+    wait_for_element: Annotated[Optional[str] , Field(
         default=None,
         description="等待元素的 CSS 选择器（仅 Selenium 方法有效），确保页面完全加载后再提取内容。示例：'.content'、'#main-content'",
-    )
+    )]
 
     @field_validator("url")
     def validate_url(cls, v: str) -> str:
