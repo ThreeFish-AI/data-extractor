@@ -81,7 +81,7 @@ class ScrapeRequest(BaseModel):
         return v
 
 
-class MultipleScrapeRequest(BaseModel):
+class BatchScrapeRequest(BaseModel):
     """Request model for scraping multiple URLs."""
 
     urls: List[str] = Field(
@@ -143,13 +143,225 @@ class ExtractLinksRequest(BaseModel):
         return v
 
 
+class GetPageInfoRequest(BaseModel):
+    """Request model for getting page information."""
+
+    url: str = Field(..., description="要获取信息的网页URL")
+
+    @field_validator("url")
+    def validate_url(cls, v: str) -> str:
+        """Validate URL format."""
+        parsed = urlparse(v)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+        return v
+
+
+class CheckRobotsRequest(BaseModel):
+    """Request model for checking robots.txt."""
+
+    url: str = Field(..., description="要检查robots.txt的网站URL")
+
+    @field_validator("url")
+    def validate_url(cls, v: str) -> str:
+        """Validate URL format."""
+        parsed = urlparse(v)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+        return v
+
+
+class ExtractStructuredDataRequest(BaseModel):
+    """Request model for extracting structured data."""
+
+    url: str = Field(..., description="要提取结构化数据的网页URL")
+    data_type: str = Field(
+        default="all",
+        description="数据类型: all（全部）、contact（联系信息）、social（社交媒体）、content（内容）、products（产品）、addresses（地址）",
+    )
+
+    @field_validator("url")
+    def validate_url(cls, v: str) -> str:
+        """Validate URL format."""
+        parsed = urlparse(v)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+        return v
+
+    @field_validator("data_type")
+    def validate_data_type(cls, v: str) -> str:
+        """Validate data type."""
+        valid_types = ["all", "contact", "social", "content", "products", "addresses"]
+        if v not in valid_types:
+            raise ValueError(f"Data type must be one of: {', '.join(valid_types)}")
+        return v
+
+
+# Response Models
+class ScrapeResponse(BaseModel):
+    """Response model for scraping operations."""
+
+    success: bool = Field(..., description="操作是否成功")
+    url: str = Field(..., description="被抓取的URL")
+    method: str = Field(..., description="使用的抓取方法")
+    data: Optional[Dict[str, Any]] = Field(default=None, description="抓取到的数据")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="页面元数据")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+    timestamp: datetime = Field(default_factory=datetime.now, description="抓取时间戳")
+
+
+class BatchScrapeResponse(BaseModel):
+    """Response model for batch scraping operations."""
+
+    success: bool = Field(..., description="整体操作是否成功")
+    total_urls: int = Field(..., description="总URL数量")
+    successful_count: int = Field(..., description="成功抓取的数量")
+    failed_count: int = Field(..., description="失败的数量")
+    results: List[ScrapeResponse] = Field(..., description="每个URL的抓取结果")
+    summary: Dict[str, Any] = Field(..., description="批量操作摘要信息")
+
+
+class LinkItem(BaseModel):
+    """Individual link item model."""
+
+    url: str = Field(..., description="链接URL")
+    text: str = Field(..., description="链接文本")
+    is_internal: bool = Field(..., description="是否为内部链接")
+
+
+class LinksResponse(BaseModel):
+    """Response model for link extraction."""
+
+    success: bool = Field(..., description="操作是否成功")
+    url: str = Field(..., description="源页面URL")
+    total_links: int = Field(..., description="总链接数量")
+    links: List[LinkItem] = Field(..., description="提取的链接列表")
+    internal_links_count: int = Field(..., description="内部链接数量")
+    external_links_count: int = Field(..., description="外部链接数量")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+
+
+class PageInfoResponse(BaseModel):
+    """Response model for page information."""
+
+    success: bool = Field(..., description="操作是否成功")
+    url: str = Field(..., description="页面URL")
+    title: Optional[str] = Field(default=None, description="页面标题")
+    description: Optional[str] = Field(default=None, description="页面描述")
+    status_code: int = Field(..., description="HTTP状态码")
+    content_type: Optional[str] = Field(default=None, description="内容类型")
+    content_length: Optional[int] = Field(default=None, description="内容长度")
+    last_modified: Optional[str] = Field(default=None, description="最后修改时间")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+
+
+class RobotsResponse(BaseModel):
+    """Response model for robots.txt check."""
+
+    success: bool = Field(..., description="操作是否成功")
+    url: str = Field(..., description="检查的URL")
+    robots_txt_url: str = Field(..., description="robots.txt文件URL")
+    robots_content: Optional[str] = Field(default=None, description="robots.txt内容")
+    is_allowed: bool = Field(..., description="是否允许抓取")
+    user_agent: str = Field(..., description="使用的User-Agent")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+
+
+class StructuredDataResponse(BaseModel):
+    """Response model for structured data extraction."""
+
+    success: bool = Field(..., description="操作是否成功")
+    url: str = Field(..., description="源页面URL")
+    data_type: str = Field(..., description="提取的数据类型")
+    extracted_data: Dict[str, Any] = Field(..., description="提取的结构化数据")
+    data_count: int = Field(..., description="提取的数据项数量")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+
+
+class MarkdownResponse(BaseModel):
+    """Response model for Markdown conversion."""
+
+    success: bool = Field(..., description="操作是否成功")
+    url: str = Field(..., description="源页面URL")
+    method: str = Field(..., description="使用的转换方法")
+    markdown_content: Optional[str] = Field(
+        default=None, description="转换后的Markdown内容"
+    )
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="页面元数据")
+    word_count: int = Field(default=0, description="字数统计")
+    images_embedded: int = Field(default=0, description="嵌入的图片数量")
+    conversion_time: float = Field(..., description="转换耗时（秒）")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+
+
+class BatchMarkdownResponse(BaseModel):
+    """Response model for batch Markdown conversion."""
+
+    success: bool = Field(..., description="整体操作是否成功")
+    total_urls: int = Field(..., description="总URL数量")
+    successful_count: int = Field(..., description="成功转换的数量")
+    failed_count: int = Field(..., description="失败的数量")
+    results: List[MarkdownResponse] = Field(..., description="每个URL的转换结果")
+    total_word_count: int = Field(default=0, description="总字数")
+    total_conversion_time: float = Field(..., description="总转换时间（秒）")
+
+
+class PDFResponse(BaseModel):
+    """Response model for PDF conversion."""
+
+    success: bool = Field(..., description="操作是否成功")
+    pdf_source: str = Field(..., description="PDF源路径或URL")
+    method: str = Field(..., description="使用的转换方法")
+    output_format: str = Field(..., description="输出格式")
+    content: Optional[str] = Field(default=None, description="转换后的内容")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="PDF元数据")
+    page_count: int = Field(default=0, description="页数")
+    word_count: int = Field(default=0, description="字数统计")
+    conversion_time: float = Field(..., description="转换耗时（秒）")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+
+
+class BatchPDFResponse(BaseModel):
+    """Response model for batch PDF conversion."""
+
+    success: bool = Field(..., description="整体操作是否成功")
+    total_pdfs: int = Field(..., description="总PDF数量")
+    successful_count: int = Field(..., description="成功转换的数量")
+    failed_count: int = Field(..., description="失败的数量")
+    results: List[PDFResponse] = Field(..., description="每个PDF的转换结果")
+    total_pages: int = Field(default=0, description="总页数")
+    total_word_count: int = Field(default=0, description="总字数")
+    total_conversion_time: float = Field(..., description="总转换时间（秒）")
+
+
+class MetricsResponse(BaseModel):
+    """Response model for server metrics."""
+
+    success: bool = Field(..., description="操作是否成功")
+    total_requests: int = Field(..., description="总请求数")
+    successful_requests: int = Field(..., description="成功请求数")
+    failed_requests: int = Field(..., description="失败请求数")
+    success_rate: float = Field(..., description="成功率")
+    average_response_time: float = Field(..., description="平均响应时间（秒）")
+    uptime_seconds: float = Field(..., description="运行时间（秒）")
+    cache_stats: Dict[str, Any] = Field(..., description="缓存统计")
+    method_usage: Dict[str, int] = Field(..., description="方法使用统计")
+    error_categories: Dict[str, int] = Field(..., description="错误分类统计")
+
+
+class CacheOperationResponse(BaseModel):
+    """Response model for cache clearing."""
+
+    success: bool = Field(..., description="操作是否成功")
+    cleared_items: int = Field(..., description="清理的缓存项数量")
+    cache_size_before: int = Field(..., description="清理前缓存大小")
+    cache_size_after: int = Field(..., description="清理后缓存大小")
+    operation_time: float = Field(..., description="操作耗时（秒）")
+    message: str = Field(..., description="操作结果消息")
+
+
 @app.tool()
-async def scrape_webpage(
-    url: str,
-    method: str = "auto",
-    extract_config: Optional[Dict[str, Any]] = None,
-    wait_for_element: Optional[str] = None,
-) -> Dict[str, Any]:
+async def scrape_webpage(request: ScrapeRequest) -> ScrapeResponse:
     """
     Scrape a single webpage and extract its content.
 
@@ -168,48 +380,37 @@ async def scrape_webpage(
     You can specify extraction rules to get specific data from the page.
     """
     try:
-        # Validate inputs
-        parsed = urlparse(url)
-        if (
-            not parsed.scheme
-            or not parsed.netloc
-            or parsed.scheme.lower() not in ["http", "https"]
-        ):
-            return {"success": False, "error": "Invalid URL format", "url": url}
-
-        if method not in ["auto", "simple", "scrapy", "selenium"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: auto, simple, scrapy, selenium",
-                "url": url,
-            }
-
-        logger.info(f"Scraping webpage: {url} with method: {method}")
+        logger.info(f"Scraping webpage: {request.url} with method: {request.method}")
 
         result = await web_scraper.scrape_url(
-            url=url,
-            method=method,
-            extract_config=extract_config,
-            wait_for_element=wait_for_element,
+            url=request.url,
+            method=request.method,
+            extract_config=request.extract_config,
+            wait_for_element=request.wait_for_element,
         )
 
         # Check if the scraper returned an error
         if "error" in result:
-            return {"success": False, "error": result["error"], "url": url}
+            return ScrapeResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error=result["error"],
+            )
 
-        return {"success": True, "data": result, "method_used": method}
+        return ScrapeResponse(
+            success=True, url=request.url, method=request.method, data=result
+        )
 
     except Exception as e:
-        logger.error(f"Error scraping webpage {url}: {str(e)}")
-        return {"success": False, "error": str(e), "url": url}
+        logger.error(f"Error scraping webpage {request.url}: {str(e)}")
+        return ScrapeResponse(
+            success=False, url=request.url, method=request.method, error=str(e)
+        )
 
 
 @app.tool()
-async def scrape_multiple_webpages(
-    urls: List[str],
-    method: str = "auto",
-    extract_config: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+async def scrape_multiple_webpages(request: BatchScrapeRequest) -> BatchScrapeResponse:
     """
     Scrape multiple webpages concurrently.
 
@@ -222,53 +423,61 @@ async def scrape_multiple_webpages(
     than scraping them one by one. All URLs will be processed concurrently.
     """
     try:
-        # Validate inputs
-        if not urls:
-            return {"success": False, "error": "URLs list cannot be empty"}
-
-        for url in urls:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.netloc:
-                return {"success": False, "error": f"Invalid URL format: {url}"}
-
-        if method not in ["auto", "simple", "scrapy", "selenium"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: auto, simple, scrapy, selenium",
-            }
-
-        logger.info(f"Scraping {len(urls)} webpages with method: {method}")
-
-        results = await web_scraper.scrape_multiple_urls(
-            urls=urls, method=method, extract_config=extract_config
+        logger.info(
+            f"Scraping {len(request.urls)} webpages with method: {request.method}"
         )
 
-        successful_results = [r for r in results if "error" not in r]
-        failed_results = [r for r in results if "error" in r]
+        results = await web_scraper.scrape_multiple_urls(
+            urls=request.urls,
+            method=request.method,
+            extract_config=request.extract_config,
+        )
 
-        return {
-            "success": True,
-            "data": results,
-            "summary": {
-                "total": len(urls),
-                "successful": len(successful_results),
-                "failed": len(failed_results),
+        # Convert results to ScrapeResponse objects
+        scrape_responses = []
+        for i, result in enumerate(results):
+            url = request.urls[i]
+            if "error" in result:
+                response = ScrapeResponse(
+                    success=False, url=url, method=request.method, error=result["error"]
+                )
+            else:
+                response = ScrapeResponse(
+                    success=True, url=url, method=request.method, data=result
+                )
+            scrape_responses.append(response)
+
+        successful_count = sum(1 for r in scrape_responses if r.success)
+        failed_count = len(scrape_responses) - successful_count
+
+        return BatchScrapeResponse(
+            success=True,
+            total_urls=len(request.urls),
+            successful_count=successful_count,
+            failed_count=failed_count,
+            results=scrape_responses,
+            summary={
+                "total": len(request.urls),
+                "successful": successful_count,
+                "failed": failed_count,
+                "method_used": request.method,
             },
-            "method_used": method,
-        }
+        )
 
     except Exception as e:
         logger.error(f"Error scraping multiple webpages: {str(e)}")
-        return {"success": False, "error": str(e), "urls": urls}
+        return BatchScrapeResponse(
+            success=False,
+            total_urls=len(request.urls),
+            successful_count=0,
+            failed_count=len(request.urls),
+            results=[],
+            summary={"error": str(e)},
+        )
 
 
 @app.tool()
-async def extract_links(
-    url: str,
-    filter_domains: Optional[List[str]] = None,
-    exclude_domains: Optional[List[str]] = None,
-    internal_only: bool = False,
-) -> Dict[str, Any]:
+async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
     """
     Extract all links from a webpage.
 
@@ -289,25 +498,28 @@ async def extract_links(
         Each link includes url, text, and additional attributes if available.
     """
     try:
-        # Validate URL
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
-            return {"success": False, "error": "Invalid URL format", "url": url}
-
-        logger.info(f"Extracting links from: {url}")
+        logger.info(f"Extracting links from: {request.url}")
 
         # Scrape the page to get links
         scrape_result = await web_scraper.scrape_url(
-            url=url,
+            url=request.url,
             method="simple",  # Use simple method for link extraction
         )
 
         if "error" in scrape_result:
-            return {"success": False, "error": scrape_result["error"], "url": url}
+            return LinksResponse(
+                success=False,
+                url=request.url,
+                total_links=0,
+                links=[],
+                internal_links_count=0,
+                external_links_count=0,
+                error=scrape_result["error"],
+            )
 
         # Extract and filter links
         all_links = scrape_result.get("content", {}).get("links", [])
-        base_domain = urlparse(url).netloc
+        base_domain = urlparse(request.url).netloc
 
         filtered_links = []
         for link in all_links:
@@ -318,42 +530,50 @@ async def extract_links(
             link_domain = urlparse(link_url).netloc
 
             # Apply filters
-            if internal_only and link_domain != base_domain:
+            if request.internal_only and link_domain != base_domain:
                 continue
 
-            if filter_domains and link_domain not in filter_domains:
+            if request.filter_domains and link_domain not in request.filter_domains:
                 continue
 
-            if exclude_domains and link_domain in exclude_domains:
+            if request.exclude_domains and link_domain in request.exclude_domains:
                 continue
 
             filtered_links.append(
-                {
-                    "url": link_url,
-                    "text": link.get("text", "").strip(),
-                    "domain": link_domain,
-                    "is_internal": link_domain == base_domain,
-                }
+                LinkItem(
+                    url=link_url,
+                    text=link.get("text", "").strip(),
+                    is_internal=link_domain == base_domain,
+                )
             )
 
-        return {
-            "success": True,
-            "data": {
-                "base_url": url,
-                "base_domain": base_domain,
-                "links": filtered_links,
-                "total_found": len(all_links),
-                "total_filtered": len(filtered_links),
-            },
-        }
+        internal_count = sum(1 for link in filtered_links if link.is_internal)
+        external_count = len(filtered_links) - internal_count
+
+        return LinksResponse(
+            success=True,
+            url=request.url,
+            total_links=len(filtered_links),
+            links=filtered_links,
+            internal_links_count=internal_count,
+            external_links_count=external_count,
+        )
 
     except Exception as e:
-        logger.error(f"Error extracting links from {url}: {str(e)}")
-        return {"success": False, "error": str(e), "url": url}
+        logger.error(f"Error extracting links from {request.url}: {str(e)}")
+        return LinksResponse(
+            success=False,
+            url=request.url,
+            total_links=0,
+            links=[],
+            internal_links_count=0,
+            external_links_count=0,
+            error=str(e),
+        )
 
 
 @app.tool()
-async def get_page_info(url: str) -> Dict[str, Any]:
+async def get_page_info(request: GetPageInfoRequest) -> PageInfoResponse:
     """
     Get basic information about a webpage (title, description, status).
 
@@ -368,41 +588,35 @@ async def get_page_info(url: str) -> Dict[str, Any]:
         Useful for quick page validation and metadata extraction.
     """
     try:
-        logger.info(f"Getting page info for: {url}")
-
-        # Validate URL
-        parsed = urlparse(url)
-        if (
-            not parsed.scheme
-            or not parsed.netloc
-            or parsed.scheme.lower() not in ["http", "https"]
-        ):
-            return {"success": False, "error": "Invalid URL format", "url": url}
+        logger.info(f"Getting page info for: {request.url}")
 
         # Use simple scraper for quick info
-        result = await web_scraper.simple_scraper.scrape(url, extract_config={})
+        result = await web_scraper.simple_scraper.scrape(request.url, extract_config={})
 
         if "error" in result:
-            return {"success": False, "error": result["error"], "url": url}
+            return PageInfoResponse(
+                success=False, url=request.url, status_code=0, error=result["error"]
+            )
 
-        return {
-            "success": True,
-            "data": {
-                "url": result.get("url", url),
-                "status_code": result.get("status_code"),
-                "title": result.get("title"),
-                "meta_description": result.get("meta_description"),
-                "domain": urlparse(result.get("url", url)).netloc,
-            },
-        }
+        return PageInfoResponse(
+            success=True,
+            url=result.get("url", request.url),
+            title=result.get("title"),
+            description=result.get("meta_description"),
+            status_code=result.get("status_code", 200),
+            content_type=result.get("content_type"),
+            content_length=result.get("content_length"),
+        )
 
     except Exception as e:
-        logger.error(f"Error getting page info for {url}: {str(e)}")
-        return {"success": False, "error": str(e), "url": url}
+        logger.error(f"Error getting page info for {request.url}: {str(e)}")
+        return PageInfoResponse(
+            success=False, url=request.url, status_code=0, error=str(e)
+        )
 
 
 @app.tool()
-async def check_robots_txt(url: str) -> Dict[str, Any]:
+async def check_robots_txt(request: CheckRobotsRequest) -> RobotsResponse:
     """
     Check the robots.txt file for a domain to understand crawling permissions.
 
@@ -418,40 +632,46 @@ async def check_robots_txt(url: str) -> Dict[str, Any]:
         Helps determine crawling permissions and restrictions for the specified domain.
     """
     try:
-        logger.info(f"Checking robots.txt for: {url}")
+        logger.info(f"Checking robots.txt for: {request.url}")
 
         # Parse URL to get base domain
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
-            return {"success": False, "error": "Invalid URL format", "url": url}
-
+        parsed = urlparse(request.url)
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
 
         # Scrape robots.txt
         result = await web_scraper.simple_scraper.scrape(robots_url, extract_config={})
 
         if "error" in result:
-            return {
-                "success": False,
-                "error": f"Could not fetch robots.txt: {result['error']}",
-                "url": robots_url,
-            }
+            return RobotsResponse(
+                success=False,
+                url=request.url,
+                robots_txt_url=robots_url,
+                is_allowed=False,
+                user_agent="*",
+                error=f"Could not fetch robots.txt: {result['error']}",
+            )
 
         robots_content = result.get("content", {}).get("text", "")
 
-        return {
-            "success": True,
-            "data": {
-                "robots_url": robots_url,
-                "content": robots_content,
-                "base_domain": parsed.netloc,
-                "has_content": bool(robots_content.strip()),
-            },
-        }
+        return RobotsResponse(
+            success=True,
+            url=request.url,
+            robots_txt_url=robots_url,
+            robots_content=robots_content,
+            is_allowed=True,  # Basic check, could be enhanced
+            user_agent="*",
+        )
 
     except Exception as e:
-        logger.error(f"Error checking robots.txt for {url}: {str(e)}")
-        return {"success": False, "error": str(e), "url": url}
+        logger.error(f"Error checking robots.txt for {request.url}: {str(e)}")
+        return RobotsResponse(
+            success=False,
+            url=request.url,
+            robots_txt_url="",
+            is_allowed=False,
+            user_agent="*",
+            error=str(e),
+        )
 
 
 class StealthScrapeRequest(BaseModel):
@@ -731,13 +951,7 @@ class BatchPDFToMarkdownRequest(BaseModel):
 
 @app.tool()
 @timing_decorator
-async def scrape_with_stealth(
-    url: str,
-    method: str = "selenium",
-    extract_config: Optional[Dict[str, Any]] = None,
-    wait_for_element: Optional[str] = None,
-    scroll_page: bool = False,
-) -> Dict[str, Any]:
+async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
     """
     Scrape a webpage using advanced stealth techniques to avoid detection.
 
@@ -768,33 +982,39 @@ async def scrape_with_stealth(
         from .utils import URLValidator
 
         # Validate inputs
-        if not URLValidator.is_valid_url(url):
-            return {"success": False, "error": "Invalid URL format", "url": url}
+        if not URLValidator.is_valid_url(request.url):
+            return ScrapeResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error="Invalid URL format",
+            )
 
-        if method not in ["selenium", "playwright"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: selenium, playwright",
-                "url": url,
-            }
+        if request.method not in ["selenium", "playwright"]:
+            return ScrapeResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error="Method must be one of: selenium, playwright",
+            )
 
         start_time = time.time()
-        logger.info(f"Stealth scraping: {url} with method: {method}")
+        logger.info(f"Stealth scraping: {request.url} with method: {request.method}")
 
         # Apply rate limiting
         await rate_limiter.wait()
 
         # Normalize URL
-        normalized_url = URLValidator.normalize_url(url)
+        normalized_url = URLValidator.normalize_url(request.url)
 
         # Check cache first
         cache_key_data = {
-            "extract_config": extract_config,
-            "wait_for_element": wait_for_element,
-            "scroll_page": scroll_page,
+            "extract_config": request.extract_config,
+            "wait_for_element": request.wait_for_element,
+            "scroll_page": request.scroll_page,
         }
         cached_result = cache_manager.get(
-            normalized_url, f"stealth_{method}", cache_key_data
+            normalized_url, f"stealth_{request.method}", cache_key_data
         )
         if cached_result:
             logger.info(f"Returning cached result for {normalized_url}")
@@ -802,6 +1022,7 @@ async def scrape_with_stealth(
             return cached_result
 
         # Validate and normalize extract config
+        extract_config = request.extract_config
         if extract_config:
             extract_config = ConfigValidator.validate_extract_config(extract_config)
 
@@ -809,10 +1030,10 @@ async def scrape_with_stealth(
         result = await retry_manager.retry_async(
             anti_detection_scraper.scrape_with_stealth,
             url=normalized_url,
-            method=method,
+            method=request.method,
             extract_config=extract_config,
-            wait_for_element=wait_for_element,
-            scroll_page=scroll_page,
+            wait_for_element=request.wait_for_element,
+            scroll_page=request.scroll_page,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -827,60 +1048,66 @@ async def scrape_with_stealth(
 
             # Cache successful result
             cache_manager.set(
-                normalized_url, f"stealth_{method}", result, cache_key_data
+                normalized_url, f"stealth_{request.method}", result, cache_key_data
             )
 
             metrics_collector.record_request(
-                normalized_url, True, duration_ms, f"stealth_{method}"
+                normalized_url, True, duration_ms, f"stealth_{request.method}"
             )
 
-            return {
-                "success": True,
-                "data": result,
-                "method_used": f"stealth_{method}",
-                "duration_ms": duration_ms,
-                "from_cache": False,
-            }
+            return ScrapeResponse(
+                success=True,
+                url=request.url,
+                method=f"stealth_{request.method}",
+                data=result,
+                duration_ms=duration_ms,
+                from_cache=False,
+            )
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "Unknown error")),
                 normalized_url,
-                f"stealth_{method}",
+                f"stealth_{request.method}",
             )
             metrics_collector.record_request(
                 normalized_url,
                 False,
                 duration_ms,
-                f"stealth_{method}",
+                f"stealth_{request.method}",
                 error_response["error"]["category"],
             )
-            return error_response
+            return ScrapeResponse(
+                success=False,
+                url=request.url,
+                method=f"stealth_{request.method}",
+                error=error_response["error"]["message"],
+            )
 
     except Exception as e:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(e, url, f"stealth_{method}")
+        error_response = ErrorHandler.handle_scraping_error(
+            e, request.url, f"stealth_{request.method}"
+        )
         metrics_collector.record_request(
-            url,
+            request.url,
             False,
             duration_ms,
-            f"stealth_{method}",
+            f"stealth_{request.method}",
             error_response["error"]["category"],
         )
-        return error_response
+        return ScrapeResponse(
+            success=False,
+            url=request.url,
+            method=f"stealth_{request.method}",
+            error=error_response["error"]["message"],
+        )
 
 
 @app.tool()
 @timing_decorator
-async def fill_and_submit_form(
-    url: str,
-    form_data: Dict[str, Any],
-    submit: bool = False,
-    submit_button_selector: Optional[str] = None,
-    method: str = "selenium",
-    wait_for_element: Optional[str] = None,
-) -> Dict[str, Any]:
+async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
     """
     Fill and optionally submit a form on a webpage.
 
@@ -919,24 +1146,30 @@ async def fill_and_submit_form(
         from .utils import URLValidator
 
         # Validate inputs
-        if not URLValidator.is_valid_url(url):
-            return {"success": False, "error": "Invalid URL format", "url": url}
+        if not URLValidator.is_valid_url(request.url):
+            return ScrapeResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error="Invalid URL format",
+            )
 
-        if method not in ["selenium", "playwright"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: selenium, playwright",
-                "url": url,
-            }
+        if request.method not in ["selenium", "playwright"]:
+            return ScrapeResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error="Method must be one of: selenium, playwright",
+            )
 
         start_time = time.time()
-        logger.info(f"Form interaction for: {url}")
+        logger.info(f"Form interaction for: {request.url}")
 
         # Apply rate limiting
         await rate_limiter.wait()
 
         # Setup browser based on method
-        if method == "selenium":
+        if request.method == "selenium":
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options as ChromeOptions
 
@@ -948,26 +1181,26 @@ async def fill_and_submit_form(
 
             driver = webdriver.Chrome(options=options)
             try:
-                driver.get(url)
+                driver.get(request.url)
 
                 # Wait for element if specified
-                if wait_for_element:
+                if request.wait_for_element:
                     from selenium.webdriver.common.by import By
                     from selenium.webdriver.support.ui import WebDriverWait
                     from selenium.webdriver.support import expected_conditions as EC
 
                     WebDriverWait(driver, settings.browser_timeout).until(
                         EC.presence_of_element_located(
-                            (By.CSS_SELECTOR, wait_for_element)
+                            (By.CSS_SELECTOR, request.wait_for_element)
                         )
                     )
 
                 # Fill and submit form
                 form_handler = FormHandler(driver)
                 result = await form_handler.fill_form(
-                    form_data=form_data,
-                    submit=submit,
-                    submit_button_selector=submit_button_selector,
+                    form_data=request.form_data,
+                    submit=request.submit,
+                    submit_button_selector=request.submit_button_selector,
                 )
 
                 # Get final page info
@@ -977,7 +1210,7 @@ async def fill_and_submit_form(
             finally:
                 driver.quit()
 
-        elif method == "playwright":
+        elif request.method == "playwright":
             from playwright.async_api import async_playwright
 
             playwright = await async_playwright().start()
@@ -988,20 +1221,21 @@ async def fill_and_submit_form(
                 context = await browser.new_context()
                 page = await context.new_page()
 
-                await page.goto(url, timeout=60000)
+                await page.goto(request.url, timeout=60000)
 
                 # Wait for element if specified
-                if wait_for_element:
+                if request.wait_for_element:
                     await page.wait_for_selector(
-                        wait_for_element, timeout=settings.browser_timeout * 1000
+                        request.wait_for_element,
+                        timeout=settings.browser_timeout * 1000,
                     )
 
                 # Fill and submit form
                 form_handler = FormHandler(page)
                 result = await form_handler.fill_form(
-                    form_data=form_data,
-                    submit=submit,
-                    submit_button_selector=submit_button_selector,
+                    form_data=request.form_data,
+                    submit=request.submit,
+                    submit_button_selector=request.submit_button_selector,
                 )
 
                 # Get final page info
@@ -1015,51 +1249,65 @@ async def fill_and_submit_form(
         duration_ms = int((time.time() - start_time) * 1000)
 
         if result.get("success"):
-            metrics_collector.record_request(url, True, duration_ms, f"form_{method}")
+            metrics_collector.record_request(
+                request.url, True, duration_ms, f"form_{request.method}"
+            )
 
-            return {
-                "success": True,
-                "data": {
+            return ScrapeResponse(
+                success=True,
+                url=request.url,
+                method=f"form_{request.method}",
+                data={
                     "form_results": result,
                     "final_url": final_url,
                     "final_title": final_title,
-                    "original_url": url,
+                    "original_url": request.url,
                 },
-                "method_used": f"form_{method}",
-                "duration_ms": duration_ms,
-            }
+            )
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "Form interaction failed")),
-                url,
-                f"form_{method}",
+                request.url,
+                f"form_{request.method}",
             )
             metrics_collector.record_request(
-                url,
+                request.url,
                 False,
                 duration_ms,
-                f"form_{method}",
+                f"form_{request.method}",
                 error_response["error"]["category"],
             )
-            return error_response
+            return ScrapeResponse(
+                success=False,
+                url=request.url,
+                method=f"form_{request.method}",
+                error=error_response["error"]["message"],
+            )
 
     except Exception as e:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(e, url, f"form_{method}")
+        error_response = ErrorHandler.handle_scraping_error(
+            e, request.url, f"form_{request.method}"
+        )
         metrics_collector.record_request(
-            url,
+            request.url,
             False,
             duration_ms,
-            f"form_{method}",
+            f"form_{request.method}",
             error_response["error"]["category"],
         )
-        return error_response
+        return ScrapeResponse(
+            success=False,
+            url=request.url,
+            method=f"form_{request.method}",
+            error=error_response["error"]["message"],
+        )
 
 
 @app.tool()
-async def get_server_metrics() -> Dict[str, Any]:
+async def get_server_metrics() -> MetricsResponse:
     """
     Get server performance metrics and statistics.
 
@@ -1081,27 +1329,35 @@ async def get_server_metrics() -> Dict[str, Any]:
         metrics = metrics_collector.get_stats()
         cache_stats = cache_manager.stats()
 
-        return {
-            "success": True,
-            "data": {
-                "scraping_metrics": metrics,
-                "cache_statistics": cache_stats,
-                "server_info": {
-                    "name": settings.server_name,
-                    "version": settings.server_version,
-                    "javascript_support": settings.enable_javascript,
-                    "proxy_enabled": settings.use_proxy,
-                    "random_user_agent": settings.use_random_user_agent,
-                },
-                "timestamp": datetime.now().isoformat(),
-            },
-        }
+        return MetricsResponse(
+            success=True,
+            total_requests=metrics.get("total_requests", 0),
+            successful_requests=metrics.get("successful_requests", 0),
+            failed_requests=metrics.get("failed_requests", 0),
+            success_rate=metrics.get("success_rate", 0.0),
+            average_response_time=metrics.get("average_response_time", 0.0),
+            uptime_seconds=metrics.get("uptime_seconds", 0.0),
+            cache_stats=cache_stats,
+            method_usage=metrics.get("method_usage", {}),
+            error_categories=metrics.get("error_categories", {}),
+        )
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return MetricsResponse(
+            success=False,
+            total_requests=0,
+            successful_requests=0,
+            failed_requests=0,
+            success_rate=0.0,
+            average_response_time=0.0,
+            uptime_seconds=0.0,
+            cache_stats={},
+            method_usage={},
+            error_categories={},
+        )
 
 
 @app.tool()
-async def clear_cache() -> Dict[str, Any]:
+async def clear_cache() -> CacheOperationResponse:
     """
     Clear the scraping results cache.
 
@@ -1115,14 +1371,37 @@ async def clear_cache() -> Dict[str, Any]:
         Useful for forcing fresh data retrieval and managing memory usage.
     """
     try:
-        cache_manager.clear()
-        return {"success": True, "message": "Cache cleared successfully"}
+        start_time = time.time()
+        cache_size_before = (
+            cache_manager.size() if hasattr(cache_manager, "size") else 0
+        )
+        cleared_items = cache_manager.clear()
+        cache_size_after = 0
+        operation_time = time.time() - start_time
+
+        return CacheOperationResponse(
+            success=True,
+            cleared_items=cleared_items if isinstance(cleared_items, int) else 0,
+            cache_size_before=cache_size_before,
+            cache_size_after=cache_size_after,
+            operation_time=operation_time,
+            message="Cache cleared successfully",
+        )
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return CacheOperationResponse(
+            success=False,
+            cleared_items=0,
+            cache_size_before=0,
+            cache_size_after=0,
+            operation_time=0.0,
+            message=f"Error clearing cache: {str(e)}",
+        )
 
 
 @app.tool()
-async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str, Any]:
+async def extract_structured_data(
+    request: ExtractStructuredDataRequest,
+) -> StructuredDataResponse:
     """
     Extract structured data from a webpage using advanced techniques.
 
@@ -1148,16 +1427,23 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
         Supports filtering for specific data categories as needed.
     """
     try:
-        logger.info(f"Extracting structured data from: {url}")
+        logger.info(f"Extracting structured data from: {request.url}")
 
         # Apply rate limiting
         await rate_limiter.wait()
 
         # Validate URL
-        if not URLValidator.is_valid_url(url):
-            return {"success": False, "error": "Invalid URL format"}
+        if not URLValidator.is_valid_url(request.url):
+            return StructuredDataResponse(
+                success=False,
+                url=request.url,
+                data_type=request.data_type,
+                extracted_data={},
+                data_count=0,
+                error="Invalid URL format",
+            )
 
-        normalized_url = URLValidator.normalize_url(url)
+        normalized_url = URLValidator.normalize_url(request.url)
 
         # Scrape page content
         scrape_result = await web_scraper.scrape_url(
@@ -1165,11 +1451,14 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
         )
 
         if "error" in scrape_result:
-            return {
-                "success": False,
-                "error": scrape_result["error"],
-                "url": normalized_url,
-            }
+            return StructuredDataResponse(
+                success=False,
+                url=normalized_url,
+                data_type=request.data_type,
+                extracted_data={},
+                data_count=0,
+                error=scrape_result["error"],
+            )
 
         content = scrape_result.get("content", {})
         text_content = content.get("text", "")
@@ -1178,14 +1467,14 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
         extracted_data = {}
 
         # Extract contact information
-        if data_type in ["all", "contact"]:
+        if request.data_type in ["all", "contact"]:
             extracted_data["contact"] = {
                 "emails": TextCleaner.extract_emails(text_content),
                 "phone_numbers": TextCleaner.extract_phone_numbers(text_content),
             }
 
         # Extract social media links
-        if data_type in ["all", "social"]:
+        if request.data_type in ["all", "social"]:
             social_domains = [
                 "facebook.com",
                 "twitter.com",
@@ -1216,7 +1505,7 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
             extracted_data["social_media"] = social_links
 
         # Extract basic content structure
-        if data_type in ["all", "content"]:
+        if request.data_type in ["all", "content"]:
             extracted_data["content"] = {
                 "title": scrape_result.get("title"),
                 "meta_description": scrape_result.get("meta_description"),
@@ -1225,31 +1514,34 @@ async def extract_structured_data(url: str, data_type: str = "all") -> Dict[str,
                 "domain": URLValidator.extract_domain(normalized_url),
             }
 
-        return {
-            "success": True,
-            "data": extracted_data,
-            "url": normalized_url,
-            "data_type": data_type,
-        }
+        return StructuredDataResponse(
+            success=True,
+            url=normalized_url,
+            data_type=request.data_type,
+            extracted_data=extracted_data,
+            data_count=sum(
+                len(v) if isinstance(v, (list, dict)) else 1
+                for v in extracted_data.values()
+            ),
+        )
 
     except Exception as e:
-        logger.error(f"Error extracting structured data from {url}: {str(e)}")
-        return {"success": False, "error": str(e), "url": url}
+        logger.error(f"Error extracting structured data from {request.url}: {str(e)}")
+        return StructuredDataResponse(
+            success=False,
+            url=request.url,
+            data_type=request.data_type,
+            extracted_data={},
+            data_count=0,
+            error=str(e),
+        )
 
 
 @app.tool()
 @timing_decorator
 async def convert_webpage_to_markdown(
-    url: str,
-    method: str = "auto",
-    extract_main_content: bool = True,
-    include_metadata: bool = True,
-    custom_options: Optional[Dict[str, Any]] = None,
-    wait_for_element: Optional[str] = None,
-    formatting_options: Optional[Dict[str, bool]] = None,
-    embed_images: bool = False,
-    embed_options: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    request: ConvertToMarkdownRequest,
+) -> MarkdownResponse:
     """
     Scrape a webpage and convert it to Markdown format.
 
@@ -1292,108 +1584,125 @@ async def convert_webpage_to_markdown(
     start_time = time.time()
     try:
         # Validate inputs
-        parsed = urlparse(url)
+        parsed = urlparse(request.url)
         if not parsed.scheme or not parsed.netloc:
-            return {"success": False, "error": "Invalid URL format", "url": url}
+            return MarkdownResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error="Invalid URL format",
+                conversion_time=0,
+            )
 
-        if method not in ["auto", "simple", "scrapy", "selenium"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: auto, simple, scrapy, selenium",
-                "url": url,
-            }
+        if request.method not in ["auto", "simple", "scrapy", "selenium"]:
+            return MarkdownResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error="Method must be one of: auto, simple, scrapy, selenium",
+                conversion_time=0,
+            )
 
-        logger.info(f"Converting webpage to Markdown: {url} with method: {method}")
+        logger.info(
+            f"Converting webpage to Markdown: {request.url} with method: {request.method}"
+        )
 
         # Apply rate limiting
         await rate_limiter.wait()
 
         # Scrape the webpage first
         scrape_result = await web_scraper.scrape_url(
-            url=url,
-            method=method,
+            url=request.url,
+            method=request.method,
             extract_config=None,  # We'll handle HTML extraction in markdown converter
-            wait_for_element=wait_for_element,
+            wait_for_element=request.wait_for_element,
         )
 
         if "error" in scrape_result:
-            return {
-                "success": False,
-                "error": scrape_result["error"],
-                "url": url,
-                "method_used": method,
-            }
+            return MarkdownResponse(
+                success=False,
+                url=request.url,
+                method=request.method,
+                error=scrape_result["error"],
+                conversion_time=time.time() - start_time,
+            )
 
         # Convert to Markdown
         conversion_result = markdown_converter.convert_webpage_to_markdown(
             scrape_result=scrape_result,
-            extract_main_content=extract_main_content,
-            include_metadata=include_metadata,
-            custom_options=custom_options,
-            formatting_options=formatting_options,
-            embed_images=embed_images,
-            embed_options=embed_options,
+            extract_main_content=request.extract_main_content,
+            include_metadata=request.include_metadata,
+            custom_options=request.custom_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         if conversion_result.get("success"):
             metrics_collector.record_request(
-                url, True, duration_ms, f"markdown_{method}"
+                request.url, True, duration_ms, f"markdown_{request.method}"
             )
 
-            result = {
-                "success": True,
-                "data": conversion_result,
-                "method_used": f"markdown_{method}",
-                "duration_ms": duration_ms,
-            }
-
-            return result
+            return MarkdownResponse(
+                success=True,
+                url=request.url,
+                method=f"markdown_{request.method}",
+                markdown_content=conversion_result.get(
+                    "markdown_content", conversion_result.get("markdown", "")
+                ),
+                metadata=conversion_result.get("metadata", {}),
+                word_count=conversion_result.get("word_count", 0),
+                images_embedded=conversion_result.get("images_embedded", 0),
+                conversion_time=duration_ms / 1000.0,
+            )
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(conversion_result.get("error", "Markdown conversion failed")),
-                url,
-                f"markdown_{method}",
+                request.url,
+                f"markdown_{request.method}",
             )
             metrics_collector.record_request(
-                url,
+                request.url,
                 False,
                 duration_ms,
-                f"markdown_{method}",
+                f"markdown_{request.method}",
                 error_response["error"]["category"],
             )
-            return error_response
+            return MarkdownResponse(
+                success=False,
+                url=request.url,
+                method=f"markdown_{request.method}",
+                error=error_response["error"]["message"],
+                conversion_time=duration_ms,
+            )
 
     except Exception as e:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
         error_response = ErrorHandler.handle_scraping_error(
-            e, url, f"markdown_{method}"
+            e, request.url, f"markdown_{request.method}"
         )
         metrics_collector.record_request(
-            url,
+            request.url,
             False,
             duration_ms,
-            f"markdown_{method}",
+            f"markdown_{request.method}",
             error_response["error"]["category"],
         )
-        return error_response
+        return MarkdownResponse(
+            success=False,
+            url=request.url,
+            method=f"markdown_{request.method}",
+            error=error_response["error"]["message"],
+            conversion_time=duration_ms,
+        )
 
 
 @app.tool()
 @timing_decorator
 async def batch_convert_webpages_to_markdown(
-    urls: List[str],
-    method: str = "auto",
-    extract_main_content: bool = True,
-    include_metadata: bool = True,
-    custom_options: Optional[Dict[str, Any]] = None,
-    formatting_options: Optional[Dict[str, bool]] = None,
-    embed_images: bool = False,
-    embed_options: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    request: BatchConvertToMarkdownRequest,
+) -> BatchMarkdownResponse:
     """
     Scrape multiple webpages and convert them to Markdown format.
 
@@ -1432,45 +1741,60 @@ async def batch_convert_webpages_to_markdown(
     """
     try:
         # Validate inputs
-        if not urls:
-            return {"success": False, "error": "URLs list cannot be empty"}
+        if not request.urls:
+            return BatchMarkdownResponse(
+                success=False,
+                total_urls=0,
+                successful_count=0,
+                failed_count=0,
+                results=[],
+                total_conversion_time=0,
+            )
 
-        for url in urls:
+        for url in request.urls:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
-                return {"success": False, "error": f"Invalid URL format: {url}"}
+                return BatchMarkdownResponse(
+                    success=False,
+                    total_urls=0,
+                    successful_count=0,
+                    failed_count=0,
+                    results=[],
+                    total_conversion_time=0,
+                )
 
-        if method not in ["auto", "simple", "scrapy", "selenium"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: auto, simple, scrapy, selenium",
-            }
+        if request.method not in ["auto", "simple", "scrapy", "selenium"]:
+            return BatchMarkdownResponse(
+                success=False,
+                total_urls=0,
+                successful_count=0,
+                failed_count=0,
+                results=[],
+                total_conversion_time=0,
+            )
 
         start_time = time.time()
         logger.info(
-            f"Batch converting {len(urls)} webpages to Markdown with method: {method}"
+            f"Batch converting {len(request.urls)} webpages to Markdown with method: {request.method}"
         )
 
         # Scrape all URLs first
         scrape_results = await web_scraper.scrape_multiple_urls(
-            urls=urls, method=method, extract_config=None
+            urls=request.urls, method=request.method, extract_config=None
         )
 
         # Convert all results to Markdown
         conversion_result = markdown_converter.batch_convert_to_markdown(
             scrape_results=scrape_results,
-            extract_main_content=extract_main_content,
-            include_metadata=include_metadata,
-            custom_options=custom_options,
-            formatting_options=formatting_options,
-            embed_images=embed_images,
-            embed_options=embed_options,
+            extract_main_content=request.extract_main_content,
+            include_metadata=request.include_metadata,
+            custom_options=request.custom_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         # Record metrics for each URL
-        for i, url in enumerate(urls):
+        for i, url in enumerate(request.urls):
             result = (
                 conversion_result["results"][i]
                 if i < len(conversion_result["results"])
@@ -1478,48 +1802,74 @@ async def batch_convert_webpages_to_markdown(
             )
             success = result.get("success", False)
             metrics_collector.record_request(
-                url, success, duration_ms // len(urls), f"batch_markdown_{method}"
+                url,
+                success,
+                duration_ms // len(request.urls),
+                f"batch_markdown_{request.method}",
             )
 
+        # Convert the conversion results to MarkdownResponse objects
+        markdown_responses = []
+        for i, result in enumerate(conversion_result.get("results", [])):
+            url = request.urls[i] if i < len(request.urls) else ""
+            markdown_responses.append(
+                MarkdownResponse(
+                    success=result.get("success", False),
+                    url=url,
+                    method=f"markdown_{request.method}",
+                    markdown_content=result.get("markdown_content", ""),
+                    metadata=result.get("metadata", {}),
+                    word_count=result.get("word_count", 0),
+                    images_embedded=result.get("images_embedded", 0),
+                    conversion_time=result.get("conversion_time", 0),
+                    error=result.get("error"),
+                )
+            )
+
+        successful_count = sum(1 for r in markdown_responses if r.success)
+        failed_count = len(markdown_responses) - successful_count
+        total_word_count = sum(r.word_count for r in markdown_responses)
+
         if conversion_result.get("success"):
-            return {
-                "success": True,
-                "data": conversion_result,
-                "method_used": f"batch_markdown_{method}",
-                "duration_ms": duration_ms,
-            }
+            return BatchMarkdownResponse(
+                success=True,
+                total_urls=len(request.urls),
+                successful_count=successful_count,
+                failed_count=failed_count,
+                results=markdown_responses,
+                total_word_count=total_word_count,
+                total_conversion_time=duration_ms / 1000.0,
+            )
         else:
-            return {
-                "success": False,
-                "error": conversion_result.get("error", "Batch conversion failed"),
-                "data": conversion_result.get("results", []),
-                "method_used": f"batch_markdown_{method}",
-                "duration_ms": duration_ms,
-            }
+            return BatchMarkdownResponse(
+                success=False,
+                total_urls=len(request.urls),
+                successful_count=successful_count,
+                failed_count=failed_count,
+                results=markdown_responses,
+                total_word_count=total_word_count,
+                total_conversion_time=duration_ms / 1000.0,
+            )
 
     except Exception as e:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
         logger.error(f"Error in batch Markdown conversion: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "urls": urls,
-            "method_used": f"batch_markdown_{method}",
-            "duration_ms": duration_ms,
-        }
+        return BatchMarkdownResponse(
+            success=False,
+            total_urls=len(request.urls) if hasattr(request, "urls") else 0,
+            successful_count=0,
+            failed_count=len(request.urls) if hasattr(request, "urls") else 0,
+            results=[],
+            total_word_count=0,
+            total_conversion_time=duration_ms / 1000.0,
+        )
 
 
 @app.tool()
 @timing_decorator
-async def convert_pdf_to_markdown(
-    pdf_source: str,
-    method: str = "auto",
-    include_metadata: bool = True,
-    page_range: Optional[List[int]] = None,
-    output_format: str = "markdown",
-) -> Dict[str, Any]:
+async def convert_pdf_to_markdown(request: PDFToMarkdownRequest) -> PDFResponse:
     """
     Convert a PDF document to Markdown format.
 
@@ -1557,46 +1907,61 @@ async def convert_pdf_to_markdown(
     """
     try:
         # Validate inputs
-        if method not in ["auto", "pymupdf", "pypdf"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: auto, pymupdf, pypdf",
-                "pdf_source": pdf_source,
-            }
+        if request.method not in ["auto", "pymupdf", "pypdf"]:
+            return PDFResponse(
+                success=False,
+                pdf_source=request.pdf_source,
+                method=request.method,
+                output_format=request.output_format,
+                error="Method must be one of: auto, pymupdf, pypdf",
+                conversion_time=0,
+            )
 
-        if output_format not in ["markdown", "text"]:
-            return {
-                "success": False,
-                "error": "Output format must be one of: markdown, text",
-                "pdf_source": pdf_source,
-            }
+        if request.output_format not in ["markdown", "text"]:
+            return PDFResponse(
+                success=False,
+                pdf_source=request.pdf_source,
+                method=request.method,
+                output_format=request.output_format,
+                error="Output format must be one of: markdown, text",
+                conversion_time=0,
+            )
 
         # Convert page_range list to tuple if provided
         page_range_tuple = None
-        if page_range:
-            if len(page_range) != 2:
-                return {
-                    "success": False,
-                    "error": "Page range must contain exactly 2 elements: [start, end]",
-                    "pdf_source": pdf_source,
-                }
-            if page_range[0] < 0 or page_range[1] < 0:
-                return {
-                    "success": False,
-                    "error": "Page numbers must be non-negative",
-                    "pdf_source": pdf_source,
-                }
-            if page_range[0] >= page_range[1]:
-                return {
-                    "success": False,
-                    "error": "Start page must be less than end page",
-                    "pdf_source": pdf_source,
-                }
-            page_range_tuple = tuple(page_range)
+        if request.page_range:
+            if len(request.page_range) != 2:
+                return PDFResponse(
+                    success=False,
+                    pdf_source=request.pdf_source,
+                    method=request.method,
+                    output_format=request.output_format,
+                    error="Page range must contain exactly 2 elements: [start, end]",
+                    conversion_time=0,
+                )
+            if request.page_range[0] < 0 or request.page_range[1] < 0:
+                return PDFResponse(
+                    success=False,
+                    pdf_source=request.pdf_source,
+                    method=request.method,
+                    output_format=request.output_format,
+                    error="Page numbers must be non-negative",
+                    conversion_time=0,
+                )
+            if request.page_range[0] >= request.page_range[1]:
+                return PDFResponse(
+                    success=False,
+                    pdf_source=request.pdf_source,
+                    method=request.method,
+                    output_format=request.output_format,
+                    error="Start page must be less than end page",
+                    conversion_time=0,
+                )
+            page_range_tuple = tuple(request.page_range)
 
         start_time = time.time()
         logger.info(
-            f"Converting PDF to {output_format}: {pdf_source} with method: {method}"
+            f"Converting PDF to {request.output_format}: {request.pdf_source} with method: {request.method}"
         )
 
         # Apply rate limiting
@@ -1605,67 +1970,82 @@ async def convert_pdf_to_markdown(
         # Process PDF
         pdf_processor = _get_pdf_processor()
         result = await pdf_processor.process_pdf(
-            pdf_source=pdf_source,
-            method=method,
-            include_metadata=include_metadata,
+            pdf_source=request.pdf_source,
+            method=request.method,
+            include_metadata=request.include_metadata,
             page_range=page_range_tuple,
-            output_format=output_format,
+            output_format=request.output_format,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         if result.get("success"):
             metrics_collector.record_request(
-                pdf_source, True, duration_ms, f"pdf_{method}"
+                request.pdf_source, True, duration_ms, f"pdf_{request.method}"
             )
 
-            return {
-                "success": True,
-                "data": result,
-                "method_used": f"pdf_{method}",
-                "duration_ms": duration_ms,
-            }
+            return PDFResponse(
+                success=True,
+                pdf_source=request.pdf_source,
+                method=request.method,
+                output_format=request.output_format,
+                content=result.get("content", result.get("markdown", "")),
+                metadata=result.get("metadata", {}),
+                page_count=result.get("page_count", result.get("pages", 0)),
+                word_count=result.get("word_count", 0),
+                conversion_time=duration_ms / 1000.0,
+            )
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "PDF conversion failed")),
-                pdf_source,
-                f"pdf_{method}",
+                request.pdf_source,
+                f"pdf_{request.method}",
             )
             metrics_collector.record_request(
-                pdf_source,
+                request.pdf_source,
                 False,
                 duration_ms,
-                f"pdf_{method}",
+                f"pdf_{request.method}",
                 error_response["error"]["category"],
             )
-            return error_response
+            return PDFResponse(
+                success=False,
+                pdf_source=request.pdf_source,
+                method=request.method,
+                output_format=request.output_format,
+                error=error_response["error"]["message"],
+                conversion_time=duration_ms / 1000.0,
+            )
 
     except Exception as e:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
         error_response = ErrorHandler.handle_scraping_error(
-            e, pdf_source, f"pdf_{method}"
+            e, request.pdf_source, f"pdf_{request.method}"
         )
         metrics_collector.record_request(
-            pdf_source,
+            request.pdf_source,
             False,
             duration_ms,
-            f"pdf_{method}",
+            f"pdf_{request.method}",
             error_response["error"]["category"],
         )
-        return error_response
+        return PDFResponse(
+            success=False,
+            pdf_source=request.pdf_source,
+            method=request.method,
+            output_format=request.output_format,
+            error=error_response["error"]["message"],
+            conversion_time=duration_ms / 1000.0,
+        )
 
 
 @app.tool()
 @timing_decorator
 async def batch_convert_pdfs_to_markdown(
-    pdf_sources: List[str],
-    method: str = "auto",
-    include_metadata: bool = True,
-    page_range: Optional[List[int]] = None,
-    output_format: str = "markdown",
-) -> Dict[str, Any]:
+    request: BatchPDFToMarkdownRequest,
+) -> BatchPDFResponse:
     """
     Convert multiple PDF documents to Markdown format concurrently.
 
@@ -1705,57 +2085,87 @@ async def batch_convert_pdfs_to_markdown(
     """
     try:
         # Validate inputs
-        if not pdf_sources:
-            return {"success": False, "error": "PDF sources list cannot be empty"}
+        if not request.pdf_sources:
+            return BatchPDFResponse(
+                success=False,
+                total_pdfs=0,
+                successful_count=0,
+                failed_count=0,
+                results=[],
+                total_conversion_time=0,
+            )
 
-        if method not in ["auto", "pymupdf", "pypdf"]:
-            return {
-                "success": False,
-                "error": "Method must be one of: auto, pymupdf, pypdf",
-            }
+        if request.method not in ["auto", "pymupdf", "pypdf"]:
+            return BatchPDFResponse(
+                success=False,
+                total_pdfs=len(request.pdf_sources),
+                successful_count=0,
+                failed_count=len(request.pdf_sources),
+                results=[],
+                total_conversion_time=0,
+            )
 
-        if output_format not in ["markdown", "text"]:
-            return {
-                "success": False,
-                "error": "Output format must be one of: markdown, text",
-            }
+        if request.output_format not in ["markdown", "text"]:
+            return BatchPDFResponse(
+                success=False,
+                total_pdfs=len(request.pdf_sources),
+                successful_count=0,
+                failed_count=len(request.pdf_sources),
+                results=[],
+                total_conversion_time=0,
+            )
 
         # Convert page_range list to tuple if provided
         page_range_tuple = None
-        if page_range:
-            if len(page_range) != 2:
-                return {
-                    "success": False,
-                    "error": "Page range must contain exactly 2 elements: [start, end]",
-                }
-            if page_range[0] < 0 or page_range[1] < 0:
-                return {"success": False, "error": "Page numbers must be non-negative"}
-            if page_range[0] >= page_range[1]:
-                return {
-                    "success": False,
-                    "error": "Start page must be less than end page",
-                }
-            page_range_tuple = tuple(page_range)
+        if request.page_range:
+            if len(request.page_range) != 2:
+                return BatchPDFResponse(
+                    success=False,
+                    total_pdfs=len(request.pdf_sources),
+                    successful_count=0,
+                    failed_count=len(request.pdf_sources),
+                    results=[],
+                    total_conversion_time=0,
+                )
+            if request.page_range[0] < 0 or request.page_range[1] < 0:
+                return BatchPDFResponse(
+                    success=False,
+                    total_pdfs=len(request.pdf_sources),
+                    successful_count=0,
+                    failed_count=len(request.pdf_sources),
+                    results=[],
+                    total_conversion_time=0,
+                )
+            if request.page_range[0] >= request.page_range[1]:
+                return BatchPDFResponse(
+                    success=False,
+                    total_pdfs=len(request.pdf_sources),
+                    successful_count=0,
+                    failed_count=len(request.pdf_sources),
+                    results=[],
+                    total_conversion_time=0,
+                )
+            page_range_tuple = tuple(request.page_range)
 
         start_time = time.time()
         logger.info(
-            f"Batch converting {len(pdf_sources)} PDFs to {output_format} with method: {method}"
+            f"Batch converting {len(request.pdf_sources)} PDFs to {request.output_format} with method: {request.method}"
         )
 
         # Process all PDFs
         pdf_processor = _get_pdf_processor()
         result = await pdf_processor.batch_process_pdfs(
-            pdf_sources=pdf_sources,
-            method=method,
-            include_metadata=include_metadata,
+            pdf_sources=request.pdf_sources,
+            method=request.method,
+            include_metadata=request.include_metadata,
             page_range=page_range_tuple,
-            output_format=output_format,
+            output_format=request.output_format,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         # Record metrics for each PDF
-        for i, pdf_source in enumerate(pdf_sources):
+        for i, pdf_source in enumerate(request.pdf_sources):
             pdf_result = (
                 result["results"][i]
                 if i < len(result["results"])
@@ -1765,38 +2175,76 @@ async def batch_convert_pdfs_to_markdown(
             metrics_collector.record_request(
                 pdf_source,
                 success,
-                duration_ms // len(pdf_sources),
-                f"batch_pdf_{method}",
+                duration_ms // len(request.pdf_sources),
+                f"batch_pdf_{request.method}",
             )
 
+        # Convert results to PDFResponse objects
+        pdf_responses = []
+        for i, result_item in enumerate(result.get("results", [])):
+            pdf_source = request.pdf_sources[i] if i < len(request.pdf_sources) else ""
+            pdf_responses.append(
+                PDFResponse(
+                    success=result_item.get("success", False),
+                    pdf_source=pdf_source,
+                    method=request.method,
+                    output_format=request.output_format,
+                    content=result_item.get("content", ""),
+                    metadata=result_item.get("metadata", {}),
+                    page_count=result_item.get("page_count", 0),
+                    word_count=result_item.get("word_count", 0),
+                    conversion_time=result_item.get("conversion_time", 0),
+                    error=result_item.get("error"),
+                )
+            )
+
+        successful_count = sum(1 for r in pdf_responses if r.success)
+        failed_count = len(pdf_responses) - successful_count
+        total_pages = sum(r.page_count for r in pdf_responses)
+        total_word_count = sum(r.word_count for r in pdf_responses)
+
         if result.get("success"):
-            return {
-                "success": True,
-                "data": result,
-                "method_used": f"batch_pdf_{method}",
-                "duration_ms": duration_ms,
-            }
+            return BatchPDFResponse(
+                success=True,
+                total_pdfs=len(request.pdf_sources),
+                successful_count=successful_count,
+                failed_count=failed_count,
+                results=pdf_responses,
+                total_pages=total_pages,
+                total_word_count=total_word_count,
+                total_conversion_time=duration_ms / 1000.0,
+            )
         else:
-            return {
-                "success": False,
-                "error": result.get("error", "Batch PDF conversion failed"),
-                "data": result.get("results", []),
-                "method_used": f"batch_pdf_{method}",
-                "duration_ms": duration_ms,
-            }
+            return BatchPDFResponse(
+                success=False,
+                total_pdfs=len(request.pdf_sources),
+                successful_count=successful_count,
+                failed_count=failed_count,
+                results=pdf_responses,
+                total_pages=total_pages,
+                total_word_count=total_word_count,
+                total_conversion_time=duration_ms / 1000.0,
+            )
 
     except Exception as e:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
         logger.error(f"Error in batch PDF conversion: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "pdf_sources": pdf_sources,
-            "method_used": f"batch_pdf_{method}",
-            "duration_ms": duration_ms,
-        }
+        return BatchPDFResponse(
+            success=False,
+            total_pdfs=len(request.pdf_sources)
+            if hasattr(request, "pdf_sources")
+            else 0,
+            successful_count=0,
+            failed_count=len(request.pdf_sources)
+            if hasattr(request, "pdf_sources")
+            else 0,
+            results=[],
+            total_pages=0,
+            total_word_count=0,
+            total_conversion_time=duration_ms / 1000.0,
+        )
 
 
 def main() -> None:

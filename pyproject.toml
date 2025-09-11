@@ -134,10 +134,10 @@ directory = "htmlcov"
 title = "Data Extractor Test Coverage Report"
 
 [tool.coverage.xml]
-output = "tests/coverage.xml"
+output = "tests/reports/coverage.xml"
 
 [tool.coverage.json]
-output = "tests/coverage.json"
+output = "tests/reports/coverage.json"
 
 [tool.mypy]
 python_version = "3.12"
