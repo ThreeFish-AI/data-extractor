@@ -53,18 +53,27 @@ class ScrapeRequest(BaseModel):
         str,
         Field(..., description="目标网页 URL，必须包含协议前缀（http://或https://）"),
     ]
-    method: Annotated[str , Field(
-        default="auto",
-        description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，不支持JavaScript）、scrapy（Scrapy框架，适合大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
-    )]
-    extract_config: Annotated[Optional[Dict[str, Any]] , Field(
-        default=None,
-        description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': {'selector': '.content p', 'multiple': True, 'attr': 'text'}}",
-    )]
-    wait_for_element: Annotated[Optional[str] , Field(
-        default=None,
-        description="等待元素的 CSS 选择器（仅 Selenium 方法有效），确保页面完全加载后再提取内容。示例：'.content'、'#main-content'",
-    )]
+    method: Annotated[
+        str,
+        Field(
+            default="auto",
+            description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，不支持JavaScript）、scrapy（Scrapy框架，适合大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
+        ),
+    ]
+    extract_config: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': {'selector': '.content p', 'multiple': True, 'attr': 'text'}}",
+        ),
+    ]
+    wait_for_element: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="等待元素的 CSS 选择器（仅 Selenium 方法有效），确保页面完全加载后再提取内容。示例：'.content'、'#main-content'",
+        ),
+    ]
 
     @field_validator("url")
     def validate_url(cls, v: str) -> str:
@@ -362,7 +371,33 @@ class CacheOperationResponse(BaseModel):
 
 
 @app.tool()
-async def scrape_webpage(request: ScrapeRequest) -> ScrapeResponse:
+async def scrape_webpage(
+    url: Annotated[
+        str,
+        Field(..., description="目标网页 URL，必须包含协议前缀（http://或https://）"),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="auto",
+            description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，不支持JavaScript）、scrapy（Scrapy框架，适合大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
+        ),
+    ],
+    extract_config: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': {'selector': '.content p', 'multiple': True, 'attr': 'text'}}",
+        ),
+    ],
+    wait_for_element: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="等待元素的 CSS 选择器（仅 Selenium 方法有效），确保页面完全加载后再提取内容。示例：'.content'、'#main-content'",
+        ),
+    ],
+) -> ScrapeResponse:
     """
     Scrape a single webpage and extract its content.
 
@@ -380,34 +415,39 @@ async def scrape_webpage(request: ScrapeRequest) -> ScrapeResponse:
 
     You can specify extraction rules to get specific data from the page.
     """
+    
+    
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.netloc:
+        raise ValueError("Invalid URL format")
+    
+    if method not in ["auto", "simple", "scrapy", "selenium"]:
+        raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
+    
     try:
-        logger.info(f"Scraping webpage: {request.url} with method: {request.method}")
+        logger.info(f"Scraping webpage: {url} with method: {method}")
 
         result = await web_scraper.scrape_url(
-            url=request.url,
-            method=request.method,
-            extract_config=request.extract_config,
-            wait_for_element=request.wait_for_element,
+            url=url,
+            method=method,
+            extract_config=extract_config,
+            wait_for_element=wait_for_element,
         )
 
         # Check if the scraper returned an error
         if "error" in result:
             return ScrapeResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error=result["error"],
             )
 
-        return ScrapeResponse(
-            success=True, url=request.url, method=request.method, data=result
-        )
+        return ScrapeResponse(success=True, url=url, method=method, data=result)
 
     except Exception as e:
-        logger.error(f"Error scraping webpage {request.url}: {str(e)}")
-        return ScrapeResponse(
-            success=False, url=request.url, method=request.method, error=str(e)
-        )
+        logger.error(f"Error scraping webpage {url}: {str(e)}")
+        return ScrapeResponse(success=False, url=url, method=method, error=str(e))
 
 
 @app.tool()
