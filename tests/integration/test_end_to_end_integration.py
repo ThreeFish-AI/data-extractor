@@ -6,7 +6,16 @@ import asyncio
 import time
 from unittest.mock import patch
 
-from extractor.server import app, web_scraper, _get_pdf_processor
+from extractor.server import (
+    app,
+    web_scraper,
+    _get_pdf_processor,
+    ScrapeRequest,
+    ConvertToMarkdownRequest,
+    BatchScrapeRequest,
+    PDFToMarkdownRequest,
+    BatchPDFToMarkdownRequest,
+)
 
 
 class TestEndToEndRealWorldScenarios:
@@ -131,14 +140,15 @@ class TestEndToEndRealWorldScenarios:
             web_scraper, "scrape_url", side_effect=mock_scrape_with_delay
         ):
             start_time = time.time()
-            portal_result = await scrape_tool.fn(
+            request = ScrapeRequest(
                 url="https://research-portal.edu/publications", method="simple"
             )
+            portal_result = await scrape_tool.fn(request)
             scrape_duration = time.time() - start_time
 
-            assert portal_result["success"] is True
+            assert portal_result.success is True
             assert scrape_duration > 0.1  # Verify delay was applied
-            assert "Research Publications Portal" in portal_result["data"]["title"]
+            assert "Research Publications Portal" in portal_result.data["title"]
 
         # Step 2: Process portal page to Markdown for documentation
         markdown_tool = e2e_tools["convert_webpage_to_markdown"]
@@ -146,7 +156,7 @@ class TestEndToEndRealWorldScenarios:
         with patch.object(
             web_scraper, "scrape_url", side_effect=mock_scrape_with_delay
         ):
-            markdown_result = await markdown_tool.fn(
+            request = ConvertToMarkdownRequest(
                 url="https://research-portal.edu/publications",
                 extract_main_content=True,
                 include_metadata=True,
@@ -158,9 +168,10 @@ class TestEndToEndRealWorldScenarios:
                     "apply_typography": True,
                 },
             )
+            markdown_result = await markdown_tool.fn(request)
 
-            assert markdown_result["success"] is True
-            markdown_content = markdown_result["data"]["markdown"]
+            assert markdown_result.success is True
+            markdown_content = markdown_result.markdown_content
 
             # Verify main content extraction worked
             assert "# Latest Research Publications" in markdown_content
@@ -168,7 +179,7 @@ class TestEndToEndRealWorldScenarios:
             assert "Recent Updates" in markdown_content
 
             # Verify metadata is included
-            metadata = markdown_result["data"]["metadata"]
+            metadata = markdown_result.metadata
             assert metadata["title"] == "Research Publications Portal"
             assert metadata["word_count"] > 0
             assert (
@@ -456,7 +467,7 @@ Editorial office: +1-555-0123
                     )
                     results.append(result)
 
-                    if result.get("success"):
+                    if result.success:
                         successful_count += 1
                         total_words += result.get("word_count", 0)
                         total_pages += result.get("pages_processed", 0)
@@ -478,24 +489,28 @@ Editorial office: +1-555-0123
             mock_batch_pdf.side_effect = mock_batch_process
 
             start_time = time.time()
-            pdf_batch_result = await batch_pdf_tool.fn(
+            request = BatchPDFToMarkdownRequest(
                 pdf_sources=pdf_urls,
                 method="auto",
                 include_metadata=True,
                 output_format="markdown",
             )
+            pdf_batch_result = await batch_pdf_tool.fn(request)
             processing_duration = time.time() - start_time
 
-            assert pdf_batch_result["success"] is True
+            assert pdf_batch_result.success is True
             assert (
                 processing_duration > 0.3
             )  # Should take time to process multiple PDFs
 
-            summary = pdf_batch_result["data"]["summary"]
-            assert summary["total_pdfs"] == 3
-            assert summary["successful"] == 3
-            assert summary["total_words_extracted"] == 3790  # 1847 + 1456 + 487
-            assert summary["total_pages_processed"] == 30  # 15 + 12 + 3
+            # BatchPDFResponse does not have a summary attribute, access individual attributes instead
+            successful_count = pdf_batch_result.successful_count
+            failed_count = pdf_batch_result.failed_count
+            total_pdfs = pdf_batch_result.total_pdfs
+            assert total_pdfs == 3
+            assert successful_count == 3
+            assert pdf_batch_result.total_word_count == 3790  # 1847 + 1456 + 487
+            assert pdf_batch_result.total_pages == 30  # 15 + 12 + 3
 
         # Step 4: Process additional HTML pages for complete documentation
         html_pages = [
@@ -532,14 +547,15 @@ Editorial office: +1-555-0123
             }
 
             with patch.object(web_scraper, "scrape_url", return_value=page_content):
-                result = await markdown_tool.fn(url=url)
-                assert result["success"] is True
+                request = ConvertToMarkdownRequest(url=url)
+                result = await markdown_tool.fn(request)
+                assert result.success is True
                 html_results.append(result)
 
         # Verify all HTML pages were processed
         assert len(html_results) == 3
         for result in html_results:
-            assert "Research Page" in result["data"]["markdown"]
+            assert "Research Page" in result.markdown_content
 
         # Step 5: Final metrics and cleanup
         metrics_tool = e2e_tools["get_server_metrics"]
@@ -547,11 +563,11 @@ Editorial office: +1-555-0123
 
         # Check comprehensive metrics after processing
         metrics_result = await metrics_tool.fn()
-        assert metrics_result["success"] is True
+        assert metrics_result.success is True
 
         # Clear cache to free resources
         cache_result = await clear_cache_tool.fn()
-        assert cache_result["success"] is True
+        assert cache_result.success is True
 
         # Verify the complete pipeline processed all content types
         print("✅ Complete E2E Pipeline Results:")
@@ -599,14 +615,15 @@ Editorial office: +1-555-0123
             "scrape_url",
             side_effect=mock_scrape_with_intermittent_failures,
         ):
-            result = await scrape_tool.fn(url="https://unreliable-site.com")
+            request = ScrapeRequest(url="https://unreliable-site.com")
+            result = await scrape_tool.fn(request)
 
             # The tool should report the failure (since retry logic isn't at MCP level)
             # In a real scenario, retry would be handled at the scraper level
             # For testing, we'll verify error handling works
-            assert result["success"] is False or call_count >= 3
-            if result["success"]:
-                assert "Success after retry" in result["data"]["content"]["html"]
+            assert result.success is False or call_count >= 3
+            if result.success:
+                assert "Success after retry" in result.content["html"]
 
         # Scenario 2: Partial batch processing failures
         batch_pdf_tool = e2e_tools["batch_convert_pdfs_to_markdown"]
@@ -649,8 +666,8 @@ Editorial office: +1-555-0123
                         }
                     )
 
-            successful = [r for r in results if r.get("success")]
-            failed = [r for r in results if not r.get("success")]
+            successful = [r for r in results if r.success]
+            failed = [r for r in results if not r.success]
 
             return {
                 "success": True,  # Batch operation succeeds even with partial failures
@@ -659,12 +676,8 @@ Editorial office: +1-555-0123
                     "total_pdfs": len(pdf_sources),
                     "successful": len(successful),
                     "failed": len(failed),
-                    "total_words_extracted": sum(
-                        r.get("word_count", 0) for r in successful
-                    ),
-                    "total_pages_processed": sum(
-                        r.get("pages_processed", 0) for r in successful
-                    ),
+                    "total_words_extracted": sum(r.word_count for r in successful),
+                    "total_pages_processed": sum(r.page_count for r in successful),
                 },
             }
 
@@ -676,16 +689,15 @@ Editorial office: +1-555-0123
                 side_effect=mock_batch_with_mixed_results,
             ),
         ):
-            result = await batch_pdf_tool.fn(pdf_sources=mixed_pdf_sources)
+            request = BatchPDFToMarkdownRequest(pdf_sources=mixed_pdf_sources)
+            result = await batch_pdf_tool.fn(request)
 
-            assert result["success"] is True
-            assert result["data"]["summary"]["successful"] == 2
-            assert result["data"]["summary"]["failed"] == 2
+            assert result.success is True
+            assert result.successful_count == 2
+            assert result.failed_count == 2
 
             # Verify specific error handling
-            failed_results = [
-                r for r in result["data"]["results"] if not r.get("success")
-            ]
+            failed_results = [r for r in result.results if not r.success]
             assert len(failed_results) == 2
             assert any("corrupted" in r["error"] for r in failed_results)
             assert any("timeout" in r["error"] for r in failed_results)
@@ -722,10 +734,11 @@ Editorial office: +1-555-0123
                     "scrape_url",
                     side_effect=mock_scrape_with_resource_pressure,
                 ):
-                    result = await convert_tool.fn(
+                    request = ConvertToMarkdownRequest(
                         url=f"https://test-site.com/page-{i}"
                     )
-                    if result["success"]:
+                    result = await convert_tool.fn(request)
+                    if result.success:
                         successful_conversions += 1
                     else:
                         break
@@ -769,16 +782,15 @@ Editorial office: +1-555-0123
             web_scraper, "scrape_multiple_urls", return_value=stress_test_results
         ):
             start_time = time.time()
-            batch_result = await batch_scrape_tool.fn(
-                urls=batch_markdown_urls, method="simple"
-            )
+            request = BatchScrapeRequest(urls=batch_markdown_urls, method="simple")
+            batch_result = await batch_scrape_tool.fn(request)
             stress_duration = time.time() - start_time
 
-            assert batch_result["success"] is True
-            assert len(batch_result["data"]) == 20
+            assert batch_result.success is True
+            assert len(batch_result.results) == 20
 
             # Verify data integrity
-            for i, result in enumerate(batch_result["data"]):
+            for i, result in enumerate(batch_result.results):
                 assert f"Stress Test Page {i}" in result["title"]
                 # Check for special characters - they might be normalized or stripped during processing
                 assert (
@@ -844,12 +856,13 @@ Editorial office: +1-555-0123
             ),
         ):
             start_time = time.time()
-            result = await convert_pdf_tool.fn(pdf_source="/large-paper.pdf")
+            request = PDFToMarkdownRequest(pdf_source="/large-paper.pdf")
+            result = await convert_pdf_tool.fn(request)
             large_doc_duration = time.time() - start_time
 
-            assert result["success"] is True
-            assert result["data"]["word_count"] == 15000
-            assert result["data"]["pages_processed"] == 50
+            assert result.success is True
+            assert result.word_count == 15000
+            assert result.page_count == 50
             assert large_doc_duration < 1.0  # Should complete within 1 second
 
         # Performance Test 2: Concurrent processing benchmark
@@ -876,7 +889,8 @@ Editorial office: +1-555-0123
         ):
             # Create concurrent tasks
             for i in range(num_concurrent):
-                task = convert_pdf_tool.fn(pdf_source=f"/concurrent-{i}.pdf")
+                request = PDFToMarkdownRequest(pdf_source=f"/concurrent-{i}.pdf")
+                task = convert_pdf_tool.fn(request)
                 concurrent_tasks.append(task)
 
             start_time = time.time()
@@ -884,7 +898,7 @@ Editorial office: +1-555-0123
             concurrent_duration = time.time() - start_time
 
             # All tasks should succeed
-            assert all(r["success"] for r in results)
+            assert all(r.success for r in results)
 
             # Concurrent execution should be faster than sequential
             # Sequential would take: 20 * 0.1 = 2.0 seconds
@@ -940,13 +954,12 @@ Editorial office: +1-555-0123
             ),
         ):
             start_time = time.time()
-            batch_result = await batch_pdf_tool.fn(pdf_sources=large_batch_sources)
+            request = BatchPDFToMarkdownRequest(pdf_sources=large_batch_sources)
+            batch_result = await batch_pdf_tool.fn(request)
             batch_duration = time.time() - start_time
 
-            assert batch_result["success"] is True
-            assert (
-                batch_result["data"]["summary"]["total_words_extracted"] == 10000
-            )  # 50 * 200
+            assert batch_result.success is True
+            assert batch_result.total_word_count == 10000  # 50 * 200
 
         # Check memory usage after batch processing
         gc.collect()
@@ -988,12 +1001,13 @@ Editorial office: +1-555-0123
                 web_scraper, "scrape_url", side_effect=mock_network_with_latency
             ):
                 start_time = time.time()
-                result = await markdown_tool.fn(
+                request = ConvertToMarkdownRequest(
                     url=f"https://latency-test-{latency}.com"
                 )
+                result = await markdown_tool.fn(request)
                 actual_duration = time.time() - start_time
 
-                assert result["success"] is True
+                assert result.success is True
                 network_results.append(
                     {
                         "latency": latency,
@@ -1079,17 +1093,19 @@ Editorial office: +1-555-0123
 
         with patch.object(web_scraper, "scrape_url", return_value=unicode_content):
             # Test scraping preserves Unicode
-            scrape_result = await scrape_tool.fn(url="https://unicode-test.com")
-            assert scrape_result["success"] is True
+            request = ScrapeRequest(url="https://unicode-test.com")
+            scrape_result = await scrape_tool.fn(request)
+            assert scrape_result.success is True
             assert (
-                "测试页面" in scrape_result["data"]["title"]
+                "测试页面" in scrape_result.data["title"]
             )  # Use the actual title that's returned
-            assert "你好，世界！🌏" in scrape_result["data"]["content"]["html"]
+            assert "你好，世界！🌏" in scrape_result.data["content"]["html"]
 
             # Test markdown conversion preserves Unicode
-            markdown_result = await markdown_tool.fn(url="https://unicode-test.com")
-            assert markdown_result["success"] is True
-            markdown_content = markdown_result["data"]["markdown"]
+            request = ConvertToMarkdownRequest(url="https://unicode-test.com")
+            markdown_result = await markdown_tool.fn(request)
+            assert markdown_result.success is True
+            markdown_content = markdown_result.markdown_content
 
             # Verify Unicode preservation - check for content that's actually in the HTML
             assert (
@@ -1165,13 +1181,14 @@ Editorial office: +1-555-0123
                 pdf_processor, "process_pdf", side_effect=mock_consistent_pdf_process
             ),
         ):
-            result = await convert_pdf_tool.fn(pdf_source="/consistency-test.pdf")
+            request = PDFToMarkdownRequest(pdf_source="/consistency-test.pdf")
+            result = await convert_pdf_tool.fn(request)
 
-            assert result["success"] is True
-            assert result["data"]["word_count"] == 10000  # 100 sections * 100 words
+            assert result.success is True
+            assert result.word_count == 10000  # 100 sections * 100 words
 
             # Verify data consistency in the output
-            output_text = result["data"]["text"]
+            output_text = result.content
             for section in test_sections:
                 assert section["id"] in output_text
                 assert section["checksum"] in output_text
@@ -1223,7 +1240,8 @@ Editorial office: +1-555-0123
                 side_effect=mock_cross_platform_batch,
             ),
         ):
-            result = await batch_pdf_tool.fn(pdf_sources=mixed_path_sources)
+            request = BatchPDFToMarkdownRequest(pdf_sources=mixed_path_sources)
+            result = await batch_pdf_tool.fn(request)
 
             assert result["success"] is True
             assert result["data"]["summary"]["successful"] == 6
@@ -1267,7 +1285,8 @@ Editorial office: +1-555-0123
         ):
             # Create concurrent tasks with unique data
             for source in data_markers.keys():
-                task = convert_pdf_tool.fn(pdf_source=source)
+                request = PDFToMarkdownRequest(pdf_source=source)
+                task = convert_pdf_tool.fn(request)
                 concurrent_integrity_tasks.append(task)
 
             # Execute all tasks concurrently
@@ -1275,7 +1294,7 @@ Editorial office: +1-555-0123
 
             # Verify data integrity for each result
             for result in concurrent_results:
-                assert result["success"] is True
+                assert result.success is True
                 source = result["data"]["source"]
                 expected_marker = data_markers[source]
                 assert expected_marker in result["data"]["text"]

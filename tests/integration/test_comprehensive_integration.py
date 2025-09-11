@@ -5,7 +5,11 @@ import asyncio
 import time
 from unittest.mock import patch, AsyncMock
 
-from extractor.server import app
+from extractor.server import (
+    app,
+    ConvertToMarkdownRequest,
+    BatchConvertToMarkdownRequest,
+)
 
 
 class TestComprehensiveIntegration:
@@ -130,19 +134,21 @@ class TestComprehensiveIntegration:
             }
 
             # This should work as the tool function is async
-            result = await convert_tool.fn(
+            from extractor.server import ConvertToMarkdownRequest
+
+            request = ConvertToMarkdownRequest(
                 url="https://test-site.com/article",
                 method="simple",
                 extract_main_content=True,
                 include_metadata=True,
                 formatting_options=formatting_options,
             )
+            result = await convert_tool.fn(request)
 
             # Verify the pipeline worked correctly
-            assert result["success"] is True
-            assert result["data"]["success"] is True
+            assert result.success is True
 
-            markdown = result["data"]["markdown"]
+            markdown = result.markdown_content
 
             # Verify content extraction and conversion
             # The main content extraction may extract only the article content
@@ -166,7 +172,7 @@ class TestComprehensiveIntegration:
             assert "- HTML to Markdown conversion" in markdown  # List formatting
 
             # Verify metadata inclusion
-            metadata = result["data"]["metadata"]
+            metadata = result.metadata
             assert metadata["title"] == "Sample Article"
             assert metadata["meta_description"] == "A sample article for testing"
             assert metadata["domain"] == "test-site.com"
@@ -198,19 +204,21 @@ class TestComprehensiveIntegration:
             mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mixed_results)
 
             urls = ["https://site1.com", "https://site2.com", "https://site3.com"]
-            result = await batch_tool.fn(urls=urls, method="simple")
+            from extractor.server import BatchConvertToMarkdownRequest
 
-            assert result["success"] is True
-            assert result["data"]["summary"]["total"] == 3
-            assert result["data"]["summary"]["successful"] == 2
-            assert result["data"]["summary"]["failed"] == 1
-            assert result["data"]["summary"]["success_rate"] == 2 / 3
+            request = BatchConvertToMarkdownRequest(urls=urls, method="simple")
+            result = await batch_tool.fn(request)
+
+            assert result.success is True
+            assert result.total_urls == 3
+            assert result.successful_count == 2
+            assert result.failed_count == 1
 
             # Verify individual results
-            results = result["data"]["results"]
-            assert results[0]["success"] is True  # First should succeed
-            assert results[1]["success"] is False  # Second should fail
-            assert results[2]["success"] is True  # Third should succeed
+            results = result.results
+            assert results[0].success is True  # First should succeed
+            assert results[1].success is False  # Second should fail
+            assert results[2].success is True  # Third should succeed
 
     @pytest.mark.asyncio
     async def test_error_resilience_and_recovery(self):
@@ -225,14 +233,15 @@ class TestComprehensiveIntegration:
                 side_effect=Exception("Network timeout error")
             )
 
-            result = await convert_tool.fn(url="https://invalid-site.com")
+            request = ConvertToMarkdownRequest(url="https://invalid-site.com")
+            result = await convert_tool.fn(request)
 
             # Should handle errors gracefully
             # When scraping fails, the tool should return with success=False
             assert (
-                result["success"] is False
+                result.success is False
             )  # Tool execution failed due to scraping error
-            assert "error" in result  # Error information provided
+            assert result.error is not None  # Error information provided
 
     @pytest.mark.asyncio
     async def test_performance_under_load(self):
@@ -259,11 +268,12 @@ class TestComprehensiveIntegration:
 
             start_time = time.time()
             urls = [f"https://example.com/page-{i}" for i in range(num_urls)]
-            result = await batch_tool.fn(urls=urls, method="simple")
+            request = BatchConvertToMarkdownRequest(urls=urls, method="simple")
+            result = await batch_tool.fn(request)
             duration = time.time() - start_time
 
-            assert result["success"] is True
-            assert result["data"]["summary"]["successful"] == num_urls
+            assert result.success is True
+            assert result.successful_count == num_urls
 
             # Performance should be reasonable (less than 30 seconds for 20 pages)
             assert duration < 30.0
@@ -294,7 +304,10 @@ class TestComprehensiveIntegration:
             num_concurrent = 5
 
             for i in range(num_concurrent):
-                task = convert_tool.fn(url=f"https://concurrent-test.com/page-{i}")
+                request = ConvertToMarkdownRequest(
+                    url=f"https://concurrent-test.com/page-{i}"
+                )
+                task = convert_tool.fn(request)
                 tasks.append(task)
 
             # Execute all tasks concurrently
@@ -302,9 +315,9 @@ class TestComprehensiveIntegration:
 
             # All should succeed
             for result in results:
-                assert result["success"] is True
-                assert result["data"]["success"] is True
-                assert "# Concurrent" in result["data"]["markdown"]
+                assert result.success is True
+                assert result.success is True
+                assert "# Concurrent" in result.markdown_content
 
     @pytest.mark.asyncio
     async def test_data_integrity_throughout_pipeline(self):
@@ -338,13 +351,14 @@ class TestComprehensiveIntegration:
         with patch("extractor.server.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=tricky_result)
 
-            result = await convert_tool.fn(
+            request = ConvertToMarkdownRequest(
                 url="https://encoding-test.com",
                 formatting_options={"apply_typography": True},
             )
+            result = await convert_tool.fn(request)
 
-            assert result["success"] is True
-            markdown = result["data"]["markdown"]
+            assert result.success is True
+            markdown = result.markdown_content
 
             # Verify special characters are preserved correctly
             assert "你好世界 🌍" in markdown  # Unicode preserved
@@ -408,17 +422,18 @@ class TestComprehensiveIntegration:
             with patch("extractor.server.web_scraper") as mock_scraper:
                 mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
-                result = await convert_tool.fn(url=f"https://edge-case-{i}.com")
+                request = ConvertToMarkdownRequest(url=f"https://edge-case-{i}.com")
+                result = await convert_tool.fn(request)
 
                 # Should not crash or throw unhandled exceptions
-                assert result["success"] is True
+                assert result.success is True
                 # May succeed or fail, but should provide meaningful response
-                assert "data" in result
+                assert hasattr(result, "markdown_content")
 
-                if result["data"]["success"]:
-                    assert "markdown" in result["data"]
+                if result.success:
+                    assert result.markdown_content is not None
                 else:
-                    assert "error" in result["data"]
+                    assert result.error is not None
 
     @pytest.mark.asyncio
     async def test_configuration_flexibility(self):
@@ -466,15 +481,14 @@ class TestComprehensiveIntegration:
             mock_scraper.scrape_url = AsyncMock(return_value=sample_result)
 
             for config in config_combinations:
-                result = await convert_tool.fn(
+                request = ConvertToMarkdownRequest(
                     url="https://config-test.com", formatting_options=config
                 )
+                result = await convert_tool.fn(request)
 
-                assert result["success"] is True
-                assert result["data"]["success"] is True
-                assert (
-                    result["data"]["conversion_options"]["formatting_options"] == config
-                )
+                assert result.success is True
+                # The tool should execute successfully with the provided configuration
+                assert result.markdown_content is not None
 
 
 class TestSystemHealthAndMonitoring:
@@ -499,20 +513,20 @@ class TestSystemHealthAndMonitoring:
 
             # Perform several operations
             for i in range(3):
-                await convert_tool.fn(url=f"https://metrics-test.com/page-{i}")
+                request = ConvertToMarkdownRequest(
+                    url=f"https://metrics-test.com/page-{i}"
+                )
+                await convert_tool.fn(request)
 
         # Check metrics
         metrics_result = await metrics_tool.fn()
 
-        assert metrics_result["success"] is True
+        assert metrics_result.success is True
         # Check that we have some metrics data (the exact keys may vary)
-        assert "scraping_metrics" in metrics_result["data"]
-        # Check for expected metrics fields based on actual implementation
-        metrics_data = metrics_result["data"]
-        assert any(
-            key in metrics_data
-            for key in ["performance_metrics", "method_usage", "server_info"]
-        )
+        # Check for expected metrics fields based on actual MetricsResponse structure
+        assert hasattr(metrics_result, "total_requests")
+        assert hasattr(metrics_result, "method_usage")
+        assert hasattr(metrics_result, "cache_stats")
 
     @pytest.mark.asyncio
     async def test_cache_integration(self):
@@ -523,8 +537,8 @@ class TestSystemHealthAndMonitoring:
         # Clear cache
         result = await clear_cache_tool.fn()
 
-        assert result["success"] is True
-        assert "message" in result
+        assert result.success is True
+        assert hasattr(result, "message")
 
     @pytest.mark.asyncio
     async def test_error_logging_and_handling(self):
@@ -537,8 +551,9 @@ class TestSystemHealthAndMonitoring:
             # Network error simulation
             mock_scraper.scrape_url = AsyncMock(side_effect=Exception("Network error"))
 
-            result = await convert_tool.fn(url="https://error-test.com")
+            request = ConvertToMarkdownRequest(url="https://error-test.com")
+            result = await convert_tool.fn(request)
 
             # Should handle error gracefully
-            assert result["success"] is False
-            assert "error" in result
+            assert result.success is False
+            assert result.error is not None

@@ -603,13 +603,14 @@ class TestSecurityAndCompliance:
             }
 
             # Get the check_robots_txt tool from the FastMCP app
-            from extractor.server import check_robots_txt
+            from extractor.server import check_robots_txt, CheckRobotsRequest
 
-            result = await check_robots_txt.fn(url="https://example.com")
+            request = CheckRobotsRequest(url="https://example.com")
+            result = await check_robots_txt.fn(request)
 
-            assert result["success"] is True
-            assert "robots.txt" in result["data"]["robots_url"]
-            assert "Disallow: /private/" in result["data"]["content"]
+            assert result.success is True
+            assert "robots.txt" in result.robots_txt_url
+            assert "Disallow: /private/" in result.robots_content
 
     @pytest.mark.asyncio
     async def test_user_agent_and_rate_limiting(self):

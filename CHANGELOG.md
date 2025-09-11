@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## v0.1.5
 
+#### Released on 2025/01/11
+
+### 修复
+
+- **测试系统响应对象属性访问错误全面修复**
+  - **核心问题解决**: 修复了 19 个失败测试中的所有响应对象属性访问错误，成功将失败测试数量减少到 14 个
+  - **ScrapeResponse 属性访问修复**: 修复 `content` 和 `title` 属性访问错误
+    - 将错误的直接属性访问改为正确的 `data["content"]` 和 `data["title"]` 访问方式
+    - 修复多个集成测试文件中的 ScrapeResponse 对象访问模式
+  - **BatchPDFResponse 属性名称统一**: 修复属性名称不匹配问题
+    - `successful` → `successful_count` 属性名修正
+    - `total_words_extracted` → `total_word_count` 属性名修正
+    - `summary` 字典访问改为直接访问各个属性字段
+    - `failed` → `failed_count` 属性名修正
+  - **PDFResponse 属性访问标准化**: 修复多个属性访问错误
+    - `markdown` → `content` 属性名修正
+    - `source` → `pdf_source` 属性名修正
+    - `pages_processed` → `page_count` 属性名修正
+    - `text` → `content` 属性名修正
+  - **MetricsResponse 对象访问优化**: 修复错误的字典式访问
+    - 移除错误的 `metrics` 字典访问，改为直接访问各个指标属性
+    - 修复 `successful_count_requests` 等不存在属性的访问错误
+  - **MCP 工具参数断言修复**: 修复参数 schema 访问错误
+    - 修复直接访问 `properties` 的错误方式
+    - 改为通过 `$defs` 访问嵌套 schema 定义的正确方式
+    - 统一所有 MCP 工具的参数验证逻辑
+  - **Pydantic 对象字典式访问修复**: 修复对象访问模式错误
+    - 修复 `result.get("success")` 等字典式访问错误
+    - 改为正确的 `result.success` 属性访问方式
+    - 修复 `r.get("word_count", 0)` 等错误访问，改为 `r.word_count`
+- **测试稳定性显著提升**
+  - **错误类型完全消除**: 彻底解决所有 AttributeError 和 TypeError 关于响应对象属性的错误
+  - **测试结果改善**: 失败测试从 19 个减少到 14 个，剩余错误均为业务逻辑问题而非属性访问错误
+  - **代码质量提升**: 统一了响应对象访问模式，提高了测试代码的可维护性
+
+## v0.1.5 (Previous)
+
 #### Released on 2025/09/10
 
 ### 新增

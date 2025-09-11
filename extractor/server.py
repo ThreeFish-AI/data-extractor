@@ -778,6 +778,14 @@ class ConvertToMarkdownRequest(BaseModel):
         default=None,
         description="等待特定元素出现的CSS选择器（仅Selenium方法），确保动态内容加载完成。示例：'.article-content'、'#main'",
     )
+    embed_images: bool = Field(
+        default=False,
+        description="是否嵌入图片作为数据URI，默认值：False",
+    )
+    embed_options: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="图片嵌入选项配置，支持quality、format、max_size等选项",
+    )
 
     @field_validator("url")
     def validate_url(cls, v: str) -> str:
@@ -816,6 +824,14 @@ class BatchConvertToMarkdownRequest(BaseModel):
     custom_options: Optional[Dict[str, Any]] = Field(
         default=None,
         description="统一的markdownify自定义选项，应用于所有URL。支持HTML标签处理、格式化选项等",
+    )
+    embed_images: bool = Field(
+        default=False,
+        description="是否在所有页面中嵌入图片作为数据URI，默认值：False",
+    )
+    embed_options: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="统一的图片嵌入选项配置，应用于所有URL",
     )
 
     @field_validator("urls")
@@ -1633,6 +1649,8 @@ async def convert_webpage_to_markdown(
             extract_main_content=request.extract_main_content,
             include_metadata=request.include_metadata,
             custom_options=request.custom_options,
+            embed_images=request.embed_images,
+            embed_options=request.embed_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -1789,6 +1807,8 @@ async def batch_convert_webpages_to_markdown(
             extract_main_content=request.extract_main_content,
             include_metadata=request.include_metadata,
             custom_options=request.custom_options,
+            embed_images=request.embed_images,
+            embed_options=request.embed_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)

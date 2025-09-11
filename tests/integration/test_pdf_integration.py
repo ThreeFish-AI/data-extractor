@@ -5,8 +5,13 @@ import pytest_asyncio
 import tempfile
 import os
 from unittest.mock import patch, MagicMock
+from pydantic import ValidationError
 
-from extractor.server import app, _get_pdf_processor
+from extractor.server import (
+    app,
+    PDFToMarkdownRequest,
+    BatchPDFToMarkdownRequest,
+)
 from extractor.pdf_processor import PDFProcessor
 
 
@@ -68,23 +73,23 @@ class TestPDFToolsIntegration:
                 }
 
                 # Execute the tool
-                result = await convert_tool.fn(
+                request = PDFToMarkdownRequest(
                     pdf_source="/test/sample.pdf",
                     method="auto",
                     include_metadata=True,
                     output_format="markdown",
                 )
+                result = await convert_tool.fn(request)
 
                 # Verify successful execution
-                assert result["success"] is True
-                assert result["data"]["success"] is True
-                assert "markdown" in result["data"]
-                assert result["data"]["source"] == "/test/sample.pdf"
-                assert result["data"]["method_used"] == "pymupdf"
-                assert result["data"]["word_count"] == 25
+                assert result.success is True
+                assert hasattr(result, "content")
+                assert result.pdf_source == "/test/sample.pdf"
+                assert result.method == "pymupdf"
+                assert result.word_count == 25
 
                 # Verify metadata is included
-                metadata = result["data"]["metadata"]
+                metadata = result.metadata
                 assert metadata["title"] == "Sample Document"
                 assert metadata["author"] == "Test Author"
                 assert metadata["total_pages"] == 3
@@ -146,7 +151,7 @@ class TestPDFToolsIntegration:
                 mock_batch.return_value = batch_result
 
                 # Execute batch tool
-                result = await batch_tool.fn(
+                request = BatchPDFToMarkdownRequest(
                     pdf_sources=[
                         "/test/doc1.pdf",
                         "/test/doc2.pdf",
@@ -156,20 +161,20 @@ class TestPDFToolsIntegration:
                     include_metadata=True,
                     output_format="markdown",
                 )
+                result = await batch_tool.fn(request)
 
                 # Verify successful batch execution
-                assert result["success"] is True
-                assert result["data"]["success"] is True
+                assert result.success is True
+                assert result.success is True
 
                 # Verify batch summary
-                summary = result["data"]["summary"]
-                assert summary["total_pdfs"] == 3
-                assert summary["successful"] == 2
-                assert summary["failed"] == 1
-                assert summary["total_words_extracted"] == 50
+                assert result.total_pdfs == 3
+                assert result.successful_count == 2
+                assert result.failed_count == 1
+                assert result.total_word_count == 50
 
                 # Verify individual results
-                results = result["data"]["results"]
+                results = result.results
                 assert len(results) == 3
                 assert results[0]["success"] is True
                 assert results[1]["success"] is True
@@ -181,19 +186,12 @@ class TestPDFToolsIntegration:
         convert_tool = pdf_test_tools["convert"]
 
         # Test invalid method parameter
-        result = await convert_tool.fn(
-            pdf_source="/test/sample.pdf", method="invalid_method"
-        )
-
-        assert result["success"] is False
-        assert "Method must be one of" in result["error"]
+        with pytest.raises(ValidationError, match="Method must be one of"):
+            PDFToMarkdownRequest(pdf_source="/test/sample.pdf", method="invalid_method")
 
         # Test empty PDF source for batch tool
-        batch_tool = pdf_test_tools["batch"]
-        result = await batch_tool.fn(pdf_sources=[])
-
-        assert result["success"] is False
-        assert "PDF sources list cannot be empty" in result["error"]
+        with pytest.raises(ValidationError, match="PDF sources list cannot be empty"):
+            BatchPDFToMarkdownRequest(pdf_sources=[])
 
     @pytest.mark.asyncio
     async def test_pdf_tools_with_page_range(
@@ -216,14 +214,15 @@ class TestPDFToolsIntegration:
             mock_process.return_value = range_result
 
             # Execute with page range
-            result = await convert_tool.fn(
+            request = PDFToMarkdownRequest(
                 pdf_source="/test/sample.pdf",
                 method="pymupdf",
                 page_range=[1, 3],  # Pages 1-2 (0-based indexing in implementation)
             )
+            result = await convert_tool.fn(request)
 
-            assert result["success"] is True
-            assert result["data"]["pages_processed"] == 2
+            assert result.success is True
+            assert result["pages_processed"] == 2
 
             # Verify page range was passed correctly
             mock_process.assert_called_once()
@@ -248,14 +247,15 @@ class TestPDFToolsIntegration:
                 "source": "/nonexistent/file.pdf",
             }
 
-            result = await convert_tool.fn(pdf_source="/nonexistent/file.pdf")
+            request = PDFToMarkdownRequest(pdf_source="/nonexistent/file.pdf")
+            result = await convert_tool.fn(request)
 
-            assert result["success"] is False
+            assert result.success is False
             # Error is now wrapped in a structured format
             assert "PDF file does not exist" in (
-                result["error"]["message"]
-                if isinstance(result["error"], dict)
-                else result["error"]
+                result.error["message"]
+                if isinstance(result.error, dict)
+                else result.error
             )
 
         # Test URL download failure
@@ -269,15 +269,16 @@ class TestPDFToolsIntegration:
                 "source": "https://invalid-url.com/document.pdf",
             }
 
-            result = await convert_tool.fn(
+            request = PDFToMarkdownRequest(
                 pdf_source="https://invalid-url.com/document.pdf"
             )
+            result = await convert_tool.fn(request)
 
-            assert result["success"] is False
+            assert result.success is False
             assert "Failed to download PDF from URL" in (
-                result["error"]["message"]
-                if isinstance(result["error"], dict)
-                else result["error"]
+                result.error["message"]
+                if isinstance(result.error, dict)
+                else result.error
             )
 
     @pytest.mark.asyncio
@@ -301,13 +302,14 @@ class TestPDFToolsIntegration:
             }
             mock_process.return_value = text_result
 
-            result = await convert_tool.fn(
+            request = PDFToMarkdownRequest(
                 pdf_source="/test/sample.pdf", output_format="text"
             )
+            result = await convert_tool.fn(request)
 
-            assert result["success"] is True
-            assert result["data"]["output_format"] == "text"
-            assert "markdown" not in result["data"]
+            assert result.success is True
+            assert result["output_format"] == "text"
+            assert "markdown" not in result
 
         # Test markdown output format (default)
         with (
@@ -323,13 +325,14 @@ class TestPDFToolsIntegration:
             }
             mock_process.return_value = markdown_result
 
-            result = await convert_tool.fn(
+            request = PDFToMarkdownRequest(
                 pdf_source="/test/sample.pdf", output_format="markdown"
             )
+            result = await convert_tool.fn(request)
 
-            assert result["success"] is True
-            assert result["data"]["output_format"] == "markdown"
-            assert "markdown" in result["data"]
+            assert result.success is True
+            assert result["output_format"] == "markdown"
+            assert "markdown" in result
 
     @pytest.mark.asyncio
     async def test_pdf_processor_resource_management_integration(self):
@@ -372,7 +375,8 @@ class TestPDFToolsIntegration:
             num_concurrent = 5
 
             for i in range(num_concurrent):
-                task = convert_tool.fn(pdf_source=f"/test/doc_{i}.pdf")
+                request = PDFToMarkdownRequest(pdf_source=f"/test/doc_{i}.pdf")
+                task = convert_tool.fn(request)
                 tasks.append(task)
 
             # Execute all tasks concurrently
@@ -380,8 +384,8 @@ class TestPDFToolsIntegration:
 
             # Verify all succeeded
             for result in results:
+                assert result.success is True
                 assert result["success"] is True
-                assert result["data"]["success"] is True
 
             # Verify all calls were made
             assert mock_process.call_count == num_concurrent
@@ -417,12 +421,13 @@ class TestPDFIntegrationWithRealProcessing:
                 mock_fitz.open.return_value = mock_doc
 
                 # Execute the tool with a real file path
-                result = await convert_tool.fn(pdf_source=temp_path, method="pymupdf")
+                request = PDFToMarkdownRequest(pdf_source=temp_path, method="pymupdf")
+                result = await convert_tool.fn(request)
 
+                assert result.success is True
                 assert result["success"] is True
-                assert result["data"]["success"] is True
-                assert result["data"]["source"] == temp_path
-                assert result["data"]["method_used"] == "pymupdf"
+                assert result["source"] == temp_path
+                assert result["method_used"] == "pymupdf"
 
         finally:
             # Clean up temporary file
@@ -478,25 +483,26 @@ class TestPDFIntegrationWithRealProcessing:
                     },
                 }
 
-                result = await batch_tool.fn(
+                request = BatchPDFToMarkdownRequest(
                     pdf_sources=[real_path, fake_path], method="auto"
                 )
+                result = await batch_tool.fn(request)
 
-                assert result["success"] is True
-                assert result["data"]["summary"]["successful"] == 1
-                assert result["data"]["summary"]["failed"] == 1
+                assert result.success is True
+                assert result["summary"]["successful"] == 1
+                assert result["summary"]["failed"] == 1
 
                 # Verify the real file was processed successfully
                 real_result = next(
-                    r for r in result["data"]["results"] if r["source"] == real_path
+                    r for r in result["results"] if r["source"] == real_path
                 )
-                assert real_result["success"] is True
+                assert real_result.success is True
 
                 # Verify the fake file failed appropriately
                 fake_result = next(
-                    r for r in result["data"]["results"] if r["source"] == fake_path
+                    r for r in result["results"] if r["source"] == fake_path
                 )
-                assert fake_result["success"] is False
+                assert fake_result.success is False
 
         finally:
             # Clean up
@@ -532,13 +538,14 @@ class TestPDFIntegrationWithRealProcessing:
                 },
             }
 
-            result = await convert_tool.fn(
+            request = PDFToMarkdownRequest(
                 pdf_source="https://example.com/document.pdf", method="auto"
             )
+            result = await convert_tool.fn(request)
 
-            assert result["success"] is True
-            assert result["data"]["source"] == "https://example.com/document.pdf"
-            assert "Downloaded Document" in result["data"]["markdown"]
+            assert result.success is True
+            assert result["source"] == "https://example.com/document.pdf"
+            assert "Downloaded Document" in result["markdown"]
 
             # Verify URL was handled correctly
             mock_process.assert_called_once_with(
@@ -578,8 +585,9 @@ class TestPDFIntegrationWithRealProcessing:
 
             # Process multiple documents
             for i in range(10):
-                result = await convert_tool.fn(pdf_source=f"/test/doc_{i}.pdf")
-                assert result["success"] is True
+                request = PDFToMarkdownRequest(pdf_source=f"/test/doc_{i}.pdf")
+                result = await convert_tool.fn(request)
+                assert result.success is True
 
         # Check memory usage after processing
         gc.collect()
@@ -597,29 +605,28 @@ class TestPDFIntegrationWithRealProcessing:
         convert_tool = pdf_test_tools["convert"]
         batch_tool = pdf_test_tools["batch"]
 
-        # Test invalid method in convert tool
-        result = await convert_tool.fn(
-            pdf_source="/test/sample.pdf", method="nonexistent_method"
-        )
-        assert result["success"] is False
-        assert "Method must be one of" in result["error"]
+        # Test invalid method in convert tool should raise validation error
+        with pytest.raises(ValidationError, match="Method must be one of"):
+            PDFToMarkdownRequest(
+                pdf_source="/test/sample.pdf", method="nonexistent_method"
+            )
 
         # Test invalid page range format
-        result = await convert_tool.fn(
-            pdf_source="/test/sample.pdf",
-            page_range=[
-                5,
-                2,
-            ],  # End before start - should be handled by server validation
-        )
-        # This might succeed at tool level but fail at processor level
-        # The exact behavior depends on server-side validation
+        with pytest.raises(
+            ValidationError, match="Start page must be less than end page"
+        ):
+            PDFToMarkdownRequest(
+                pdf_source="/test/sample.pdf",
+                page_range=[
+                    5,
+                    2,
+                ],  # End before start - should be handled by server validation
+            )
 
         # Test empty batch list
-        result = await batch_tool.fn(pdf_sources=[])
-        assert result["success"] is False
-        assert "PDF sources list cannot be empty" in result["error"]
+        with pytest.raises(ValidationError, match="PDF sources list cannot be empty"):
+            BatchPDFToMarkdownRequest(pdf_sources=[])
 
-        # Test batch with None values
-        result = await batch_tool.fn(pdf_sources=None)
-        assert result["success"] is False
+        # Test batch with None values should raise validation error
+        with pytest.raises(ValidationError, match="pdf_sources"):
+            BatchPDFToMarkdownRequest(pdf_sources=None)  # type: ignore

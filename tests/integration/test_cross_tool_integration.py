@@ -5,7 +5,17 @@ import pytest_asyncio
 import asyncio
 from unittest.mock import patch
 
-from extractor.server import app, web_scraper, _get_pdf_processor
+from extractor.server import (
+    app,
+    web_scraper,
+    _get_pdf_processor,
+    ScrapeRequest,
+    ConvertToMarkdownRequest,
+    BatchScrapeRequest,
+    PDFToMarkdownRequest,
+    BatchPDFToMarkdownRequest,
+    ExtractLinksRequest,
+)
 
 
 class TestCrossToolIntegration:
@@ -87,29 +97,31 @@ class TestCrossToolIntegration:
             mock_pdf.return_value = pdf_processing_result
 
             # Step 1: Scrape the webpage
-            webpage_response = await scrape_tool.fn(
+            request = ScrapeRequest(
                 url="https://example.com/research-page", method="simple"
             )
+            webpage_response = await scrape_tool.fn(request)
 
-            assert webpage_response["success"] is True
+            assert webpage_response.success is True
 
             # Extract PDF links from the scraped content
             pdf_links = [
                 link["url"]
-                for link in webpage_response["data"]["content"]["links"]
+                for link in webpage_response.data["content"]["links"]
                 if link["url"].endswith(".pdf")
             ]
             assert len(pdf_links) == 3
 
             # Step 2: Process the first PDF found
             first_pdf_url = pdf_links[0]
-            pdf_response = await convert_pdf_tool.fn(
+            request = PDFToMarkdownRequest(
                 pdf_source=first_pdf_url, method="auto", output_format="markdown"
             )
+            pdf_response = await convert_pdf_tool.fn(request)
 
-            assert pdf_response["success"] is True
-            assert pdf_response["data"]["source"] == first_pdf_url
-            assert "Machine Learning Basics" in pdf_response["data"]["markdown"]
+            assert pdf_response.success is True
+            assert pdf_response.pdf_source == first_pdf_url
+            assert "Machine Learning Basics" in pdf_response.content
 
             # Verify the workflow executed correctly
             mock_scrape.assert_called_once_with(
@@ -181,9 +193,9 @@ class TestCrossToolIntegration:
             ],
             "summary": {
                 "total_pdfs": 2,
-                "successful": 2,
+                "successful_count": 2,
                 "failed": 0,
-                "total_words_extracted": 4000,
+                "total_word_count": 4000,
             },
         }
 
@@ -197,16 +209,15 @@ class TestCrossToolIntegration:
 
             # Step 1: Batch scrape multiple websites
             scrape_urls = ["https://site1.com", "https://site2.com"]
-            scrape_response = await batch_scrape_tool.fn(
-                urls=scrape_urls, method="simple"
-            )
+            request = BatchScrapeRequest(urls=scrape_urls, method="simple")
+            scrape_response = await batch_scrape_tool.fn(request)
 
-            assert scrape_response["success"] is True
-            assert len(scrape_response["data"]) == 2
+            assert scrape_response.success is True
+            assert len(scrape_response.results) == 2
 
             # Extract all PDF links from scraped results
             all_pdf_links = []
-            for result in scrape_response["data"]:
+            for result in scrape_response.results:
                 if "content" in result and "links" in result["content"]:
                     pdf_links = [
                         link["url"]
@@ -218,14 +229,15 @@ class TestCrossToolIntegration:
             assert len(all_pdf_links) == 2
 
             # Step 2: Batch process all found PDFs
-            pdf_response = await batch_pdf_tool.fn(
+            request = BatchPDFToMarkdownRequest(
                 pdf_sources=all_pdf_links, method="auto", output_format="markdown"
             )
+            pdf_response = await batch_pdf_tool.fn(request)
 
-            assert pdf_response["success"] is True
-            assert pdf_response["data"]["summary"]["total_pdfs"] == 2
-            assert pdf_response["data"]["summary"]["successful"] == 2
-            assert pdf_response["data"]["summary"]["total_words_extracted"] == 4000
+            assert pdf_response.success is True
+            assert pdf_response.total_pdfs == 2
+            assert pdf_response.successful_count_count == 2
+            assert pdf_response.total_word_count == 4000
 
     @pytest.mark.asyncio
     async def test_metrics_collection_across_multiple_tools(
@@ -267,24 +279,23 @@ class TestCrossToolIntegration:
             mock_pdf.return_value = pdf_result
 
             # Use multiple tools to generate metrics
-            await scrape_tool.fn(url="https://test.com")
-            await pdf_tool.fn(pdf_source="/test.pdf")
-            await markdown_tool.fn(url="https://test.com")
+            request1 = ScrapeRequest(url="https://test.com")
+            await scrape_tool.fn(request1)
+            request2 = PDFToMarkdownRequest(pdf_source="/test.pdf")
+            await pdf_tool.fn(request2)
+            request3 = ConvertToMarkdownRequest(url="https://test.com")
+            await markdown_tool.fn(request3)
 
             # Check metrics collection
             metrics_response = await metrics_tool.fn()
 
-            assert metrics_response["success"] is True
+            assert metrics_response.success is True
             # Verify metrics contain information about different operations
-            metrics_data = metrics_response["data"]
-
-            # Check for expected metrics categories
-            expected_categories = [
-                "scraping_metrics",
-                "performance_metrics",
-                "server_info",
-            ]
-            assert any(cat in metrics_data for cat in expected_categories)
+            # MetricsResponse has individual attributes, not a metrics dict
+            assert hasattr(metrics_response, "total_requests")
+            assert hasattr(metrics_response, "successful_count_requests")
+            assert hasattr(metrics_response, "cache_stats")
+            assert hasattr(metrics_response, "method_usage")
 
     @pytest.mark.asyncio
     async def test_error_propagation_across_tools(self, all_tools, pdf_processor):
@@ -297,8 +308,9 @@ class TestCrossToolIntegration:
             mock_scrape.side_effect = Exception("Network timeout")
 
             # First tool fails
-            scrape_response = await scrape_tool.fn(url="https://unreachable.com")
-            assert scrape_response["success"] is False
+            request = ScrapeRequest(url="https://unreachable.com")
+            scrape_response = await scrape_tool.fn(request)
+            assert scrape_response.success is False
 
         # Mock a failed PDF processing
         with (
@@ -312,12 +324,13 @@ class TestCrossToolIntegration:
             }
 
             # Second tool fails with proper error handling
-            pdf_response = await pdf_tool.fn(pdf_source="/corrupted.pdf")
-            assert pdf_response["success"] is False
+            request = PDFToMarkdownRequest(pdf_source="/corrupted.pdf")
+            pdf_response = await pdf_tool.fn(request)
+            assert pdf_response.success is False
             assert "PDF parsing failed" in (
-                pdf_response["error"]["message"]
-                if isinstance(pdf_response["error"], dict)
-                else pdf_response["error"]
+                pdf_response.error["message"]
+                if isinstance(pdf_response.error, dict)
+                else pdf_response.error
             )
 
     @pytest.mark.asyncio
@@ -335,7 +348,7 @@ class TestCrossToolIntegration:
         pdf_tool = all_tools["convert_pdf_to_markdown"]
         batch_pdf_tool = all_tools["batch_convert_pdfs_to_markdown"]
 
-        # Mock successful operations
+        # Mock successful_count operations
         scrape_result = {
             "url": "https://test.com",
             "title": "Test",
@@ -353,7 +366,7 @@ class TestCrossToolIntegration:
         batch_pdf_result = {
             "success": True,
             "results": [pdf_result for _ in range(5)],
-            "summary": {"total_pdfs": 5, "successful": 5, "failed": 0},
+            "summary": {"total_pdfs": 5, "successful_count": 5, "failed": 0},
         }
 
         with (
@@ -368,11 +381,16 @@ class TestCrossToolIntegration:
 
             # Perform multiple operations with large data
             for i in range(10):
-                await scrape_tool.fn(url=f"https://test{i}.com")
-                await pdf_tool.fn(pdf_source=f"/test{i}.pdf")
+                request1 = ScrapeRequest(url=f"https://test{i}.com")
+                await scrape_tool.fn(request1)
+                request2 = PDFToMarkdownRequest(pdf_source=f"/test{i}.pdf")
+                await pdf_tool.fn(request2)
 
             # Perform batch operation
-            await batch_pdf_tool.fn(pdf_sources=[f"/batch{i}.pdf" for i in range(5)])
+            request = BatchPDFToMarkdownRequest(
+                pdf_sources=[f"/batch{i}.pdf" for i in range(5)]
+            )
+            await batch_pdf_tool.fn(request)
 
         # Force garbage collection and check memory usage
         gc.collect()
@@ -421,9 +439,20 @@ class TestCrossToolIntegration:
 
             # Create concurrent tasks using different tools
             tasks = (
-                [scrape_tool.fn(url=f"https://test{i}.com") for i in range(3)]
-                + [pdf_tool.fn(pdf_source=f"/test{i}.pdf") for i in range(3)]
-                + [markdown_tool.fn(url=f"https://markdown{i}.com") for i in range(3)]
+                [
+                    scrape_tool.fn(ScrapeRequest(url=f"https://test{i}.com"))
+                    for i in range(3)
+                ]
+                + [
+                    pdf_tool.fn(PDFToMarkdownRequest(pdf_source=f"/test{i}.pdf"))
+                    for i in range(3)
+                ]
+                + [
+                    markdown_tool.fn(
+                        ConvertToMarkdownRequest(url=f"https://markdown{i}.com")
+                    )
+                    for i in range(3)
+                ]
             )
 
             # Execute all concurrently
@@ -431,7 +460,7 @@ class TestCrossToolIntegration:
 
             # Verify all operations succeeded
             for result in results:
-                assert result["success"] is True
+                assert result.success is True
 
             # Verify appropriate number of calls to each mock
             assert (
@@ -502,11 +531,10 @@ class TestRealWorldIntegrationScenarios:
             }
 
             # Extract all links
-            links_response = await extract_links_tool.fn(
-                url="https://academic-site.com/papers"
-            )
+            request = ExtractLinksRequest(url="https://academic-site.com/papers")
+            links_response = await extract_links_tool.fn(request)
 
-            assert links_response["success"] is True
+            assert links_response.success is True
 
         # Step 2: Filter PDF links and batch process them
         pdf_links = [
@@ -531,9 +559,9 @@ class TestRealWorldIntegrationScenarios:
             ],
             "summary": {
                 "total_pdfs": 3,
-                "successful": 3,
+                "successful_count": 3,
                 "failed": 0,
-                "total_words_extracted": 6000,
+                "total_word_count": 6000,
             },
         }
 
@@ -543,13 +571,14 @@ class TestRealWorldIntegrationScenarios:
         ):
             mock_batch_pdf.return_value = batch_result
 
-            batch_response = await batch_pdf_tool.fn(
+            request = BatchPDFToMarkdownRequest(
                 pdf_sources=pdf_links, method="auto", include_metadata=True
             )
+            batch_response = await batch_pdf_tool.fn(request)
 
-            assert batch_response["success"] is True
-            assert batch_response["data"]["summary"]["successful"] == 3
-            assert batch_response["data"]["summary"]["total_words_extracted"] == 6000
+            assert batch_response.success is True
+            assert batch_response.successful_count == 3
+            assert batch_response.total_word_count == 6000
 
         # Step 3: Also convert the overview HTML page to markdown
         markdown_tool = scenario_tools["convert_webpage_to_markdown"]
@@ -563,17 +592,18 @@ class TestRealWorldIntegrationScenarios:
                 },
             }
 
-            markdown_response = await markdown_tool.fn(
+            request = ConvertToMarkdownRequest(
                 url="https://academic-site.com/paper3.html"
             )
+            markdown_response = await markdown_tool.fn(request)
 
-            assert markdown_response["success"] is True
-            assert "Research Overview" in markdown_response["data"]["markdown"]
+            assert markdown_response.success is True
+            assert "Research Overview" in markdown_response.markdown_content
 
         # Step 4: Check final metrics
         metrics_tool = scenario_tools["get_server_metrics"]
         metrics_response = await metrics_tool.fn()
-        assert metrics_response["success"] is True
+        assert metrics_response.success is True
 
     @pytest.mark.asyncio
     async def test_website_documentation_backup_scenario(
@@ -622,8 +652,9 @@ class TestRealWorldIntegrationScenarios:
         with patch.object(web_scraper, "scrape_url") as mock_scrape:
             mock_scrape.return_value = index_result
 
-            index_response = await scrape_tool.fn(url="https://docs.example.com")
-            assert index_response["success"] is True
+            request = ScrapeRequest(url="https://docs.example.com")
+            index_response = await scrape_tool.fn(request)
+            assert index_response.success is True
 
         # Step 2: Batch convert all HTML pages to markdown
         html_pages = [
@@ -646,8 +677,9 @@ class TestRealWorldIntegrationScenarios:
                     },
                 }
 
-                result = await batch_markdown_tool.fn(url=url)
-                assert result["success"] is True
+                request = ConvertToMarkdownRequest(url=url)
+                result = await batch_markdown_tool.fn(request)
+                assert result.success is True
                 html_results.append(result)
 
         # Step 3: Convert the PDF to markdown
@@ -664,16 +696,17 @@ class TestRealWorldIntegrationScenarios:
                 "word_count": 50,
             }
 
-            pdf_result = await pdf_tool.fn(
+            request = PDFToMarkdownRequest(
                 pdf_source="https://docs.example.com/faq.pdf"
             )
-            assert pdf_result["success"] is True
+            pdf_result = await pdf_tool.fn(request)
+            assert pdf_result.success is True
 
         # Verify complete documentation backup
         assert len(html_results) == 3
         for result in html_results:
-            assert "Page" in result["data"]["markdown"]
-        assert "FAQ" in pdf_result["data"]["markdown"]
+            assert "Page" in result.markdown_content
+        assert "FAQ" in pdf_result.content
 
     @pytest.mark.asyncio
     async def test_competitive_analysis_scenario(self, scenario_tools, pdf_processor):
@@ -717,12 +750,11 @@ class TestRealWorldIntegrationScenarios:
         with patch.object(web_scraper, "scrape_multiple_urls") as mock_batch_scrape:
             mock_batch_scrape.return_value = competitor_results
 
-            scrape_response = await batch_scrape_tool.fn(
-                urls=competitor_urls, method="simple"
-            )
+            request = BatchScrapeRequest(urls=competitor_urls, method="simple")
+            scrape_response = await batch_scrape_tool.fn(request)
 
-            assert scrape_response["success"] is True
-            assert len(scrape_response["data"]) == 3
+            assert scrape_response.success is True
+            assert len(scrape_response.results) == 3
 
         # Step 2: Extract all whitepaper PDFs found
         pdf_urls = []
@@ -754,8 +786,8 @@ class TestRealWorldIntegrationScenarios:
             ],
             "summary": {
                 "total_pdfs": 3,
-                "successful": 3,
-                "total_words_extracted": 3000,  # 500 + 1000 + 1500
+                "successful_count": 3,
+                "total_word_count": 3000,  # 500 + 1000 + 1500
             },
         }
 
@@ -765,10 +797,11 @@ class TestRealWorldIntegrationScenarios:
         ):
             mock_batch_pdf.return_value = whitepaper_results
 
-            pdf_response = await batch_pdf_tool.fn(pdf_sources=pdf_urls, method="auto")
+            request = BatchPDFToMarkdownRequest(pdf_sources=pdf_urls, method="auto")
+            pdf_response = await batch_pdf_tool.fn(request)
 
-            assert pdf_response["success"] is True
-            assert pdf_response["data"]["summary"]["total_words_extracted"] == 3000
+            assert pdf_response.success is True
+            assert pdf_response.total_word_count == 3000
 
         # Step 4: Generate final metrics for the analysis
         metrics_tool = scenario_tools["get_server_metrics"]
@@ -778,5 +811,5 @@ class TestRealWorldIntegrationScenarios:
         await clear_cache_tool.fn()
         metrics_response = await metrics_tool.fn()
 
-        assert metrics_response["success"] is True
+        assert metrics_response.success is True
         # In a real scenario, metrics would show the analysis activity
