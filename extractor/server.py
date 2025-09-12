@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from datetime import datetime
 
 from fastmcp import FastMCP
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from .scraper import WebScraper
 from .advanced_features import AntiDetectionScraper, FormHandler
@@ -46,165 +46,12 @@ def _get_pdf_processor():
     return PDFProcessor()
 
 
-class ScrapeRequest(BaseModel):
-    """Request model for scraping operations."""
-
-    url: Annotated[
-        str,
-        Field(..., description="目标网页 URL，必须包含协议前缀（http://或https://）"),
-    ]
-    method: Annotated[
-        str,
-        Field(
-            default="auto",
-            description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，不支持JavaScript）、scrapy（Scrapy框架，适合大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
-        ),
-    ]
-    extract_config: Annotated[
-        Optional[Dict[str, Any]],
-        Field(
-            default=None,
-            description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': {'selector': '.content p', 'multiple': True, 'attr': 'text'}}",
-        ),
-    ]
-    wait_for_element: Annotated[
-        Optional[str],
-        Field(
-            default=None,
-            description="等待元素的 CSS 选择器（仅 Selenium 方法有效），确保页面完全加载后再提取内容。示例：'.content'、'#main-content'",
-        ),
-    ]
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        parsed = urlparse(v)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
-        return v
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate scraping method."""
-        if v not in ["auto", "simple", "scrapy", "selenium"]:
-            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
-        return v
-
-
-class BatchScrapeRequest(BaseModel):
-    """Request model for scraping multiple URLs."""
-
-    urls: List[str] = Field(
-        ...,
-        description="要抓取的 URL 列表，每个 URL 必须包含协议前缀。支持并发抓取以提高效率",
-    )
-    method: str = Field(
-        default="auto",
-        description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求）、scrapy（Scrapy框架，适合批量处理）、selenium（浏览器渲染，支持JavaScript）",
-    )
-    extract_config: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="统一的数据提取配置，应用于所有URL。格式：{'字段名': '选择器', '复杂字段': {'selector': 'CSS选择器', 'multiple': True/False, 'attr': '属性名'}}",
-    )
-
-    @field_validator("urls")
-    def validate_urls(cls, v: List[str]) -> List[str]:
-        """Validate URLs format."""
-        if not v:
-            raise ValueError("URLs list cannot be empty")
-
-        for url in v:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.netloc:
-                raise ValueError(f"Invalid URL format: {url}")
-        return v
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate scraping method."""
-        if v not in ["auto", "simple", "scrapy", "selenium"]:
-            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
-        return v
-
-
-class ExtractLinksRequest(BaseModel):
-    """Request model for extracting links from a page."""
-
-    url: str = Field(..., description="要提取链接的网页URL")
-    filter_domains: Optional[List[str]] = Field(
-        default=None,
-        description="仅包含这些域名的链接，支持多域名过滤。示例：['example.com', 'subdomain.example.com']",
-    )
-    exclude_domains: Optional[List[str]] = Field(
-        default=None,
-        description="排除这些域名的链接，用于过滤不需要的外部链接。示例：['ads.com', 'tracker.net']",
-    )
-    internal_only: bool = Field(
-        default=False,
-        description="是否仅提取内部链接（同域名链接），设为True时只返回与源页面相同域名的链接",
-    )
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        parsed = urlparse(v)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
-        return v
-
-
-class GetPageInfoRequest(BaseModel):
-    """Request model for getting page information."""
-
-    url: str = Field(..., description="要获取信息的网页URL")
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        parsed = urlparse(v)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
-        return v
-
-
-class CheckRobotsRequest(BaseModel):
-    """Request model for checking robots.txt."""
-
-    url: str = Field(..., description="要检查robots.txt的网站URL")
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        parsed = urlparse(v)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
-        return v
-
-
-class ExtractStructuredDataRequest(BaseModel):
-    """Request model for extracting structured data."""
-
-    url: str = Field(..., description="要提取结构化数据的网页URL")
-    data_type: str = Field(
-        default="all",
-        description="数据类型: all（全部）、contact（联系信息）、social（社交媒体）、content（内容）、products（产品）、addresses（地址）",
-    )
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        parsed = urlparse(v)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
-        return v
-
-    @field_validator("data_type")
-    def validate_data_type(cls, v: str) -> str:
-        """Validate data type."""
-        valid_types = ["all", "contact", "social", "content", "products", "addresses"]
-        if v not in valid_types:
-            raise ValueError(f"Data type must be one of: {', '.join(valid_types)}")
-        return v
+# ScrapeRequest removed - now uses individual parameters with Annotated Field
+# BatchScrapeRequest removed - now uses individual parameters with Annotated Field
+# ExtractLinksRequest removed - now uses individual parameters with Annotated Field
+# GetPageInfoRequest removed - now uses individual parameters with Annotated Field
+# CheckRobotsRequest removed - now uses individual parameters with Annotated Field
+# ExtractStructuredDataRequest removed - now uses individual parameters with Annotated Field
 
 
 # Response Models
@@ -415,15 +262,22 @@ async def scrape_webpage(
 
     You can specify extraction rules to get specific data from the page.
     """
-    
-    
+
+    # Validate inputs and return ScrapeResponse instead of raising exceptions
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
-        raise ValueError("Invalid URL format")
-    
+        return ScrapeResponse(
+            success=False, url=url, method=method, error="Invalid URL format"
+        )
+
     if method not in ["auto", "simple", "scrapy", "selenium"]:
-        raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
-    
+        return ScrapeResponse(
+            success=False,
+            url=url,
+            method=method,
+            error="Method must be one of: auto, simple, scrapy, selenium",
+        )
+
     try:
         logger.info(f"Scraping webpage: {url} with method: {method}")
 
@@ -451,7 +305,29 @@ async def scrape_webpage(
 
 
 @app.tool()
-async def scrape_multiple_webpages(request: BatchScrapeRequest) -> BatchScrapeResponse:
+async def scrape_multiple_webpages(
+    urls: Annotated[
+        List[str],
+        Field(
+            ...,
+            description="要抓取的 URL 列表，每个 URL 必须包含协议前缀（http://或https://），支持并发抓取以提高效率。示例：['https://example.com', 'https://another.com']",
+        ),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="auto",
+            description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，适合静态页面）、scrapy（Scrapy框架，适合批量处理和大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
+        ),
+    ],
+    extract_config: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="统一的数据提取配置，应用于所有URL。格式：{'字段名': '选择器', '复杂字段': {'selector': 'CSS选择器', 'multiple': True/False, 'attr': '属性名'}}。示例：{'title': 'h1', 'links': {'selector': 'a', 'multiple': True, 'attr': 'href'}}",
+        ),
+    ],
+) -> BatchScrapeResponse:
     """
     Scrape multiple webpages concurrently.
 
@@ -464,27 +340,37 @@ async def scrape_multiple_webpages(request: BatchScrapeRequest) -> BatchScrapeRe
     than scraping them one by one. All URLs will be processed concurrently.
     """
     try:
-        logger.info(
-            f"Scraping {len(request.urls)} webpages with method: {request.method}"
-        )
+        # Validate inputs
+        if not urls:
+            raise ValueError("URLs list cannot be empty")
+
+        for url in urls:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                raise ValueError(f"Invalid URL format: {url}")
+
+        if method not in ["auto", "simple", "scrapy", "selenium"]:
+            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
+
+        logger.info(f"Scraping {len(urls)} webpages with method: {method}")
 
         results = await web_scraper.scrape_multiple_urls(
-            urls=request.urls,
-            method=request.method,
-            extract_config=request.extract_config,
+            urls=urls,
+            method=method,
+            extract_config=extract_config,
         )
 
         # Convert results to ScrapeResponse objects
         scrape_responses = []
         for i, result in enumerate(results):
-            url = request.urls[i]
+            url = urls[i]
             if "error" in result:
                 response = ScrapeResponse(
-                    success=False, url=url, method=request.method, error=result["error"]
+                    success=False, url=url, method=method, error=result["error"]
                 )
             else:
                 response = ScrapeResponse(
-                    success=True, url=url, method=request.method, data=result
+                    success=True, url=url, method=method, data=result
                 )
             scrape_responses.append(response)
 
@@ -493,15 +379,15 @@ async def scrape_multiple_webpages(request: BatchScrapeRequest) -> BatchScrapeRe
 
         return BatchScrapeResponse(
             success=True,
-            total_urls=len(request.urls),
+            total_urls=len(urls),
             successful_count=successful_count,
             failed_count=failed_count,
             results=scrape_responses,
             summary={
-                "total": len(request.urls),
+                "total": len(urls),
                 "successful": successful_count,
                 "failed": failed_count,
-                "method_used": request.method,
+                "method_used": method,
             },
         )
 
@@ -509,16 +395,45 @@ async def scrape_multiple_webpages(request: BatchScrapeRequest) -> BatchScrapeRe
         logger.error(f"Error scraping multiple webpages: {str(e)}")
         return BatchScrapeResponse(
             success=False,
-            total_urls=len(request.urls),
+            total_urls=len(urls),
             successful_count=0,
-            failed_count=len(request.urls),
+            failed_count=len(urls),
             results=[],
             summary={"error": str(e)},
         )
 
 
 @app.tool()
-async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
+async def extract_links(
+    url: Annotated[
+        str,
+        Field(
+            ...,
+            description="目标网页URL，必须包含协议前缀（http://或https://），将从此页面提取所有链接。支持http和https协议的有效URL格式",
+        ),
+    ],
+    filter_domains: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="白名单域名列表，仅包含这些域名的链接。设置后只返回指定域名的链接。示例：['example.com', 'subdomain.example.com', 'blog.example.org']",
+        ),
+    ],
+    exclude_domains: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="黑名单域名列表，排除这些域名的链接。用于过滤广告、跟踪器等不需要的外部链接。示例：['ads.com', 'tracker.net', 'analytics.google.com']",
+        ),
+    ],
+    internal_only: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="是否仅提取内部链接（同域名链接）。设为True时只返回与源页面相同域名的链接，忽略所有外部链接",
+        ),
+    ],
+) -> LinksResponse:
     """
     Extract all links from a webpage.
 
@@ -539,18 +454,23 @@ async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
         Each link includes url, text, and additional attributes if available.
     """
     try:
-        logger.info(f"Extracting links from: {request.url}")
+        # Validate inputs
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+
+        logger.info(f"Extracting links from: {url}")
 
         # Scrape the page to get links
         scrape_result = await web_scraper.scrape_url(
-            url=request.url,
+            url=url,
             method="simple",  # Use simple method for link extraction
         )
 
         if "error" in scrape_result:
             return LinksResponse(
                 success=False,
-                url=request.url,
+                url=url,
                 total_links=0,
                 links=[],
                 internal_links_count=0,
@@ -560,7 +480,7 @@ async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
 
         # Extract and filter links
         all_links = scrape_result.get("content", {}).get("links", [])
-        base_domain = urlparse(request.url).netloc
+        base_domain = urlparse(url).netloc
 
         filtered_links = []
         for link in all_links:
@@ -571,13 +491,13 @@ async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
             link_domain = urlparse(link_url).netloc
 
             # Apply filters
-            if request.internal_only and link_domain != base_domain:
+            if internal_only and link_domain != base_domain:
                 continue
 
-            if request.filter_domains and link_domain not in request.filter_domains:
+            if filter_domains and link_domain not in filter_domains:
                 continue
 
-            if request.exclude_domains and link_domain in request.exclude_domains:
+            if exclude_domains and link_domain in exclude_domains:
                 continue
 
             filtered_links.append(
@@ -593,7 +513,7 @@ async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
 
         return LinksResponse(
             success=True,
-            url=request.url,
+            url=url,
             total_links=len(filtered_links),
             links=filtered_links,
             internal_links_count=internal_count,
@@ -601,10 +521,10 @@ async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
         )
 
     except Exception as e:
-        logger.error(f"Error extracting links from {request.url}: {str(e)}")
+        logger.error(f"Error extracting links from {url}: {str(e)}")
         return LinksResponse(
             success=False,
-            url=request.url,
+            url=url,
             total_links=0,
             links=[],
             internal_links_count=0,
@@ -614,7 +534,15 @@ async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
 
 
 @app.tool()
-async def get_page_info(request: GetPageInfoRequest) -> PageInfoResponse:
+async def get_page_info(
+    url: Annotated[
+        str,
+        Field(
+            ...,
+            description="目标网页URL，必须包含协议前缀（http://或https://），用于获取页面基础信息和元数据。这是一个轻量级工具，不会提取完整页面内容",
+        ),
+    ],
+) -> PageInfoResponse:
     """
     Get basic information about a webpage (title, description, status).
 
@@ -629,19 +557,24 @@ async def get_page_info(request: GetPageInfoRequest) -> PageInfoResponse:
         Useful for quick page validation and metadata extraction.
     """
     try:
-        logger.info(f"Getting page info for: {request.url}")
+        # Validate inputs
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+
+        logger.info(f"Getting page info for: {url}")
 
         # Use simple scraper for quick info
-        result = await web_scraper.simple_scraper.scrape(request.url, extract_config={})
+        result = await web_scraper.simple_scraper.scrape(url, extract_config={})
 
         if "error" in result:
             return PageInfoResponse(
-                success=False, url=request.url, status_code=0, error=result["error"]
+                success=False, url=url, status_code=0, error=result["error"]
             )
 
         return PageInfoResponse(
             success=True,
-            url=result.get("url", request.url),
+            url=result.get("url", url),
             title=result.get("title"),
             description=result.get("meta_description"),
             status_code=result.get("status_code", 200),
@@ -650,14 +583,20 @@ async def get_page_info(request: GetPageInfoRequest) -> PageInfoResponse:
         )
 
     except Exception as e:
-        logger.error(f"Error getting page info for {request.url}: {str(e)}")
-        return PageInfoResponse(
-            success=False, url=request.url, status_code=0, error=str(e)
-        )
+        logger.error(f"Error getting page info for {url}: {str(e)}")
+        return PageInfoResponse(success=False, url=url, status_code=0, error=str(e))
 
 
 @app.tool()
-async def check_robots_txt(request: CheckRobotsRequest) -> RobotsResponse:
+async def check_robots_txt(
+    url: Annotated[
+        str,
+        Field(
+            ...,
+            description="网站域名URL，必须包含协议前缀（http://或https://），将检查该域名的robots.txt文件。示例：'https://example.com'将检查'https://example.com/robots.txt'。用于确保道德抓取，遵循网站的爬虫规则",
+        ),
+    ],
+) -> RobotsResponse:
     """
     Check the robots.txt file for a domain to understand crawling permissions.
 
@@ -673,10 +612,14 @@ async def check_robots_txt(request: CheckRobotsRequest) -> RobotsResponse:
         Helps determine crawling permissions and restrictions for the specified domain.
     """
     try:
-        logger.info(f"Checking robots.txt for: {request.url}")
+        # Validate inputs
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+
+        logger.info(f"Checking robots.txt for: {url}")
 
         # Parse URL to get base domain
-        parsed = urlparse(request.url)
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
 
         # Scrape robots.txt
@@ -685,7 +628,7 @@ async def check_robots_txt(request: CheckRobotsRequest) -> RobotsResponse:
         if "error" in result:
             return RobotsResponse(
                 success=False,
-                url=request.url,
+                url=url,
                 robots_txt_url=robots_url,
                 is_allowed=False,
                 user_agent="*",
@@ -696,7 +639,7 @@ async def check_robots_txt(request: CheckRobotsRequest) -> RobotsResponse:
 
         return RobotsResponse(
             success=True,
-            url=request.url,
+            url=url,
             robots_txt_url=robots_url,
             robots_content=robots_content,
             is_allowed=True,  # Basic check, could be enhanced
@@ -704,10 +647,10 @@ async def check_robots_txt(request: CheckRobotsRequest) -> RobotsResponse:
         )
 
     except Exception as e:
-        logger.error(f"Error checking robots.txt for {request.url}: {str(e)}")
+        logger.error(f"Error checking robots.txt for {url}: {str(e)}")
         return RobotsResponse(
             success=False,
-            url=request.url,
+            url=url,
             robots_txt_url="",
             is_allowed=False,
             user_agent="*",
@@ -715,300 +658,53 @@ async def check_robots_txt(request: CheckRobotsRequest) -> RobotsResponse:
         )
 
 
-class StealthScrapeRequest(BaseModel):
-    """Request model for stealth scraping operations."""
-
-    url: str = Field(
-        ..., description="要使用隐身技术抓取的URL，适用于具有反爿虫保护的网站"
-    )
-    method: str = Field(
-        default="selenium",
-        description="隐身抓取方法：selenium（使用undetected-chromedriver，适合大部分场景）或playwright（Microsoft Playwright，更多浏览器支持）",
-    )
-    extract_config: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="数据提取配置，支持复杂的CSS选择器和属性提取。隐身模式下推荐使用简单配置以减少检测风险",
-    )
-    wait_for_element: Optional[str] = Field(
-        default=None,
-        description="等待特定元素出现的CSS选择器，确保动态内容加载完成再提取。隐身模式下建议设置以提高成功率",
-    )
-    scroll_page: bool = Field(
-        default=False,
-        description="是否滚动页面以加载动态内容，适用于无限滚动或懒加载的页面。滚动行为会模拟真实用户操作",
-    )
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        if not URLValidator.is_valid_url(v):
-            raise ValueError("Invalid URL format")
-        return URLValidator.normalize_url(v)
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate stealth method."""
-        if v not in ["selenium", "playwright"]:
-            raise ValueError("Method must be one of: selenium, playwright")
-        return v
-
-
-class FormRequest(BaseModel):
-    """Request model for form interaction operations."""
-
-    url: str = Field(
-        ..., description="包含表单的页面URL，将在此页面上执行表单填写和提交操作"
-    )
-    form_data: Dict[str, Any] = Field(
-        ...,
-        description="表单字段数据，格式为 {'选择器': '值'}。支持文本输入、密码、单选框、多选框、下拉选择等。示例：{'#username': '用户名', 'input[name=\"password\"]': '密码', '#submit-btn': 'click'}",
-    )
-    submit: bool = Field(
-        default=False,
-        description="是否在填写完成后自动提交表单。设为False时仅填写不提交，适合预处理或测试场景",
-    )
-    submit_button_selector: Optional[str] = Field(
-        default=None,
-        description="提交按钮的CSS选择器，如未指定则尝试自动检测。建议明确指定以提高成功率。示例：'button[type=\"submit\"]'、'#login-btn'",
-    )
-    method: str = Field(
-        default="selenium",
-        description="表单交互方法：selenium（成熟稳定，支持复杂表单）或playwright（现代化，性能更好）",
-    )
-    wait_for_element: Optional[str] = Field(
-        default=None,
-        description="在开始填写表单前等待的元素CSS选择器，确保表单完全加载。示例：'form'、'.login-form'",
-    )
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        if not URLValidator.is_valid_url(v):
-            raise ValueError("Invalid URL format")
-        return URLValidator.normalize_url(v)
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate method."""
-        if v not in ["selenium", "playwright"]:
-            raise ValueError("Method must be one of: selenium, playwright")
-        return v
-
-
-class ConvertToMarkdownRequest(BaseModel):
-    """Request model for converting webpage to Markdown."""
-
-    url: str = Field(..., description="要转换为Markdown的网页URL")
-    method: str = Field(
-        default="auto",
-        description="抓取方法：auto（自动选择）、simple（HTTP请求）、scrapy（Scrapy框架）、selenium（浏览器渲染，适合动态内容）",
-    )
-    extract_main_content: bool = Field(
-        default=True,
-        description="是否仅提取主要内容区域，启用时会移除导航栏、广告、侧边栏等非核心内容，提供更清晰的Markdown输出",
-    )
-    include_metadata: bool = Field(
-        default=True,
-        description="是否在结果中包含页面元数据（标题、描述、字数统计、链接数等）",
-    )
-    custom_options: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="自定义markdownify转换选项，支持strip、convert、wrap等参数。示例：{'strip': ['script', 'style'], 'convert': ['p', 'br']}",
-    )
-    wait_for_element: Optional[str] = Field(
-        default=None,
-        description="等待特定元素出现的CSS选择器（仅Selenium方法），确保动态内容加载完成。示例：'.article-content'、'#main'",
-    )
-    embed_images: bool = Field(
-        default=False,
-        description="是否嵌入图片作为数据URI，默认值：False",
-    )
-    embed_options: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="图片嵌入选项配置，支持quality、format、max_size等选项",
-    )
-
-    @field_validator("url")
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        parsed = urlparse(v)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
-        return v
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate scraping method."""
-        if v not in ["auto", "simple", "scrapy", "selenium"]:
-            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
-        return v
-
-
-class BatchConvertToMarkdownRequest(BaseModel):
-    """Request model for batch converting webpages to Markdown."""
-
-    urls: List[str] = Field(
-        ..., description="要批量转换为Markdown的URL列表，支持并发处理以提高效率"
-    )
-    method: str = Field(
-        default="auto",
-        description="统一的抓取方法：auto（智能选择）、simple（轻量级HTTP）、scrapy（适合大批量）、selenium（支持JavaScript动态页面）",
-    )
-    extract_main_content: bool = Field(
-        default=True,
-        description="是否统一提取主要内容区域，过滤掉导航、广告、页脚等非核心内容，获得更纯净的Markdown文档",
-    )
-    include_metadata: bool = Field(
-        default=True,
-        description="是否在每个转换结果中包含页面元数据，包含标题、URL、字数、处理时间等信息",
-    )
-    custom_options: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="统一的markdownify自定义选项，应用于所有URL。支持HTML标签处理、格式化选项等",
-    )
-    embed_images: bool = Field(
-        default=False,
-        description="是否在所有页面中嵌入图片作为数据URI，默认值：False",
-    )
-    embed_options: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="统一的图片嵌入选项配置，应用于所有URL",
-    )
-
-    @field_validator("urls")
-    def validate_urls(cls, v: List[str]) -> List[str]:
-        """Validate URLs format."""
-        if not v:
-            raise ValueError("URLs list cannot be empty")
-
-        for url in v:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.netloc:
-                raise ValueError(f"Invalid URL format: {url}")
-        return v
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate scraping method."""
-        if v not in ["auto", "simple", "scrapy", "selenium"]:
-            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
-        return v
-
-
-class PDFToMarkdownRequest(BaseModel):
-    """Request model for converting PDF to Markdown."""
-
-    pdf_source: str = Field(
-        ...,
-        description="PDF源路径，支持HTTP/HTTPS URL或本地文件绝对路径。URL将自动下载处理，本地路径需确保文件存在",
-    )
-    method: str = Field(
-        default="auto",
-        description="PDF提取方法：auto（自动选择最佳引擎）、pymupdf（PyMuPDF引擎，适合复杂布局）、pypdf（PyPDF引擎，适合简单文本）",
-    )
-    include_metadata: bool = Field(
-        default=True,
-        description="是否在结果中包含PDF元数据（标题、作者、创建日期、页数等）和处理统计信息",
-    )
-    page_range: Optional[List[int]] = Field(
-        default=None,
-        description="页面范围[start, end]用于部分提取，两个整数表示起始页和结束页。示例：[1, 10]提取第1-10页。页码从0开始计数",
-    )
-    output_format: str = Field(
-        default="markdown",
-        description="输出格式选择：markdown（结构化Markdown文档，保留格式信息）或text（纯文本内容，去除所有格式）",
-    )
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate extraction method."""
-        if v not in ["auto", "pymupdf", "pypdf"]:
-            raise ValueError("Method must be one of: auto, pymupdf, pypdf")
-        return v
-
-    @field_validator("output_format")
-    def validate_output_format(cls, v: str) -> str:
-        """Validate output format."""
-        if v not in ["markdown", "text"]:
-            raise ValueError("Output format must be one of: markdown, text")
-        return v
-
-    @field_validator("page_range")
-    def validate_page_range(cls, v: Optional[List[int]]) -> Optional[tuple]:
-        """Validate and convert page range."""
-        if v is None:
-            return None
-        if len(v) != 2:
-            raise ValueError("Page range must contain exactly 2 elements: [start, end]")
-        if v[0] < 0 or v[1] < 0:
-            raise ValueError("Page numbers must be non-negative")
-        if v[0] >= v[1]:
-            raise ValueError("Start page must be less than end page")
-        return tuple(v)
-
-
-class BatchPDFToMarkdownRequest(BaseModel):
-    """Request model for batch converting PDFs to Markdown."""
-
-    pdf_sources: List[str] = Field(
-        ...,
-        description="PDF源列表，支持混合使用URL和本地文件路径。URL将并发下载，本地文件需确保存在且可读",
-    )
-    method: str = Field(
-        default="auto",
-        description="统一的PDF提取方法：auto（智能选择）、pymupdf（适合复杂排版和图表）、pypdf（适合简单纯文本文档）",
-    )
-    include_metadata: bool = Field(
-        default=True,
-        description="是否在每个转换结果中包含PDF元数据和处理统计，包括文件名、大小、页数、处理时间等",
-    )
-    page_range: Optional[List[int]] = Field(
-        default=None,
-        description="应用于所有PDF的统一页面范围[start, end]。如未指定则提取全部页面。页码从0开始计数",
-    )
-    output_format: str = Field(
-        default="markdown",
-        description="统一输出格式：markdown（保留标题、列表等结构化信息）或text（纯文本，去除所有格式化）",
-    )
-
-    @field_validator("pdf_sources")
-    def validate_pdf_sources(cls, v: List[str]) -> List[str]:
-        """Validate PDF sources."""
-        if not v:
-            raise ValueError("PDF sources list cannot be empty")
-        return v
-
-    @field_validator("method")
-    def validate_method(cls, v: str) -> str:
-        """Validate extraction method."""
-        if v not in ["auto", "pymupdf", "pypdf"]:
-            raise ValueError("Method must be one of: auto, pymupdf, pypdf")
-        return v
-
-    @field_validator("output_format")
-    def validate_output_format(cls, v: str) -> str:
-        """Validate output format."""
-        if v not in ["markdown", "text"]:
-            raise ValueError("Output format must be one of: markdown, text")
-        return v
-
-    @field_validator("page_range")
-    def validate_page_range(cls, v: Optional[List[int]]) -> Optional[tuple]:
-        """Validate and convert page range."""
-        if v is None:
-            return None
-        if len(v) != 2:
-            raise ValueError("Page range must contain exactly 2 elements: [start, end]")
-        if v[0] < 0 or v[1] < 0:
-            raise ValueError("Page numbers must be non-negative")
-        if v[0] >= v[1]:
-            raise ValueError("Start page must be less than end page")
-        return tuple(v)
+# StealthScrapeRequest removed - now uses individual parameters with Annotated Field
+# FormRequest removed - now uses individual parameters with Annotated Field
+# ConvertToMarkdownRequest removed - now uses individual parameters with Annotated Field
+# BatchConvertToMarkdownRequest removed - now uses individual parameters with Annotated Field
+# PDFToMarkdownRequest removed - now uses individual parameters with Annotated Field
+# BatchPDFToMarkdownRequest removed - now uses individual parameters with Annotated Field
 
 
 @app.tool()
 @timing_decorator
-async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
+async def scrape_with_stealth(
+    url: Annotated[
+        str,
+        Field(
+            ...,
+            description="目标网页URL，必须包含协议前缀（http://或https://），使用反检测技术抓取复杂的反爬虫网站",
+        ),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="selenium",
+            description="隐身方法选择，可选值：'selenium'（使用undetected-chromedriver反检测技术）、'playwright'（使用Playwright隐身模式）",
+        ),
+    ],
+    extract_config: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': '.article-body', 'links': {'selector': 'a', 'attr': 'href', 'multiple': True}}",
+        ),
+    ],
+    wait_for_element: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="等待加载的元素CSS选择器，确保动态内容完全加载。示例：'.content'、'#main-article'",
+        ),
+    ],
+    scroll_page: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="是否滚动页面以加载动态内容，适用于无限滚动或懒加载的页面",
+        ),
+    ],
+) -> ScrapeResponse:
     """
     Scrape a webpage using advanced stealth techniques to avoid detection.
 
@@ -1039,39 +735,39 @@ async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
         from .utils import URLValidator
 
         # Validate inputs
-        if not URLValidator.is_valid_url(request.url):
+        if not URLValidator.is_valid_url(url):
             return ScrapeResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error="Invalid URL format",
             )
 
-        if request.method not in ["selenium", "playwright"]:
+        if method not in ["selenium", "playwright"]:
             return ScrapeResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error="Method must be one of: selenium, playwright",
             )
 
         start_time = time.time()
-        logger.info(f"Stealth scraping: {request.url} with method: {request.method}")
+        logger.info(f"Stealth scraping: {url} with method: {method}")
 
         # Apply rate limiting
         await rate_limiter.wait()
 
         # Normalize URL
-        normalized_url = URLValidator.normalize_url(request.url)
+        normalized_url = URLValidator.normalize_url(url)
 
         # Check cache first
         cache_key_data = {
-            "extract_config": request.extract_config,
-            "wait_for_element": request.wait_for_element,
-            "scroll_page": request.scroll_page,
+            "extract_config": extract_config,
+            "wait_for_element": wait_for_element,
+            "scroll_page": scroll_page,
         }
         cached_result = cache_manager.get(
-            normalized_url, f"stealth_{request.method}", cache_key_data
+            normalized_url, f"stealth_{method}", cache_key_data
         )
         if cached_result:
             logger.info(f"Returning cached result for {normalized_url}")
@@ -1079,7 +775,6 @@ async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
             return cached_result
 
         # Validate and normalize extract config
-        extract_config = request.extract_config
         if extract_config:
             extract_config = ConfigValidator.validate_extract_config(extract_config)
 
@@ -1087,10 +782,10 @@ async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
         result = await retry_manager.retry_async(
             anti_detection_scraper.scrape_with_stealth,
             url=normalized_url,
-            method=request.method,
+            method=method,
             extract_config=extract_config,
-            wait_for_element=request.wait_for_element,
-            scroll_page=request.scroll_page,
+            wait_for_element=wait_for_element,
+            scroll_page=scroll_page,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -1105,17 +800,17 @@ async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
 
             # Cache successful result
             cache_manager.set(
-                normalized_url, f"stealth_{request.method}", result, cache_key_data
+                normalized_url, f"stealth_{method}", result, cache_key_data
             )
 
             metrics_collector.record_request(
-                normalized_url, True, duration_ms, f"stealth_{request.method}"
+                normalized_url, True, duration_ms, f"stealth_{method}"
             )
 
             return ScrapeResponse(
                 success=True,
-                url=request.url,
-                method=f"stealth_{request.method}",
+                url=url,
+                method=f"stealth_{method}",
                 data=result,
                 duration_ms=duration_ms,
                 from_cache=False,
@@ -1124,19 +819,19 @@ async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "Unknown error")),
                 normalized_url,
-                f"stealth_{request.method}",
+                f"stealth_{method}",
             )
             metrics_collector.record_request(
                 normalized_url,
                 False,
                 duration_ms,
-                f"stealth_{request.method}",
+                f"stealth_{method}",
                 error_response["error"]["category"],
             )
             return ScrapeResponse(
                 success=False,
-                url=request.url,
-                method=f"stealth_{request.method}",
+                url=url,
+                method=f"stealth_{method}",
                 error=error_response["error"]["message"],
             )
 
@@ -1144,27 +839,61 @@ async def scrape_with_stealth(request: StealthScrapeRequest) -> ScrapeResponse:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(
-            e, request.url, f"stealth_{request.method}"
-        )
+        error_response = ErrorHandler.handle_scraping_error(e, url, f"stealth_{method}")
         metrics_collector.record_request(
-            request.url,
+            url,
             False,
             duration_ms,
-            f"stealth_{request.method}",
+            f"stealth_{method}",
             error_response["error"]["category"],
         )
         return ScrapeResponse(
             success=False,
-            url=request.url,
-            method=f"stealth_{request.method}",
+            url=url,
+            method=f"stealth_{method}",
             error=error_response["error"]["message"],
         )
 
 
 @app.tool()
 @timing_decorator
-async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
+async def fill_and_submit_form(
+    url: Annotated[
+        str,
+        Field(
+            ..., description="包含表单的网页URL，必须包含协议前缀（http://或https://）"
+        ),
+    ],
+    form_data: Annotated[
+        Dict[str, Any],
+        Field(
+            ...,
+            description="表单字段数据，格式为{'选择器': '值'}，支持各种表单元素。示例：{'#username': 'admin', 'input[name=password]': 'secret', 'select[name=country]': 'US', 'input[type=checkbox]': True}",
+        ),
+    ],
+    submit: Annotated[bool, Field(default=False, description="是否提交表单")],
+    submit_button_selector: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="提交按钮的CSS选择器，如未指定则尝试自动查找。示例：'button[type=submit]'、'#submit-btn'",
+        ),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="selenium",
+            description="自动化方法选择，可选值：'selenium'（使用Selenium WebDriver）、'playwright'（使用Playwright浏览器自动化）",
+        ),
+    ],
+    wait_for_element: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="表单填写前等待加载的元素CSS选择器。示例：'.form-container'、'#login-form'",
+        ),
+    ],
+) -> ScrapeResponse:
     """
     Fill and optionally submit a form on a webpage.
 
@@ -1203,30 +932,30 @@ async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
         from .utils import URLValidator
 
         # Validate inputs
-        if not URLValidator.is_valid_url(request.url):
+        if not URLValidator.is_valid_url(url):
             return ScrapeResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error="Invalid URL format",
             )
 
-        if request.method not in ["selenium", "playwright"]:
+        if method not in ["selenium", "playwright"]:
             return ScrapeResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error="Method must be one of: selenium, playwright",
             )
 
         start_time = time.time()
-        logger.info(f"Form interaction for: {request.url}")
+        logger.info(f"Form interaction for: {url}")
 
         # Apply rate limiting
         await rate_limiter.wait()
 
         # Setup browser based on method
-        if request.method == "selenium":
+        if method == "selenium":
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options as ChromeOptions
 
@@ -1238,26 +967,26 @@ async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
 
             driver = webdriver.Chrome(options=options)
             try:
-                driver.get(request.url)
+                driver.get(url)
 
                 # Wait for element if specified
-                if request.wait_for_element:
+                if wait_for_element:
                     from selenium.webdriver.common.by import By
                     from selenium.webdriver.support.ui import WebDriverWait
                     from selenium.webdriver.support import expected_conditions as EC
 
                     WebDriverWait(driver, settings.browser_timeout).until(
                         EC.presence_of_element_located(
-                            (By.CSS_SELECTOR, request.wait_for_element)
+                            (By.CSS_SELECTOR, wait_for_element)
                         )
                     )
 
                 # Fill and submit form
                 form_handler = FormHandler(driver)
                 result = await form_handler.fill_form(
-                    form_data=request.form_data,
-                    submit=request.submit,
-                    submit_button_selector=request.submit_button_selector,
+                    form_data=form_data,
+                    submit=submit,
+                    submit_button_selector=submit_button_selector,
                 )
 
                 # Get final page info
@@ -1267,7 +996,7 @@ async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
             finally:
                 driver.quit()
 
-        elif request.method == "playwright":
+        elif method == "playwright":
             from playwright.async_api import async_playwright
 
             playwright = await async_playwright().start()
@@ -1278,21 +1007,21 @@ async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
                 context = await browser.new_context()
                 page = await context.new_page()
 
-                await page.goto(request.url, timeout=60000)
+                await page.goto(url, timeout=60000)
 
                 # Wait for element if specified
-                if request.wait_for_element:
+                if wait_for_element:
                     await page.wait_for_selector(
-                        request.wait_for_element,
+                        wait_for_element,
                         timeout=settings.browser_timeout * 1000,
                     )
 
                 # Fill and submit form
                 form_handler = FormHandler(page)
                 result = await form_handler.fill_form(
-                    form_data=request.form_data,
-                    submit=request.submit,
-                    submit_button_selector=request.submit_button_selector,
+                    form_data=form_data,
+                    submit=submit,
+                    submit_button_selector=submit_button_selector,
                 )
 
                 # Get final page info
@@ -1306,38 +1035,36 @@ async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
         duration_ms = int((time.time() - start_time) * 1000)
 
         if result.get("success"):
-            metrics_collector.record_request(
-                request.url, True, duration_ms, f"form_{request.method}"
-            )
+            metrics_collector.record_request(url, True, duration_ms, f"form_{method}")
 
             return ScrapeResponse(
                 success=True,
-                url=request.url,
-                method=f"form_{request.method}",
+                url=url,
+                method=f"form_{method}",
                 data={
                     "form_results": result,
                     "final_url": final_url,
                     "final_title": final_title,
-                    "original_url": request.url,
+                    "original_url": url,
                 },
             )
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "Form interaction failed")),
-                request.url,
-                f"form_{request.method}",
+                url,
+                f"form_{method}",
             )
             metrics_collector.record_request(
-                request.url,
+                url,
                 False,
                 duration_ms,
-                f"form_{request.method}",
+                f"form_{method}",
                 error_response["error"]["category"],
             )
             return ScrapeResponse(
                 success=False,
-                url=request.url,
-                method=f"form_{request.method}",
+                url=url,
+                method=f"form_{method}",
                 error=error_response["error"]["message"],
             )
 
@@ -1345,20 +1072,18 @@ async def fill_and_submit_form(request: FormRequest) -> ScrapeResponse:
         duration_ms = (
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
-        error_response = ErrorHandler.handle_scraping_error(
-            e, request.url, f"form_{request.method}"
-        )
+        error_response = ErrorHandler.handle_scraping_error(e, url, f"form_{method}")
         metrics_collector.record_request(
-            request.url,
+            url,
             False,
             duration_ms,
-            f"form_{request.method}",
+            f"form_{method}",
             error_response["error"]["category"],
         )
         return ScrapeResponse(
             success=False,
-            url=request.url,
-            method=f"form_{request.method}",
+            url=url,
+            method=f"form_{method}",
             error=error_response["error"]["message"],
         )
 
@@ -1457,7 +1182,20 @@ async def clear_cache() -> CacheOperationResponse:
 
 @app.tool()
 async def extract_structured_data(
-    request: ExtractStructuredDataRequest,
+    url: Annotated[
+        str,
+        Field(
+            ...,
+            description="目标网页URL，必须包含协议前缀（http://或https://），从中提取结构化数据。支持自动识别联系信息、社交媒体链接等内容",
+        ),
+    ],
+    data_type: Annotated[
+        str,
+        Field(
+            default="all",
+            description="数据类型过滤器，指定要提取的结构化数据类型。可选值：all（提取所有类型）、contact（联系信息：邮箱、电话号码）、social（社交媒体链接：Facebook、Twitter等）、content（文章内容和元数据）、products（产品信息和价格）、addresses（地址和位置信息）",
+        ),
+    ],
 ) -> StructuredDataResponse:
     """
     Extract structured data from a webpage using advanced techniques.
@@ -1484,23 +1222,20 @@ async def extract_structured_data(
         Supports filtering for specific data categories as needed.
     """
     try:
-        logger.info(f"Extracting structured data from: {request.url}")
+        # Validate inputs
+        if not URLValidator.is_valid_url(url):
+            raise ValueError("Invalid URL format")
+
+        valid_types = ["all", "contact", "social", "content", "products", "addresses"]
+        if data_type not in valid_types:
+            raise ValueError(f"Data type must be one of: {', '.join(valid_types)}")
+
+        logger.info(f"Extracting structured data from: {url}")
 
         # Apply rate limiting
         await rate_limiter.wait()
 
-        # Validate URL
-        if not URLValidator.is_valid_url(request.url):
-            return StructuredDataResponse(
-                success=False,
-                url=request.url,
-                data_type=request.data_type,
-                extracted_data={},
-                data_count=0,
-                error="Invalid URL format",
-            )
-
-        normalized_url = URLValidator.normalize_url(request.url)
+        normalized_url = URLValidator.normalize_url(url)
 
         # Scrape page content
         scrape_result = await web_scraper.scrape_url(
@@ -1511,7 +1246,7 @@ async def extract_structured_data(
             return StructuredDataResponse(
                 success=False,
                 url=normalized_url,
-                data_type=request.data_type,
+                data_type=data_type,
                 extracted_data={},
                 data_count=0,
                 error=scrape_result["error"],
@@ -1524,14 +1259,14 @@ async def extract_structured_data(
         extracted_data = {}
 
         # Extract contact information
-        if request.data_type in ["all", "contact"]:
+        if data_type in ["all", "contact"]:
             extracted_data["contact"] = {
                 "emails": TextCleaner.extract_emails(text_content),
                 "phone_numbers": TextCleaner.extract_phone_numbers(text_content),
             }
 
         # Extract social media links
-        if request.data_type in ["all", "social"]:
+        if data_type in ["all", "social"]:
             social_domains = [
                 "facebook.com",
                 "twitter.com",
@@ -1562,7 +1297,7 @@ async def extract_structured_data(
             extracted_data["social_media"] = social_links
 
         # Extract basic content structure
-        if request.data_type in ["all", "content"]:
+        if data_type in ["all", "content"]:
             extracted_data["content"] = {
                 "title": scrape_result.get("title"),
                 "meta_description": scrape_result.get("meta_description"),
@@ -1574,7 +1309,7 @@ async def extract_structured_data(
         return StructuredDataResponse(
             success=True,
             url=normalized_url,
-            data_type=request.data_type,
+            data_type=data_type,
             extracted_data=extracted_data,
             data_count=sum(
                 len(v) if isinstance(v, (list, dict)) else 1
@@ -1583,11 +1318,11 @@ async def extract_structured_data(
         )
 
     except Exception as e:
-        logger.error(f"Error extracting structured data from {request.url}: {str(e)}")
+        logger.error(f"Error extracting structured data from {url}: {str(e)}")
         return StructuredDataResponse(
             success=False,
-            url=request.url,
-            data_type=request.data_type,
+            url=url,
+            data_type=data_type,
             extracted_data={},
             data_count=0,
             error=str(e),
@@ -1597,7 +1332,64 @@ async def extract_structured_data(
 @app.tool()
 @timing_decorator
 async def convert_webpage_to_markdown(
-    request: ConvertToMarkdownRequest,
+    url: Annotated[
+        str,
+        Field(
+            ...,
+            description="目标网页URL，必须包含协议前缀（http://或https://），将抓取并转换为Markdown格式",
+        ),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="auto",
+            description="抓取方法选择，可选值：'auto'（自动选择最佳方法）、'simple'（快速HTTP请求，不支持JavaScript）、'scrapy'（Scrapy框架，适合大规模抓取）、'selenium'（浏览器渲染，支持JavaScript）",
+        ),
+    ],
+    extract_main_content: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否仅提取主要内容区域，设为True时排除导航、广告、侧边栏等非主要内容",
+        ),
+    ],
+    include_metadata: Annotated[
+        bool,
+        Field(
+            default=True, description="是否在结果中包含页面元数据（标题、描述、字数等）"
+        ),
+    ],
+    custom_options: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="自定义Markdown转换选项，支持markdownify库的各种参数配置",
+        ),
+    ],
+    wait_for_element: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Selenium模式下等待加载的元素CSS选择器。示例：'.content'、'#main-article'",
+        ),
+    ],
+    formatting_options: Annotated[
+        Optional[Dict[str, bool]],
+        Field(
+            default=None,
+            description="高级格式化选项，如表格对齐、代码检测等。示例：{'table_alignment': True, 'code_detection': True}",
+        ),
+    ],
+    embed_images: Annotated[
+        bool, Field(default=False, description="是否嵌入图片作为数据URI，默认值：False")
+    ],
+    embed_options: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="图片嵌入选项配置。示例：{'max_bytes_per_image': 100000, 'allowed_types': ['png', 'jpg']}",
+        ),
+    ],
 ) -> MarkdownResponse:
     """
     Scrape a webpage and convert it to Markdown format.
@@ -1641,45 +1433,43 @@ async def convert_webpage_to_markdown(
     start_time = time.time()
     try:
         # Validate inputs
-        parsed = urlparse(request.url)
+        parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return MarkdownResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error="Invalid URL format",
                 conversion_time=0,
             )
 
-        if request.method not in ["auto", "simple", "scrapy", "selenium"]:
+        if method not in ["auto", "simple", "scrapy", "selenium"]:
             return MarkdownResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error="Method must be one of: auto, simple, scrapy, selenium",
                 conversion_time=0,
             )
 
-        logger.info(
-            f"Converting webpage to Markdown: {request.url} with method: {request.method}"
-        )
+        logger.info(f"Converting webpage to Markdown: {url} with method: {method}")
 
         # Apply rate limiting
         await rate_limiter.wait()
 
         # Scrape the webpage first
         scrape_result = await web_scraper.scrape_url(
-            url=request.url,
-            method=request.method,
+            url=url,
+            method=method,
             extract_config=None,  # We'll handle HTML extraction in markdown converter
-            wait_for_element=request.wait_for_element,
+            wait_for_element=wait_for_element,
         )
 
         if "error" in scrape_result:
             return MarkdownResponse(
                 success=False,
-                url=request.url,
-                method=request.method,
+                url=url,
+                method=method,
                 error=scrape_result["error"],
                 conversion_time=time.time() - start_time,
             )
@@ -1687,24 +1477,24 @@ async def convert_webpage_to_markdown(
         # Convert to Markdown
         conversion_result = markdown_converter.convert_webpage_to_markdown(
             scrape_result=scrape_result,
-            extract_main_content=request.extract_main_content,
-            include_metadata=request.include_metadata,
-            custom_options=request.custom_options,
-            embed_images=request.embed_images,
-            embed_options=request.embed_options,
+            extract_main_content=extract_main_content,
+            include_metadata=include_metadata,
+            custom_options=custom_options,
+            embed_images=embed_images,
+            embed_options=embed_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         if conversion_result.get("success"):
             metrics_collector.record_request(
-                request.url, True, duration_ms, f"markdown_{request.method}"
+                url, True, duration_ms, f"markdown_{method}"
             )
 
             return MarkdownResponse(
                 success=True,
-                url=request.url,
-                method=f"markdown_{request.method}",
+                url=url,
+                method=f"markdown_{method}",
                 markdown_content=conversion_result.get(
                     "markdown_content", conversion_result.get("markdown", "")
                 ),
@@ -1716,20 +1506,20 @@ async def convert_webpage_to_markdown(
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(conversion_result.get("error", "Markdown conversion failed")),
-                request.url,
-                f"markdown_{request.method}",
+                url,
+                f"markdown_{method}",
             )
             metrics_collector.record_request(
-                request.url,
+                url,
                 False,
                 duration_ms,
-                f"markdown_{request.method}",
+                f"markdown_{method}",
                 error_response["error"]["category"],
             )
             return MarkdownResponse(
                 success=False,
-                url=request.url,
-                method=f"markdown_{request.method}",
+                url=url,
+                method=f"markdown_{method}",
                 error=error_response["error"]["message"],
                 conversion_time=duration_ms,
             )
@@ -1739,19 +1529,19 @@ async def convert_webpage_to_markdown(
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
         error_response = ErrorHandler.handle_scraping_error(
-            e, request.url, f"markdown_{request.method}"
+            e, url, f"markdown_{method}"
         )
         metrics_collector.record_request(
-            request.url,
+            url,
             False,
             duration_ms,
-            f"markdown_{request.method}",
+            f"markdown_{method}",
             error_response["error"]["category"],
         )
         return MarkdownResponse(
             success=False,
-            url=request.url,
-            method=f"markdown_{request.method}",
+            url=url,
+            method=f"markdown_{method}",
             error=error_response["error"]["message"],
             conversion_time=duration_ms,
         )
@@ -1760,7 +1550,52 @@ async def convert_webpage_to_markdown(
 @app.tool()
 @timing_decorator
 async def batch_convert_webpages_to_markdown(
-    request: BatchConvertToMarkdownRequest,
+    urls: Annotated[
+        List[str],
+        Field(
+            ...,
+            description="要批量转换为Markdown的URL列表，每个URL必须包含协议前缀，支持并发处理以提高效率",
+        ),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="auto",
+            description="统一的抓取方法：'auto'（智能选择最佳方法）、'simple'（轻量级HTTP请求）、'scrapy'（适合大批量抓取）、'selenium'（支持JavaScript动态页面）",
+        ),
+    ],
+    extract_main_content: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否统一提取主要内容区域，过滤掉导航、广告、页脚等非核心内容，获得更纯净的Markdown文档",
+        ),
+    ],
+    include_metadata: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否在每个转换结果中包含页面元数据，包含标题、URL、字数、处理时间等信息",
+        ),
+    ],
+    custom_options: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="统一的markdownify自定义选项，应用于所有URL。支持HTML标签处理、格式化选项等",
+        ),
+    ],
+    embed_images: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="是否在所有页面中嵌入图片作为数据URI，默认值：False",
+        ),
+    ],
+    embed_options: Annotated[
+        Optional[Dict[str, Any]],
+        Field(default=None, description="统一的图片嵌入选项配置，应用于所有URL"),
+    ],
 ) -> BatchMarkdownResponse:
     """
     Scrape multiple webpages and convert them to Markdown format.
@@ -1800,7 +1635,7 @@ async def batch_convert_webpages_to_markdown(
     """
     try:
         # Validate inputs
-        if not request.urls:
+        if not urls:
             return BatchMarkdownResponse(
                 success=False,
                 total_urls=0,
@@ -1810,7 +1645,7 @@ async def batch_convert_webpages_to_markdown(
                 total_conversion_time=0,
             )
 
-        for url in request.urls:
+        for url in urls:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 return BatchMarkdownResponse(
@@ -1822,7 +1657,7 @@ async def batch_convert_webpages_to_markdown(
                     total_conversion_time=0,
                 )
 
-        if request.method not in ["auto", "simple", "scrapy", "selenium"]:
+        if method not in ["auto", "simple", "scrapy", "selenium"]:
             return BatchMarkdownResponse(
                 success=False,
                 total_urls=0,
@@ -1834,28 +1669,28 @@ async def batch_convert_webpages_to_markdown(
 
         start_time = time.time()
         logger.info(
-            f"Batch converting {len(request.urls)} webpages to Markdown with method: {request.method}"
+            f"Batch converting {len(urls)} webpages to Markdown with method: {method}"
         )
 
         # Scrape all URLs first
         scrape_results = await web_scraper.scrape_multiple_urls(
-            urls=request.urls, method=request.method, extract_config=None
+            urls=urls, method=method, extract_config=None
         )
 
         # Convert all results to Markdown
         conversion_result = markdown_converter.batch_convert_to_markdown(
             scrape_results=scrape_results,
-            extract_main_content=request.extract_main_content,
-            include_metadata=request.include_metadata,
-            custom_options=request.custom_options,
-            embed_images=request.embed_images,
-            embed_options=request.embed_options,
+            extract_main_content=extract_main_content,
+            include_metadata=include_metadata,
+            custom_options=custom_options,
+            embed_images=embed_images,
+            embed_options=embed_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         # Record metrics for each URL
-        for i, url in enumerate(request.urls):
+        for i, url in enumerate(urls):
             result = (
                 conversion_result["results"][i]
                 if i < len(conversion_result["results"])
@@ -1865,19 +1700,19 @@ async def batch_convert_webpages_to_markdown(
             metrics_collector.record_request(
                 url,
                 success,
-                duration_ms // len(request.urls),
-                f"batch_markdown_{request.method}",
+                duration_ms // len(urls),
+                f"batch_markdown_{method}",
             )
 
         # Convert the conversion results to MarkdownResponse objects
         markdown_responses = []
         for i, result in enumerate(conversion_result.get("results", [])):
-            url = request.urls[i] if i < len(request.urls) else ""
+            url_item = urls[i] if i < len(urls) else ""
             markdown_responses.append(
                 MarkdownResponse(
                     success=result.get("success", False),
-                    url=url,
-                    method=f"markdown_{request.method}",
+                    url=url_item,
+                    method=f"markdown_{method}",
                     markdown_content=result.get("markdown_content", ""),
                     metadata=result.get("metadata", {}),
                     word_count=result.get("word_count", 0),
@@ -1894,7 +1729,7 @@ async def batch_convert_webpages_to_markdown(
         if conversion_result.get("success"):
             return BatchMarkdownResponse(
                 success=True,
-                total_urls=len(request.urls),
+                total_urls=len(urls),
                 successful_count=successful_count,
                 failed_count=failed_count,
                 results=markdown_responses,
@@ -1904,7 +1739,7 @@ async def batch_convert_webpages_to_markdown(
         else:
             return BatchMarkdownResponse(
                 success=False,
-                total_urls=len(request.urls),
+                total_urls=len(urls),
                 successful_count=successful_count,
                 failed_count=failed_count,
                 results=markdown_responses,
@@ -1919,9 +1754,9 @@ async def batch_convert_webpages_to_markdown(
         logger.error(f"Error in batch Markdown conversion: {str(e)}")
         return BatchMarkdownResponse(
             success=False,
-            total_urls=len(request.urls) if hasattr(request, "urls") else 0,
+            total_urls=len(urls) if urls else 0,
             successful_count=0,
-            failed_count=len(request.urls) if hasattr(request, "urls") else 0,
+            failed_count=len(urls) if urls else 0,
             results=[],
             total_word_count=0,
             total_conversion_time=duration_ms / 1000.0,
@@ -1930,7 +1765,43 @@ async def batch_convert_webpages_to_markdown(
 
 @app.tool()
 @timing_decorator
-async def convert_pdf_to_markdown(request: PDFToMarkdownRequest) -> PDFResponse:
+async def convert_pdf_to_markdown(
+    pdf_source: Annotated[
+        str,
+        Field(
+            ...,
+            description="PDF源路径，支持HTTP/HTTPS URL或本地文件绝对路径。URL将自动下载处理，本地路径需确保文件存在",
+        ),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="auto",
+            description="PDF提取方法：'auto'（自动选择最佳引擎）、'pymupdf'（PyMuPDF引擎，适合复杂布局）、'pypdf'（PyPDF引擎，适合简单文本）",
+        ),
+    ],
+    include_metadata: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否在结果中包含PDF元数据（标题、作者、创建日期、页数等）和处理统计信息",
+        ),
+    ],
+    page_range: Annotated[
+        Optional[List[int]],
+        Field(
+            default=None,
+            description="页面范围[start, end]用于部分提取，两个整数表示起始页和结束页。示例：[1, 10]提取第1-10页。页码从0开始计数",
+        ),
+    ],
+    output_format: Annotated[
+        str,
+        Field(
+            default="markdown",
+            description="输出格式选择：'markdown'（结构化Markdown文档，保留格式信息）或'text'（纯文本内容，去除所有格式）",
+        ),
+    ],
+) -> PDFResponse:
     """
     Convert a PDF document to Markdown format.
 
@@ -1968,61 +1839,61 @@ async def convert_pdf_to_markdown(request: PDFToMarkdownRequest) -> PDFResponse:
     """
     try:
         # Validate inputs
-        if request.method not in ["auto", "pymupdf", "pypdf"]:
+        if method not in ["auto", "pymupdf", "pypdf"]:
             return PDFResponse(
                 success=False,
-                pdf_source=request.pdf_source,
-                method=request.method,
-                output_format=request.output_format,
+                pdf_source=pdf_source,
+                method=method,
+                output_format=output_format,
                 error="Method must be one of: auto, pymupdf, pypdf",
                 conversion_time=0,
             )
 
-        if request.output_format not in ["markdown", "text"]:
+        if output_format not in ["markdown", "text"]:
             return PDFResponse(
                 success=False,
-                pdf_source=request.pdf_source,
-                method=request.method,
-                output_format=request.output_format,
+                pdf_source=pdf_source,
+                method=method,
+                output_format=output_format,
                 error="Output format must be one of: markdown, text",
                 conversion_time=0,
             )
 
         # Convert page_range list to tuple if provided
         page_range_tuple = None
-        if request.page_range:
-            if len(request.page_range) != 2:
+        if page_range:
+            if len(page_range) != 2:
                 return PDFResponse(
                     success=False,
-                    pdf_source=request.pdf_source,
-                    method=request.method,
-                    output_format=request.output_format,
+                    pdf_source=pdf_source,
+                    method=method,
+                    output_format=output_format,
                     error="Page range must contain exactly 2 elements: [start, end]",
                     conversion_time=0,
                 )
-            if request.page_range[0] < 0 or request.page_range[1] < 0:
+            if page_range[0] < 0 or page_range[1] < 0:
                 return PDFResponse(
                     success=False,
-                    pdf_source=request.pdf_source,
-                    method=request.method,
-                    output_format=request.output_format,
+                    pdf_source=pdf_source,
+                    method=method,
+                    output_format=output_format,
                     error="Page numbers must be non-negative",
                     conversion_time=0,
                 )
-            if request.page_range[0] >= request.page_range[1]:
+            if page_range[0] >= page_range[1]:
                 return PDFResponse(
                     success=False,
-                    pdf_source=request.pdf_source,
-                    method=request.method,
-                    output_format=request.output_format,
+                    pdf_source=pdf_source,
+                    method=method,
+                    output_format=output_format,
                     error="Start page must be less than end page",
                     conversion_time=0,
                 )
-            page_range_tuple = tuple(request.page_range)
+            page_range_tuple = tuple(page_range)
 
         start_time = time.time()
         logger.info(
-            f"Converting PDF to {request.output_format}: {request.pdf_source} with method: {request.method}"
+            f"Converting PDF to {output_format}: {pdf_source} with method: {method}"
         )
 
         # Apply rate limiting
@@ -2031,49 +1902,51 @@ async def convert_pdf_to_markdown(request: PDFToMarkdownRequest) -> PDFResponse:
         # Process PDF
         pdf_processor = _get_pdf_processor()
         result = await pdf_processor.process_pdf(
-            pdf_source=request.pdf_source,
-            method=request.method,
-            include_metadata=request.include_metadata,
+            pdf_source=pdf_source,
+            method=method,
+            include_metadata=include_metadata,
             page_range=page_range_tuple,
-            output_format=request.output_format,
+            output_format=output_format,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         if result.get("success"):
             metrics_collector.record_request(
-                request.pdf_source, True, duration_ms, f"pdf_{request.method}"
+                pdf_source, True, duration_ms, f"pdf_{method}"
             )
 
             return PDFResponse(
                 success=True,
-                pdf_source=request.pdf_source,
-                method=request.method,
-                output_format=request.output_format,
+                pdf_source=pdf_source,
+                method=method,
+                output_format=output_format,
                 content=result.get("content", result.get("markdown", "")),
                 metadata=result.get("metadata", {}),
-                page_count=result.get("page_count", result.get("pages", 0)),
+                page_count=result.get(
+                    "page_count", result.get("pages_processed", result.get("pages", 0))
+                ),
                 word_count=result.get("word_count", 0),
                 conversion_time=duration_ms / 1000.0,
             )
         else:
             error_response = ErrorHandler.handle_scraping_error(
                 Exception(result.get("error", "PDF conversion failed")),
-                request.pdf_source,
-                f"pdf_{request.method}",
+                pdf_source,
+                f"pdf_{method}",
             )
             metrics_collector.record_request(
-                request.pdf_source,
+                pdf_source,
                 False,
                 duration_ms,
-                f"pdf_{request.method}",
+                f"pdf_{method}",
                 error_response["error"]["category"],
             )
             return PDFResponse(
                 success=False,
-                pdf_source=request.pdf_source,
-                method=request.method,
-                output_format=request.output_format,
+                pdf_source=pdf_source,
+                method=method,
+                output_format=output_format,
                 error=error_response["error"]["message"],
                 conversion_time=duration_ms / 1000.0,
             )
@@ -2083,20 +1956,20 @@ async def convert_pdf_to_markdown(request: PDFToMarkdownRequest) -> PDFResponse:
             int((time.time() - start_time) * 1000) if "start_time" in locals() else 0
         )
         error_response = ErrorHandler.handle_scraping_error(
-            e, request.pdf_source, f"pdf_{request.method}"
+            e, pdf_source, f"pdf_{method}"
         )
         metrics_collector.record_request(
-            request.pdf_source,
+            pdf_source,
             False,
             duration_ms,
-            f"pdf_{request.method}",
+            f"pdf_{method}",
             error_response["error"]["category"],
         )
         return PDFResponse(
             success=False,
-            pdf_source=request.pdf_source,
-            method=request.method,
-            output_format=request.output_format,
+            pdf_source=pdf_source,
+            method=method,
+            output_format=output_format,
             error=error_response["error"]["message"],
             conversion_time=duration_ms / 1000.0,
         )
@@ -2105,7 +1978,41 @@ async def convert_pdf_to_markdown(request: PDFToMarkdownRequest) -> PDFResponse:
 @app.tool()
 @timing_decorator
 async def batch_convert_pdfs_to_markdown(
-    request: BatchPDFToMarkdownRequest,
+    pdf_sources: Annotated[
+        List[str],
+        Field(
+            ...,
+            description="PDF源列表，支持混合使用URL和本地文件路径。URL将并发下载，本地文件需确保存在且可读",
+        ),
+    ],
+    method: Annotated[
+        str,
+        Field(
+            default="auto",
+            description="统一的PDF提取方法：'auto'（智能选择最佳引擎）、'pymupdf'（适合复杂排版和图表）、'pypdf'（适合简单纯文本文档）",
+        ),
+    ],
+    include_metadata: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否在每个转换结果中包含PDF元数据和处理统计，包括文件名、大小、页数、处理时间等",
+        ),
+    ],
+    page_range: Annotated[
+        Optional[List[int]],
+        Field(
+            default=None,
+            description="应用于所有PDF的统一页面范围[start, end]。如未指定则提取全部页面。页码从0开始计数",
+        ),
+    ],
+    output_format: Annotated[
+        str,
+        Field(
+            default="markdown",
+            description="统一输出格式：'markdown'（保留标题、列表等结构化信息）或'text'（纯文本，去除所有格式化）",
+        ),
+    ],
 ) -> BatchPDFResponse:
     """
     Convert multiple PDF documents to Markdown format concurrently.
@@ -2146,7 +2053,7 @@ async def batch_convert_pdfs_to_markdown(
     """
     try:
         # Validate inputs
-        if not request.pdf_sources:
+        if not pdf_sources:
             return BatchPDFResponse(
                 success=False,
                 total_pdfs=0,
@@ -2156,77 +2063,77 @@ async def batch_convert_pdfs_to_markdown(
                 total_conversion_time=0,
             )
 
-        if request.method not in ["auto", "pymupdf", "pypdf"]:
+        if method not in ["auto", "pymupdf", "pypdf"]:
             return BatchPDFResponse(
                 success=False,
-                total_pdfs=len(request.pdf_sources),
+                total_pdfs=len(pdf_sources),
                 successful_count=0,
-                failed_count=len(request.pdf_sources),
+                failed_count=len(pdf_sources),
                 results=[],
                 total_conversion_time=0,
             )
 
-        if request.output_format not in ["markdown", "text"]:
+        if output_format not in ["markdown", "text"]:
             return BatchPDFResponse(
                 success=False,
-                total_pdfs=len(request.pdf_sources),
+                total_pdfs=len(pdf_sources),
                 successful_count=0,
-                failed_count=len(request.pdf_sources),
+                failed_count=len(pdf_sources),
                 results=[],
                 total_conversion_time=0,
             )
 
         # Convert page_range list to tuple if provided
         page_range_tuple = None
-        if request.page_range:
-            if len(request.page_range) != 2:
+        if page_range:
+            if len(page_range) != 2:
                 return BatchPDFResponse(
                     success=False,
-                    total_pdfs=len(request.pdf_sources),
+                    total_pdfs=len(pdf_sources),
                     successful_count=0,
-                    failed_count=len(request.pdf_sources),
+                    failed_count=len(pdf_sources),
                     results=[],
                     total_conversion_time=0,
                 )
-            if request.page_range[0] < 0 or request.page_range[1] < 0:
+            if page_range[0] < 0 or page_range[1] < 0:
                 return BatchPDFResponse(
                     success=False,
-                    total_pdfs=len(request.pdf_sources),
+                    total_pdfs=len(pdf_sources),
                     successful_count=0,
-                    failed_count=len(request.pdf_sources),
+                    failed_count=len(pdf_sources),
                     results=[],
                     total_conversion_time=0,
                 )
-            if request.page_range[0] >= request.page_range[1]:
+            if page_range[0] >= page_range[1]:
                 return BatchPDFResponse(
                     success=False,
-                    total_pdfs=len(request.pdf_sources),
+                    total_pdfs=len(pdf_sources),
                     successful_count=0,
-                    failed_count=len(request.pdf_sources),
+                    failed_count=len(pdf_sources),
                     results=[],
                     total_conversion_time=0,
                 )
-            page_range_tuple = tuple(request.page_range)
+            page_range_tuple = tuple(page_range)
 
         start_time = time.time()
         logger.info(
-            f"Batch converting {len(request.pdf_sources)} PDFs to {request.output_format} with method: {request.method}"
+            f"Batch converting {len(pdf_sources)} PDFs to {output_format} with method: {method}"
         )
 
         # Process all PDFs
         pdf_processor = _get_pdf_processor()
         result = await pdf_processor.batch_process_pdfs(
-            pdf_sources=request.pdf_sources,
-            method=request.method,
-            include_metadata=request.include_metadata,
+            pdf_sources=pdf_sources,
+            method=method,
+            include_metadata=include_metadata,
             page_range=page_range_tuple,
-            output_format=request.output_format,
+            output_format=output_format,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
 
         # Record metrics for each PDF
-        for i, pdf_source in enumerate(request.pdf_sources):
+        for i, pdf_source in enumerate(pdf_sources):
             pdf_result = (
                 result["results"][i]
                 if i < len(result["results"])
@@ -2236,23 +2143,25 @@ async def batch_convert_pdfs_to_markdown(
             metrics_collector.record_request(
                 pdf_source,
                 success,
-                duration_ms // len(request.pdf_sources),
-                f"batch_pdf_{request.method}",
+                duration_ms // len(pdf_sources),
+                f"batch_pdf_{method}",
             )
 
         # Convert results to PDFResponse objects
         pdf_responses = []
         for i, result_item in enumerate(result.get("results", [])):
-            pdf_source = request.pdf_sources[i] if i < len(request.pdf_sources) else ""
+            pdf_source_item = pdf_sources[i] if i < len(pdf_sources) else ""
             pdf_responses.append(
                 PDFResponse(
                     success=result_item.get("success", False),
-                    pdf_source=pdf_source,
-                    method=request.method,
-                    output_format=request.output_format,
+                    pdf_source=pdf_source_item,
+                    method=method,
+                    output_format=output_format,
                     content=result_item.get("content", ""),
                     metadata=result_item.get("metadata", {}),
-                    page_count=result_item.get("page_count", 0),
+                    page_count=result_item.get(
+                        "page_count", result_item.get("pages_processed", 0)
+                    ),
                     word_count=result_item.get("word_count", 0),
                     conversion_time=result_item.get("conversion_time", 0),
                     error=result_item.get("error"),
@@ -2267,7 +2176,7 @@ async def batch_convert_pdfs_to_markdown(
         if result.get("success"):
             return BatchPDFResponse(
                 success=True,
-                total_pdfs=len(request.pdf_sources),
+                total_pdfs=len(pdf_sources),
                 successful_count=successful_count,
                 failed_count=failed_count,
                 results=pdf_responses,
@@ -2278,7 +2187,7 @@ async def batch_convert_pdfs_to_markdown(
         else:
             return BatchPDFResponse(
                 success=False,
-                total_pdfs=len(request.pdf_sources),
+                total_pdfs=len(pdf_sources),
                 successful_count=successful_count,
                 failed_count=failed_count,
                 results=pdf_responses,
@@ -2294,13 +2203,9 @@ async def batch_convert_pdfs_to_markdown(
         logger.error(f"Error in batch PDF conversion: {str(e)}")
         return BatchPDFResponse(
             success=False,
-            total_pdfs=len(request.pdf_sources)
-            if hasattr(request, "pdf_sources")
-            else 0,
+            total_pdfs=len(pdf_sources) if pdf_sources else 0,
             successful_count=0,
-            failed_count=len(request.pdf_sources)
-            if hasattr(request, "pdf_sources")
-            else 0,
+            failed_count=len(pdf_sources) if pdf_sources else 0,
             results=[],
             total_pages=0,
             total_word_count=0,
