@@ -560,28 +560,70 @@ pre-commit run --all-files
 3. **代码覆盖率不能下降**
 4. **所有测试必须在 CI 中通过**
 
----
-
-## 版本历史
-
-- **v0.1.4** - 全面测试系统优化
-
-  - 新增 14 个 MCP 工具的完整测试覆盖
-  - 增强单元测试和集成测试
-  - 改进测试报告和文档
-  - 添加性能测试和负载测试
-
-- **v0.1.3** - 基础测试框架
-  - 基本单元测试和集成测试
-  - 初始 CI 配置
-
-有关更多信息，请参考项目的[CHANGELOG.md](CHANGELOG.md)文件。
-
----
-
 # 测试文档 - Data Extractor 核心引擎与 MCP 工具集
 
 本文档详细说明了 Data Extractor 项目的测试架构、测试用例和自动化测试运行方法。
+
+## MCP 工具架构重构说明 (v0.1.5)
+
+### 核心架构变更
+
+**从 BaseModel 子类实现迁移到 Annotated Field 参数约束模式**
+
+#### 重构前 (BaseModel 模式)
+
+```python
+# 定义请求模型
+class ExtractLinksRequest(BaseModel):
+    url: str
+    filter_domains: Optional[List[str]] = None
+    exclude_domains: Optional[List[str]] = None
+    internal_only: bool = False
+
+# MCP 工具函数
+@app.tool()
+async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
+    # 使用 request.url, request.filter_domains 等
+```
+
+#### 重构后 (Annotated Field 模式)
+
+```python
+# 直接参数定义，无需请求模型类
+@app.tool()
+async def extract_links(
+    url: Annotated[str, Field(..., description="目标网页URL，必须包含协议前缀(http://或https://)")],
+    filter_domains: Annotated[Optional[List[str]], Field(default=None, description="白名单域名列表，仅提取这些域名的链接")],
+    exclude_domains: Annotated[Optional[List[str]], Field(default=None, description="黑名单域名列表，排除这些域名的链接")],
+    internal_only: Annotated[bool, Field(default=False, description="是否仅提取内部链接(相同域名)")],
+) -> LinksResponse:
+    # 直接使用参数 url, filter_domains 等
+```
+
+### 测试用例适配变更
+
+#### 测试调用方式变更
+
+```python
+# 重构前的测试调用
+request = ExtractLinksRequest(url="https://example.com", internal_only=True)
+result = await extract_links(request)
+
+# 重构后的测试调用
+result = await extract_links(
+    url="https://example.com",
+    filter_domains=None,
+    exclude_domains=None,
+    internal_only=True
+)
+```
+
+#### 优势和改进
+
+- **参数透明性**: 所有参数都明确可见，无需查看请求模型定义
+- **描述清晰性**: 每个参数都有详细的中文描述和使用示例
+- **MCP Client 兼容**: 增强的参数描述提升了 MCP Client 的自动化识别能力
+- **减少样板代码**: 移除了大量 BaseModel 请求类定义，代码更简洁
 
 ## 测试架构概览
 

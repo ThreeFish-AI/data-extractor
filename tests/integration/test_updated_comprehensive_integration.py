@@ -6,9 +6,7 @@
 import pytest
 import asyncio
 import time
-from unittest.mock import patch, AsyncMock, Mock
-import tempfile
-import os
+from unittest.mock import patch, AsyncMock
 
 from extractor.server import app
 from extractor.config import settings
@@ -603,10 +601,9 @@ class TestSecurityAndCompliance:
             }
 
             # Get the check_robots_txt tool from the FastMCP app
-            from extractor.server import check_robots_txt, CheckRobotsRequest
+            from extractor.server import check_robots_txt
 
-            request = CheckRobotsRequest(url="https://example.com")
-            result = await check_robots_txt.fn(request)
+            result = await check_robots_txt.fn(url="https://example.com")
 
             assert result.success is True
             assert "robots.txt" in result.robots_txt_url

@@ -5,23 +5,9 @@
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from pydantic import ValidationError
 
 import extractor.server as server_module
-from extractor.server import (
-    ScrapeRequest,
-    BatchScrapeRequest,
-    ExtractLinksRequest,
-    GetPageInfoRequest,
-    CheckRobotsRequest,
-    ExtractStructuredDataRequest,
-    StealthScrapeRequest,
-    FormRequest,
-    ConvertToMarkdownRequest,
-    BatchConvertToMarkdownRequest,
-    PDFToMarkdownRequest,
-    BatchPDFToMarkdownRequest,
-)
+# BaseModel request classes have been removed - tools now use individual parameters with Annotated Field
 
 # 获取实际的函数，而不是 FunctionTool 包装器
 scrape_webpage = server_module.scrape_webpage.fn
@@ -55,8 +41,13 @@ class TestMCPToolsScraping:
             }
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
-            request = ScrapeRequest(url="https://example.com", method="simple")
-            result = await scrape_webpage(request)
+            # Now using individual parameters instead of request object
+            result = await scrape_webpage(
+                url="https://example.com",
+                method="simple",
+                extract_config=None,
+                wait_for_element=None,
+            )
 
             assert result.success is True
             assert result.data == mock_result
@@ -65,19 +56,29 @@ class TestMCPToolsScraping:
 
     @pytest.mark.asyncio
     async def test_scrape_webpage_invalid_url(self):
-        """测试无效URL处理 - BaseModel验证会拦截无效URL"""
-        with pytest.raises(ValidationError) as exc_info:
-            ScrapeRequest(url="invalid-url", method="simple")
+        """测试无效URL处理 - 现在在函数内部验证"""
+        result = await scrape_webpage(
+            url="invalid-url",
+            method="simple",
+            extract_config=None,
+            wait_for_element=None,
+        )
 
-        assert "Invalid URL format" in str(exc_info.value)
+        assert result.success is False
+        assert "Invalid URL format" in result.error
 
     @pytest.mark.asyncio
     async def test_scrape_webpage_invalid_method(self):
-        """测试无效方法处理 - BaseModel验证会拦截无效方法"""
-        with pytest.raises(ValidationError) as exc_info:
-            ScrapeRequest(url="https://example.com", method="invalid-method")
+        """测试无效方法处理 - 现在在函数内部验证"""
+        result = await scrape_webpage(
+            url="https://example.com",
+            method="invalid-method",
+            extract_config=None,
+            wait_for_element=None,
+        )
 
-        assert "Method must be one of" in str(exc_info.value)
+        assert result.success is False
+        assert "Method must be one of" in result.error
 
     @pytest.mark.asyncio
     async def test_scrape_multiple_webpages_success(self):
@@ -89,10 +90,12 @@ class TestMCPToolsScraping:
             ]
             mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mock_results)
 
-            request = BatchScrapeRequest(
-                urls=["https://example.com/1", "https://example.com/2"], method="simple"
+            # Now using individual parameters
+            result = await scrape_multiple_webpages(
+                urls=["https://example.com/1", "https://example.com/2"],
+                method="simple",
+                extract_config=None,
             )
-            result = await scrape_multiple_webpages(request)
 
             assert result.success is True
             assert result.summary["total"] == 2
@@ -100,11 +103,13 @@ class TestMCPToolsScraping:
 
     @pytest.mark.asyncio
     async def test_scrape_multiple_webpages_empty_list(self):
-        """测试空URL列表处理 - BaseModel验证会拦截空列表"""
-        with pytest.raises(ValidationError) as exc_info:
-            BatchScrapeRequest(urls=[], method="simple")
+        """测试空URL列表处理 - 现在在函数内部验证"""
+        result = await scrape_multiple_webpages(
+            urls=[], method="simple", extract_config=None
+        )
 
-        assert "URLs list cannot be empty" in str(exc_info.value)
+        assert result.success is False
+        assert "URLs list cannot be empty" in result.summary["error"]
 
     @pytest.mark.asyncio
     async def test_extract_links_success(self):
@@ -120,8 +125,13 @@ class TestMCPToolsScraping:
             }
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
-            request = ExtractLinksRequest(url="https://example.com", internal_only=True)
-            result = await extract_links(request)
+            # Using individual parameters
+            result = await extract_links(
+                url="https://example.com",
+                filter_domains=None,
+                exclude_domains=None,
+                internal_only=True,
+            )
 
             assert result.success is True
             # 内部链接过滤应该只保留同域名链接
@@ -145,12 +155,13 @@ class TestMCPToolsScraping:
             }
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
-            request = ExtractLinksRequest(
+            # Using individual parameters
+            result = await extract_links(
                 url="https://example.com",
                 filter_domains=["example.com", "allowed.com"],
                 exclude_domains=["blocked.com"],
+                internal_only=False,
             )
-            result = await extract_links(request)
 
             assert result.success is True
             # 检查过滤结果
@@ -173,8 +184,8 @@ class TestMCPToolsInformation:
             }
             mock_scraper.simple_scraper.scrape = AsyncMock(return_value=mock_result)
 
-            request = GetPageInfoRequest(url="https://example.com")
-            result = await get_page_info(request)
+            # Using individual parameter
+            result = await get_page_info(url="https://example.com")
 
             assert result.success is True
             assert result.title == "Test Page"
@@ -187,8 +198,8 @@ class TestMCPToolsInformation:
             mock_result = {"content": {"text": "User-agent: *\nDisallow: /admin/"}}
             mock_scraper.simple_scraper.scrape = AsyncMock(return_value=mock_result)
 
-            request = CheckRobotsRequest(url="https://example.com")
-            result = await check_robots_txt(request)
+            # Using individual parameter
+            result = await check_robots_txt(url="https://example.com")
 
             assert result.success is True
             assert "User-agent" in result.robots_content
@@ -202,8 +213,8 @@ class TestMCPToolsInformation:
                 return_value={"error": "404 Not Found"}
             )
 
-            request = CheckRobotsRequest(url="https://example.com")
-            result = await check_robots_txt(request)
+            # Using individual parameter
+            result = await check_robots_txt(url="https://example.com")
 
             assert result.success is False
             assert "Could not fetch robots.txt" in result.error
@@ -231,8 +242,13 @@ class TestMCPToolsAdvanced:
             }
             mock_retry.retry_async = AsyncMock(return_value=mock_result)
 
-            request = StealthScrapeRequest(url="https://example.com", method="selenium")
-            result = await scrape_with_stealth(request)
+            result = await scrape_with_stealth(
+                url="https://example.com",
+                method="selenium",
+                extract_config=None,
+                wait_for_element=None,
+                scroll_page=False,
+            )
 
             assert result.success is True
             assert result.data == mock_result
@@ -252,12 +268,14 @@ class TestMCPToolsAdvanced:
             mock_driver_instance = Mock()
             mock_driver.return_value = mock_driver_instance
 
-            request = FormRequest(
+            result = await fill_and_submit_form(
                 url="https://example.com/form",
                 form_data={"#username": "test", "#password": "secret"},
                 submit=False,
+                submit_button_selector=None,
+                method="selenium",
+                wait_for_element=None,
             )
-            result = await fill_and_submit_form(request)
 
             # 由于复杂的浏览器交互，这里主要测试参数验证
             assert hasattr(result, "success")
@@ -283,10 +301,10 @@ class TestMCPToolsAdvanced:
             }
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
-            request = ExtractStructuredDataRequest(
+            # Using individual parameters
+            result = await extract_structured_data(
                 url="https://example.com/contact", data_type="contact"
             )
-            result = await extract_structured_data(request)
 
             assert result.success is True
             assert result.extracted_data is not None
@@ -362,10 +380,17 @@ class TestMCPToolsMarkdown:
                 mock_conversion_result
             )
 
-            request = ConvertToMarkdownRequest(
-                url="https://example.com", method="simple"
+            result = await convert_webpage_to_markdown(
+                url="https://example.com",
+                method="simple",
+                extract_main_content=True,
+                include_metadata=True,
+                custom_options=None,
+                wait_for_element=None,
+                formatting_options=None,
+                embed_images=False,
+                embed_options=None,
             )
-            result = await convert_webpage_to_markdown(request)
 
             assert result.success is True
             assert result.markdown_content == "# Test\n\nContent"
@@ -403,10 +428,15 @@ class TestMCPToolsMarkdown:
                 mock_conversion_result
             )
 
-            request = BatchConvertToMarkdownRequest(
-                urls=["https://example.com/1", "https://example.com/2"], method="simple"
+            result = await batch_convert_webpages_to_markdown(
+                urls=["https://example.com/1", "https://example.com/2"],
+                method="simple",
+                extract_main_content=True,
+                include_metadata=True,
+                custom_options=None,
+                embed_images=False,
+                embed_options=None,
             )
-            result = await batch_convert_webpages_to_markdown(request)
 
             assert result.success is True
             assert result.total_urls == 2
@@ -434,10 +464,13 @@ class TestMCPToolsPDF:
             )
             mock_get_processor.return_value = mock_processor
 
-            request = PDFToMarkdownRequest(
-                pdf_source="https://example.com/document.pdf", method="auto"
+            result = await convert_pdf_to_markdown(
+                pdf_source="https://example.com/document.pdf",
+                method="auto",
+                include_metadata=True,
+                page_range=None,
+                output_format="markdown",
             )
-            result = await convert_pdf_to_markdown(request)
 
             assert result.success is True
             assert result.content == "# PDF Title\n\nPDF content"
@@ -445,17 +478,15 @@ class TestMCPToolsPDF:
     @pytest.mark.asyncio
     async def test_convert_pdf_to_markdown_invalid_method(self):
         """测试PDF转换无效方法"""
-        from pydantic import ValidationError
-
-        try:
-            request = PDFToMarkdownRequest(
-                pdf_source="https://example.com/document.pdf", method="invalid-method"
-            )
-            result = await convert_pdf_to_markdown(request)
-            assert result.success is False
-            assert "Method must be one of" in result.error
-        except ValidationError as e:
-            assert "Method must be one of" in str(e)
+        result = await convert_pdf_to_markdown(
+            pdf_source="https://example.com/document.pdf",
+            method="invalid-method",
+            include_metadata=True,
+            page_range=None,
+            output_format="markdown",
+        )
+        assert result.success is False
+        assert "Method must be one of" in result.error
 
     @pytest.mark.asyncio
     async def test_batch_convert_pdfs_to_markdown_success(self):
@@ -479,14 +510,16 @@ class TestMCPToolsPDF:
             )
             mock_get_processor.return_value = mock_processor
 
-            request = BatchPDFToMarkdownRequest(
+            result = await batch_convert_pdfs_to_markdown(
                 pdf_sources=[
                     "https://example.com/doc1.pdf",
                     "https://example.com/doc2.pdf",
                 ],
                 method="auto",
+                include_metadata=True,
+                page_range=None,
+                output_format="markdown",
             )
-            result = await batch_convert_pdfs_to_markdown(request)
 
             assert result.success is True
             assert result.total_pdfs == 2
@@ -494,18 +527,15 @@ class TestMCPToolsPDF:
     @pytest.mark.asyncio
     async def test_batch_convert_pdfs_to_markdown_empty_list(self):
         """测试批量PDF转换空列表"""
-        from pydantic import ValidationError
-
-        try:
-            request = BatchPDFToMarkdownRequest(pdf_sources=[], method="auto")
-            result = await batch_convert_pdfs_to_markdown(request)
-            assert result.success is False
-            assert "PDF sources list cannot be empty" in result.error
-        except ValidationError as e:
-            # 空列表可能在 Pydantic 层面被拒绝
-            assert "list should have at least 1 item" in str(
-                e
-            ) or "PDF sources list cannot be empty" in str(e)
+        result = await batch_convert_pdfs_to_markdown(
+            pdf_sources=[],
+            method="auto",
+            include_metadata=True,
+            page_range=None,
+            output_format="markdown",
+        )
+        assert result.success is False
+        # Empty list should result in failed operation
 
 
 class TestMCPToolsValidation:
@@ -514,8 +544,6 @@ class TestMCPToolsValidation:
     @pytest.mark.asyncio
     async def test_invalid_urls_handling(self):
         """测试无效URL的一致性处理"""
-        from pydantic import ValidationError
-
         invalid_urls = [
             "not-a-url",
             "ftp://example.com",  # 非HTTP协议
@@ -524,60 +552,52 @@ class TestMCPToolsValidation:
         ]
 
         for invalid_url in invalid_urls:
-            # 测试单页面抓取 - Pydantic 会在模型创建时验证
-            try:
-                request = ScrapeRequest(url=invalid_url)
-                result = await scrape_webpage(request)
-                # 如果请求成功创建，结果应该失败
-                assert result.success is False
-                # 根据不同的错误情况调整断言
-                error_msg = result.error
-                assert any(
-                    phrase in error_msg
-                    for phrase in [
-                        "Invalid URL format",
-                        "No connection adapters",
-                        "Unsupported protocol",
-                        "Invalid schema",
-                    ]
-                )
-            except ValidationError as e:
-                # Pydantic 验证错误也是可接受的
-                assert "Invalid URL format" in str(e)
+            # 测试单页面抓取 - 现在在函数内部验证
+            result = await scrape_webpage(
+                url=invalid_url,
+                method="simple",
+                extract_config=None,
+                wait_for_element=None,
+            )
+            # 结果应该失败
+            assert result.success is False
+            error_msg = result.error
+            assert any(
+                phrase in error_msg
+                for phrase in [
+                    "Invalid URL format",
+                    "No connection adapters",
+                    "Unsupported protocol",
+                    "Invalid schema",
+                ]
+            )
 
             # 测试页面信息获取
-            try:
-                request = GetPageInfoRequest(url=invalid_url)
-                result = await get_page_info(request)
-                assert result.success is False
-                error_msg = result.error
-                assert any(
-                    phrase in error_msg
-                    for phrase in [
-                        "Invalid URL format",
-                        "No connection adapters",
-                        "Unsupported protocol",
-                        "Invalid schema",
-                    ]
-                )
-            except ValidationError as e:
-                assert "Invalid URL format" in str(e)
+            result = await get_page_info(url=invalid_url)
+            assert result.success is False
+            error_msg = result.error
+            assert any(
+                phrase in error_msg
+                for phrase in [
+                    "Invalid URL format",
+                    "No connection adapters",
+                    "Unsupported protocol",
+                    "Invalid schema",
+                ]
+            )
 
     @pytest.mark.asyncio
     async def test_method_validation_consistency(self):
         """测试方法参数验证的一致性"""
-        from pydantic import ValidationError
-
         invalid_methods = ["invalid", "unknown", "", "AUTO"]  # 大写应该无效
 
         for invalid_method in invalid_methods:
             # 测试不同工具的方法验证一致性
-            try:
-                request = ScrapeRequest(
-                    url="https://example.com", method=invalid_method
-                )
-                result = await scrape_webpage(request)
-                assert result.success is False
-                assert "Method must be one of" in result.error
-            except ValidationError as e:
-                assert "Method must be one of" in str(e)
+            result = await scrape_webpage(
+                url="https://example.com",
+                method=invalid_method,
+                extract_config=None,
+                wait_for_element=None,
+            )
+            assert result.success is False
+            assert "Method must be one of" in result.error

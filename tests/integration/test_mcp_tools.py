@@ -233,18 +233,14 @@ class TestMarkdownConversionToolIntegration:
 
         # Tool should accept embed_images and embed_options in parameters
         if hasattr(convert_tool, "parameters"):
-            # Parameters are nested in the request schema definition
-            defs = convert_tool.parameters.get("$defs", {})
-            request_schema = defs.get("ConvertToMarkdownRequest", {})
-            params = request_schema.get("properties", {})
+            # Parameters are directly in the properties
+            params = convert_tool.parameters.get("properties", {})
             assert "embed_images" in params
             assert "embed_options" in params
 
         if hasattr(batch_tool, "parameters"):
-            # Parameters are nested in the request schema definition
-            defs = batch_tool.parameters.get("$defs", {})
-            request_schema = defs.get("BatchConvertToMarkdownRequest", {})
-            params = request_schema.get("properties", {})
+            # Parameters are directly in the properties
+            params = batch_tool.parameters.get("properties", {})
             assert "embed_images" in params
             assert "embed_options" in params
 
@@ -512,10 +508,8 @@ class TestSystemHealthAndDiagnostics:
 
         # Complex mocking would be needed to test actual functionality
         # For now, verify the tool structure is correct
-        # Parameters are nested in the request schema definition
-        defs = pdf_tool.parameters.get("$defs", {})
-        request_schema = defs.get("PDFToMarkdownRequest", {})
-        params = request_schema.get("properties", {})
+        # Parameters are directly in the properties
+        params = pdf_tool.parameters.get("properties", {})
         assert "pdf_source" in params
         assert "method" in params
 

@@ -5,11 +5,7 @@ import asyncio
 import time
 from unittest.mock import patch, AsyncMock
 
-from extractor.server import (
-    app,
-    ConvertToMarkdownRequest,
-    BatchConvertToMarkdownRequest,
-)
+from extractor.server import app
 
 
 class TestComprehensiveIntegration:
@@ -133,17 +129,18 @@ class TestComprehensiveIntegration:
                 "apply_typography": True,
             }
 
-            # This should work as the tool function is async
-            from extractor.server import ConvertToMarkdownRequest
-
-            request = ConvertToMarkdownRequest(
+            # Call the tool function directly with individual parameters
+            result = await convert_tool.fn(
                 url="https://test-site.com/article",
                 method="simple",
                 extract_main_content=True,
                 include_metadata=True,
+                custom_options=None,
                 formatting_options=formatting_options,
+                wait_for_element=None,
+                embed_images=False,
+                embed_options=None,
             )
-            result = await convert_tool.fn(request)
 
             # Verify the pipeline worked correctly
             assert result.success is True
@@ -204,10 +201,16 @@ class TestComprehensiveIntegration:
             mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mixed_results)
 
             urls = ["https://site1.com", "https://site2.com", "https://site3.com"]
-            from extractor.server import BatchConvertToMarkdownRequest
 
-            request = BatchConvertToMarkdownRequest(urls=urls, method="simple")
-            result = await batch_tool.fn(request)
+            result = await batch_tool.fn(
+                urls=urls,
+                method="simple",
+                extract_main_content=True,
+                include_metadata=True,
+                custom_options=None,
+                embed_images=False,
+                embed_options=None,
+            )
 
             assert result.success is True
             assert result.total_urls == 3
@@ -233,8 +236,17 @@ class TestComprehensiveIntegration:
                 side_effect=Exception("Network timeout error")
             )
 
-            request = ConvertToMarkdownRequest(url="https://invalid-site.com")
-            result = await convert_tool.fn(request)
+            result = await convert_tool.fn(
+                url="https://invalid-site.com",
+                method="auto",
+                extract_main_content=True,
+                include_metadata=True,
+                custom_options=None,
+                formatting_options=None,
+                wait_for_element=None,
+                embed_images=False,
+                embed_options=None,
+            )
 
             # Should handle errors gracefully
             # When scraping fails, the tool should return with success=False
@@ -268,8 +280,15 @@ class TestComprehensiveIntegration:
 
             start_time = time.time()
             urls = [f"https://example.com/page-{i}" for i in range(num_urls)]
-            request = BatchConvertToMarkdownRequest(urls=urls, method="simple")
-            result = await batch_tool.fn(request)
+            result = await batch_tool.fn(
+                urls=urls,
+                method="simple",
+                extract_main_content=True,
+                include_metadata=True,
+                custom_options=None,
+                embed_images=False,
+                embed_options=None,
+            )
             duration = time.time() - start_time
 
             assert result.success is True
@@ -304,10 +323,17 @@ class TestComprehensiveIntegration:
             num_concurrent = 5
 
             for i in range(num_concurrent):
-                request = ConvertToMarkdownRequest(
-                    url=f"https://concurrent-test.com/page-{i}"
+                task = convert_tool.fn(
+                    url=f"https://concurrent-test.com/page-{i}",
+                    method="auto",
+                    extract_main_content=True,
+                    include_metadata=True,
+                    custom_options=None,
+                    formatting_options=None,
+                    wait_for_element=None,
+                    embed_images=False,
+                    embed_options=None,
                 )
-                task = convert_tool.fn(request)
                 tasks.append(task)
 
             # Execute all tasks concurrently
@@ -351,11 +377,20 @@ class TestComprehensiveIntegration:
         with patch("extractor.server.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=tricky_result)
 
-            request = ConvertToMarkdownRequest(
-                url="https://encoding-test.com",
-                formatting_options={"apply_typography": True},
+            # Prepare request parameters
+            url = "https://encoding-test.com"
+            formatting_options = {"apply_typography": True}
+            result = await convert_tool.fn(
+                url=url,
+                method="auto",
+                extract_main_content=True,
+                include_metadata=True,
+                custom_options=None,
+                formatting_options=formatting_options,
+                wait_for_element=None,
+                embed_images=False,
+                embed_options=None,
             )
-            result = await convert_tool.fn(request)
 
             assert result.success is True
             markdown = result.markdown_content
@@ -422,8 +457,17 @@ class TestComprehensiveIntegration:
             with patch("extractor.server.web_scraper") as mock_scraper:
                 mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
-                request = ConvertToMarkdownRequest(url=f"https://edge-case-{i}.com")
-                result = await convert_tool.fn(request)
+                result = await convert_tool.fn(
+                    url=f"https://edge-case-{i}.com",
+                    method="auto",
+                    extract_main_content=True,
+                    include_metadata=True,
+                    custom_options=None,
+                    formatting_options=None,
+                    wait_for_element=None,
+                    embed_images=False,
+                    embed_options=None,
+                )
 
                 # Should not crash or throw unhandled exceptions
                 assert result.success is True
@@ -481,10 +525,17 @@ class TestComprehensiveIntegration:
             mock_scraper.scrape_url = AsyncMock(return_value=sample_result)
 
             for config in config_combinations:
-                request = ConvertToMarkdownRequest(
-                    url="https://config-test.com", formatting_options=config
+                result = await convert_tool.fn(
+                    url="https://config-test.com",
+                    method="auto",
+                    extract_main_content=True,
+                    include_metadata=True,
+                    custom_options=None,
+                    formatting_options=config,
+                    wait_for_element=None,
+                    embed_images=False,
+                    embed_options=None,
                 )
-                result = await convert_tool.fn(request)
 
                 assert result.success is True
                 # The tool should execute successfully with the provided configuration
@@ -513,10 +564,17 @@ class TestSystemHealthAndMonitoring:
 
             # Perform several operations
             for i in range(3):
-                request = ConvertToMarkdownRequest(
-                    url=f"https://metrics-test.com/page-{i}"
+                await convert_tool.fn(
+                    url=f"https://metrics-test.com/page-{i}",
+                    method="auto",
+                    extract_main_content=True,
+                    include_metadata=True,
+                    custom_options=None,
+                    formatting_options=None,
+                    wait_for_element=None,
+                    embed_images=False,
+                    embed_options=None,
                 )
-                await convert_tool.fn(request)
 
         # Check metrics
         metrics_result = await metrics_tool.fn()
@@ -551,8 +609,17 @@ class TestSystemHealthAndMonitoring:
             # Network error simulation
             mock_scraper.scrape_url = AsyncMock(side_effect=Exception("Network error"))
 
-            request = ConvertToMarkdownRequest(url="https://error-test.com")
-            result = await convert_tool.fn(request)
+            result = await convert_tool.fn(
+                url="https://error-test.com",
+                method="auto",
+                extract_main_content=True,
+                include_metadata=True,
+                custom_options=None,
+                formatting_options=None,
+                wait_for_element=None,
+                embed_images=False,
+                embed_options=None,
+            )
 
             # Should handle error gracefully
             assert result.success is False
