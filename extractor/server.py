@@ -227,38 +227,32 @@ async def scrape_webpage(
         str,
         Field(
             default="auto",
-            description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，不支持JavaScript）、scrapy（Scrapy框架，适合大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
+            description="""抓取方法选择：
+                - auto（自动选择最佳方法）；
+                - simple（快速 HTTP 请求，不支持 JavaScript）；
+                - scrapy（Scrapy 框架，适合大规模抓取）；
+                - selenium（浏览器渲染，支持 JavaScript 和动态内容）；""",
         ),
     ],
     extract_config: Annotated[
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': {'selector': '.content p', 'multiple': True, 'attr': 'text'}}",
+            description="""数据提取配置字典，支持 CSS 选择器和属性提取。
+                示例：{"title": "h1", "content": {"selector": ".content p", "multiple": True, "attr": "text"}}""",
         ),
     ],
     wait_for_element: Annotated[
         Optional[str],
         Field(
             default=None,
-            description="等待元素的 CSS 选择器（仅 Selenium 方法有效），确保页面完全加载后再提取内容。示例：'.content'、'#main-content'",
+            description="""等待元素的 CSS 选择器（仅 Selenium 方法有效），确保页面完全加载后再提取内容。
+                示例：".content"、"#main-content\"""",
         ),
     ],
 ) -> ScrapeResponse:
     """
     Scrape a single webpage and extract its content.
-
-    Args:
-        url: URL to scrape
-        method: Scraping method: auto, simple, scrapy, selenium (default: auto)
-        extract_config: Configuration for data extraction (optional)
-        wait_for_element: CSS selector to wait for - Selenium only (optional)
-
-    This tool can scrape web pages using different methods:
-    - auto: Automatically choose the best method
-    - simple: Fast HTTP requests (no JavaScript)
-    - scrapy: Robust scraping with Scrapy framework
-    - selenium: Full browser rendering (supports JavaScript)
 
     You can specify extraction rules to get specific data from the page.
     """
@@ -310,7 +304,8 @@ async def scrape_multiple_webpages(
         List[str],
         Field(
             ...,
-            description="要抓取的 URL 列表，每个 URL 必须包含协议前缀（http://或https://），支持并发抓取以提高效率。示例：['https://example.com', 'https://another.com']",
+            description="""要抓取的 URL 列表，每个 URL 必须包含协议前缀（http://或https://），支持并发抓取以提高效率。
+                示例：["https://example.com", "https://another.com"]""",
         ),
     ],
     method: Annotated[
