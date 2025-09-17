@@ -6,48 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## v0.1.5
 
-#### Released on 2025/01/11
+#### Released on 2025/09/17
 
-### 修复
-
-- **测试系统响应对象属性访问错误全面修复**
-  - **核心问题解决**: 修复了 19 个失败测试中的所有响应对象属性访问错误，成功将失败测试数量减少到 14 个
-  - **ScrapeResponse 属性访问修复**: 修复 `content` 和 `title` 属性访问错误
-    - 将错误的直接属性访问改为正确的 `data["content"]` 和 `data["title"]` 访问方式
-    - 修复多个集成测试文件中的 ScrapeResponse 对象访问模式
-  - **BatchPDFResponse 属性名称统一**: 修复属性名称不匹配问题
-    - `successful` → `successful_count` 属性名修正
-    - `total_words_extracted` → `total_word_count` 属性名修正
-    - `summary` 字典访问改为直接访问各个属性字段
-    - `failed` → `failed_count` 属性名修正
-  - **PDFResponse 属性访问标准化**: 修复多个属性访问错误
-    - `markdown` → `content` 属性名修正
-    - `source` → `pdf_source` 属性名修正
-    - `pages_processed` → `page_count` 属性名修正
-    - `text` → `content` 属性名修正
-  - **MetricsResponse 对象访问优化**: 修复错误的字典式访问
-    - 移除错误的 `metrics` 字典访问，改为直接访问各个指标属性
-    - 修复 `successful_count_requests` 等不存在属性的访问错误
-  - **MCP 工具参数断言修复**: 修复参数 schema 访问错误
-    - 修复直接访问 `properties` 的错误方式
-    - 改为通过 `$defs` 访问嵌套 schema 定义的正确方式
-    - 统一所有 MCP 工具的参数验证逻辑
-  - **Pydantic 对象字典式访问修复**: 修复对象访问模式错误
-    - 修复 `result.get("success")` 等字典式访问错误
-    - 改为正确的 `result.success` 属性访问方式
-    - 修复 `r.get("word_count", 0)` 等错误访问，改为 `r.word_count`
-- **测试稳定性显著提升**
-  - **错误类型完全消除**: 彻底解决所有 AttributeError 和 TypeError 关于响应对象属性的错误
-  - **测试结果改善**: 失败测试从 19 个减少到 14 个，剩余错误均为业务逻辑问题而非属性访问错误
-  - **代码质量提升**: 统一了响应对象访问模式，提高了测试代码的可维护性
-
-## v0.1.5 (Previous)
-
-#### Released on 2025/09/10
+**版本亮点**: 本版本是一个里程碑式的重大更新，实现了 MCP 工具的全面标准化重构和 API 文档完善，建立了完整的 FastMCP 规范体系，同时通过综合测试系统全面优化，从基础测试扩展至企业级测试体系，显著提升了工具的易用性、文档质量和系统稳定性。
 
 ### 新增
 
+- **MCP 工具 API 文档全面完善**
+
+  - **返回值规范体系建立**: 新增完整的 FastMCP 返回值规范说明章节
+    - 建立通用字段说明，明确 `success`、`error`、时间戳等标准字段含义
+    - 提供 6 种主要响应模型类型对照表，涵盖所有工具返回值类型
+    - 添加强类型 Pydantic BaseModel 标准说明
+  - **详细返回值文档**: 为核心 MCP 工具补充完整的返回值字段表格
+    - `scrape_webpage` 工具: 添加 `ScrapeResponse` 完整字段说明和示例
+    - `scrape_multiple_webpages` 工具: 添加 `BatchScrapeResponse` 批量操作结构说明
+    - `extract_links` 工具: 添加 `LinksResponse` 链接提取详细字段文档
+    - `get_server_metrics` 工具: 添加 `MetricsResponse` 性能指标完整结构
+    - `clear_cache` 工具: 添加 `CacheOperationResponse` 缓存操作结果说明
+  - **API 文档标准化**: 统一工具文档格式，提供参数说明、返回值类型、字段表格和示例
+
 - **综合测试系统全面优化**
+
   - **新增 5 个单元测试文件**: 完整覆盖所有核心模块和组件
     - `tests/unit/test_server_mcp_tools.py` - 14 个 MCP 工具完整单元测试覆盖
     - `tests/unit/test_config.py` - 配置管理模块全面测试验证
@@ -65,19 +45,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - 6 种运行模式：单元、集成、完整、快速、性能、清理
     - 彩色输出、依赖检查和自动报告生成
 
+- **图片嵌入功能扩展**
+  - **MarkdownConverter 图片嵌入引擎**: 新增 `_embed_images_in_markdown()` 方法
+    - 支持将网页中的远程图片以 data URI 形式嵌入到 Markdown 文档中
+    - 智能图片大小检测：通过 Content-Length 头部预检查，避免下载超大图片
+    - 多格式支持：自动识别 PNG、JPEG、GIF、WebP 等常见图片格式
+    - 失败回退机制：下载失败或超限时保留原始图片链接
+    - 详细统计信息：提供嵌入成功数、跳过数、错误数等诊断数据
+  - **MCP 工具集成图片嵌入功能**
+    - `convert_webpage_to_markdown`: 新增 `embed_images` 和 `embed_options` 参数支持
+    - `batch_convert_webpages_to_markdown`: 批量转换工具同步支持图片嵌入功能
+    - 配置化嵌入选项：
+      - `max_images`: 最大嵌入图片数量限制（默认 50）
+      - `max_bytes_per_image`: 单张图片大小上限（默认 2MB）
+      - `timeout_seconds`: 图片下载超时控制（默认 10 秒）
+  - **图片嵌入测试体系**: 新增 TestImageEmbedding 测试类
+    - 成功嵌入小图片测试：验证 base64 编码和 data URI 生成
+    - 大图片跳过测试：验证通过 Content-Length 头部检测超限图片
+    - 下载失败处理测试：验证网络错误时的回退机制
+    - 超时处理测试：验证请求超时时的异常处理
+    - 统计数据验证：测试嵌入统计信息的准确性和完整性
+
 ### 变更
 
+- **MCP 工具参数架构重构与标准化**
+
+  - **参数定义模式升级**: 全面重构 14 个 MCP 工具参数定义
+    - 从 BaseModel 子类迁移到 `Annotated[*, Field(...)]` 参数约束模式
+    - 统一使用 FastMCP 标准的函数签名定义方式
+    - 提供更清晰的参数描述和示例说明
+  - **参数描述格式优化**: 系统性改进参数文档质量
+    - 优化多行文档字符串格式，移除冗余的项目符号
+    - 统一参数描述风格，提供中文友好的说明文本
+    - 清理参数文档中的重复 Args 部分描述
+  - **类型注解完善**: 确保所有工具函数具有完整的返回值类型注解
+    - 14 个工具函数全部添加明确的返回值类型 (如 `-> ScrapeResponse`)
+    - 保持与 Pydantic 响应模型的完全一致性
+  - **测试系统适配**: 更新测试用例以适配新的参数定义方式
+    - 修复参数 schema 访问方式，适配新的函数签名结构
+    - 确保所有 MCP 工具测试正常运行
+
 - **pyproject.toml 测试配置全面升级**
+
   - **pytest 配置优化**: 新增测试路径、标记系统、asyncio 支持
   - **覆盖率配置完善**: HTML、XML、JSON 多格式报告生成
   - **测试标记系统**: slow、integration、unit、requires_network 等标记
   - **开发依赖更新**: 新增 pytest-html、pytest-json-report、pytest-mock 等
+
 - **测试基础设施现代化**
+
   - **从基础测试到企业级测试系统**: 330 个测试用例全覆盖
   - **多种报告格式支持**: HTML 可视化、XML CI/CD 集成、JSON 版本对比
   - **并行测试执行**: pytest-xdist 支持加速测试运行
   - **自动化测试流程**: 依赖检查、清理、执行、报告一体化
+
 - **MCP 工具参数说明系统性优化**
+
   - **全面升级 14 个 MCP 工具参数文档**: 对所有 `@app.tool()` 装饰器标记的 MCP 工具参数提供详细说明
   - **核心工具优化完成**:
     - `scrape_webpage` - 单页面抓取工具参数增强
@@ -106,9 +129,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - **README.md**: MCP 工具参数说明章节同步更新
     - **tests/TESTING.md**: 测试文档的参数说明章节同步完善
 
+- **文档体系更新**
+  - **README.md**: 新增图片嵌入功能文档
+    - 详细的 `embed_images` 和 `embed_options` 参数说明
+    - 完整的 JSON 配置示例，展示图片嵌入参数使用方法
+    - 图片嵌入限制和最佳实践说明
+  - **TESTING.md**: 更新测试覆盖范围
+    - 新增图片嵌入功能测试类别描述
+    - 测试用例数量统计更新
+  - **TEST_RESULTS.md**: 测试结果报告更新
+    - 反映新增图片嵌入测试的执行结果
+    - 测试通过率和覆盖范围统计更新
+
 ### 修复
 
+- **测试系统响应对象属性访问错误全面修复**
+
+  - **核心问题解决**: 修复了 19 个失败测试中的所有响应对象属性访问错误，成功将失败测试数量减少到 14 个
+  - **ScrapeResponse 属性访问修复**: 修复 `content` 和 `title` 属性访问错误
+    - 将错误的直接属性访问改为正确的 `data["content"]` 和 `data["title"]` 访问方式
+    - 修复多个集成测试文件中的 ScrapeResponse 对象访问模式
+  - **BatchPDFResponse 属性名称统一**: 修复属性名称不匹配问题
+    - `successful` → `successful_count` 属性名修正
+    - `total_words_extracted` → `total_word_count` 属性名修正
+    - `summary` 字典访问改为直接访问各个属性字段
+    - `failed` → `failed_count` 属性名修正
+  - **PDFResponse 属性访问标准化**: 修复多个属性访问错误
+    - `markdown` → `content` 属性名修正
+    - `source` → `pdf_source` 属性名修正
+    - `pages_processed` → `page_count` 属性名修正
+    - `text` → `content` 属性名修正
+  - **MetricsResponse 对象访问优化**: 修复错误的字典式访问
+    - 移除错误的 `metrics` 字典访问，改为直接访问各个指标属性
+    - 修复 `successful_count_requests` 等不存在属性的访问错误
+  - **MCP 工具参数断言修复**: 修复参数 schema 访问错误
+    - 修复直接访问 `properties` 的错误方式
+    - 改为通过 `$defs` 访问嵌套 schema 定义的正确方式
+    - 统一所有 MCP 工具的参数验证逻辑
+  - **Pydantic 对象字典式访问修复**: 修复对象访问模式错误
+    - 修复 `result.get("success")` 等字典式访问错误
+    - 改为正确的 `result.success` 属性访问方式
+    - 修复 `r.get("word_count", 0)` 等错误访问，改为 `r.word_count`
+
 - **Markdown 段落格式保持优化 - 超强算法升级**
+
   - **问题大幅改善**: 修复页面转 Markdown 工具输出格式问题，实现超强智能段落分割
   - **核心技术升级**:
     - **超强智能分段**: 升级 `_split_text_into_paragraphs()` 方法，实现 5 层分割策略
@@ -125,14 +189,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - **分隔完善**: 74 个空行提供良好段落间分隔，提升阅读体验
   - **全面测试**: 所有单元测试通过，确保功能稳定性和兼容性
 
-### 修复
-
 - **集成测试方法引用路径修复**
+
   - **Mock 路径纠正**: 修复`extractor.scraper.WebScraper`到`extractor.server`的方法引用
   - **依赖缺失处理**: 为 psutil 缺失情况添加优雅跳过处理
   - **配置文件重复修复**: 移除 pyproject.toml 中重复的 pytest 配置段
   - **包发现错误修复**: 配置 setuptools 正确排除 tests、reports、htmlcov、scripts 目录
+
 - **配置测试一致性修复**
+
   - **配置默认值统一**: 修复 `extractor/config.py` 中 `server_name` 默认值与测试期望不一致问题
     - 将 `DataExtractorSettings.server_name` 默认值从 `"Data Extractor"` 修正为 `"data-extractor"`
     - 同步更新 `tests/unit/test_config.py` 中相关测试期望值保持一致性
@@ -143,7 +208,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - 统一 server_name 在配置类和测试中的命名规范
     - 保证配置的向后兼容性和系统稳定性
 
+- **测试稳定性显著提升**
+  - **错误类型完全消除**: 彻底解决所有 AttributeError 和 TypeError 关于响应对象属性的错误
+  - **测试结果改善**: 失败测试从 19 个减少到 14 个，剩余错误均为业务逻辑问题而非属性访问错误
+  - **代码质量提升**: 统一了响应对象访问模式，提高了测试代码的可维护性
+
 ### 整理
+
+- **项目文档结构优化**
+
+  - **里程碑文档更新**: 完善项目开发进度记录和版本管理文档
+  - **代码规范统一**: 整理项目编码标准和最佳实践指南
+  - **文档格式标准化**: 统一 README.md、TESTING.md 等文档的格式规范
 
 - **测试文件结构优化**
   - **移动集成测试**: 将 `test_langchain_blog.py` 移动到 `tests/integration/test_langchain_blog_conversion.py`
@@ -153,6 +229,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - **新增独立脚本**: 创建 `scripts/test_langchain_blog.py` 提供手动测试功能
   - **清理测试环境**: 移除测试目录下的遗留 Markdown 输出文件
   - **测试验证**: 221 个测试全部通过，确保无回归问题
+
+### 技术改进
+
+- **FastMCP 标准合规性**: 全面遵循 FastMCP 2.0 标准，确保工具的兼容性和可维护性
+- **类型安全增强**: 通过 Pydantic BaseModel 和完整类型注解提升代码安全性
+- **API 设计优化**: 标准化工具接口设计，提升开发者体验和集成便利性
 
 ### 技术细节
 
@@ -168,43 +250,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - 强制分割从 200→180→150 字符，更激进的处理策略
 - **扩展过渡词检测**: 新增"Each", "Every", "Any", "Other"等高频过渡词
 - **增强主题识别**: 支持"LangGraph", "Claude Code", "ChatGPT"等专有名词主题切换检测
-
-### 新增
-
-- **图片嵌入功能扩展**
-  - **MarkdownConverter 图片嵌入引擎**: 新增 `_embed_images_in_markdown()` 方法
-    - 支持将网页中的远程图片以 data URI 形式嵌入到 Markdown 文档中
-    - 智能图片大小检测：通过 Content-Length 头部预检查，避免下载超大图片
-    - 多格式支持：自动识别 PNG、JPEG、GIF、WebP 等常见图片格式
-    - 失败回退机制：下载失败或超限时保留原始图片链接
-    - 详细统计信息：提供嵌入成功数、跳过数、错误数等诊断数据
-  - **MCP 工具集成图片嵌入功能**
-    - `convert_webpage_to_markdown`: 新增 `embed_images` 和 `embed_options` 参数支持
-    - `batch_convert_webpages_to_markdown`: 批量转换工具同步支持图片嵌入功能
-    - 配置化嵌入选项：
-      - `max_images`: 最大嵌入图片数量限制（默认 50）
-      - `max_bytes_per_image`: 单张图片大小上限（默认 2MB）
-      - `timeout_seconds`: 图片下载超时控制（默认 10 秒）
-  - **图片嵌入测试体系**: 新增 TestImageEmbedding 测试类
-    - 成功嵌入小图片测试：验证 base64 编码和 data URI 生成
-    - 大图片跳过测试：验证通过 Content-Length 头部检测超限图片
-    - 下载失败处理测试：验证网络错误时的回退机制
-    - 超时处理测试：验证请求超时时的异常处理
-    - 统计数据验证：测试嵌入统计信息的准确性和完整性
-
-### 变更
-
-- **文档体系更新**
-  - **README.md**: 新增图片嵌入功能文档
-    - 详细的 `embed_images` 和 `embed_options` 参数说明
-    - 完整的 JSON 配置示例，展示图片嵌入参数使用方法
-    - 图片嵌入限制和最佳实践说明
-  - **TESTING.md**: 更新测试覆盖范围
-    - 新增图片嵌入功能测试类别描述
-    - 测试用例数量统计更新
-  - **TEST_RESULTS.md**: 测试结果报告更新
-    - 反映新增图片嵌入测试的执行结果
-    - 测试通过率和覆盖范围统计更新
 
 ## v0.1.4
 
