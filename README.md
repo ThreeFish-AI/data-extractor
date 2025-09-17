@@ -397,6 +397,27 @@ uv run python -m extractor.server
 
 ## 🛠️ 工具详情
 
+### 📋 返回值规范
+
+所有 MCP 工具都遵循 FastMCP 标准，使用强类型的 Pydantic BaseModel 定义返回值：
+
+#### 通用字段说明
+
+- **`success`**: `bool` - 所有工具都包含此字段，表示操作是否成功执行
+- **`error`**: `str` (可选) - 失败时包含具体的错误信息
+- **时间戳**: 大部分工具包含时间相关字段，如 `timestamp`、`operation_time` 等
+
+#### 响应模型类型
+
+| 响应类型              | 用途          | 主要字段                                        |
+| --------------------- | ------------- | ----------------------------------------------- |
+| `ScrapeResponse`      | 单页面抓取    | `url`, `method`, `data`, `metadata`             |
+| `BatchScrapeResponse` | 批量抓取      | `total_urls`, `successful_count`, `results`     |
+| `LinksResponse`       | 链接提取      | `total_links`, `links`, `internal_links_count`  |
+| `MarkdownResponse`    | Markdown 转换 | `markdown_content`, `word_count`, `metadata`    |
+| `PDFResponse`         | PDF 转换      | `content`, `page_count`, `word_count`           |
+| `MetricsResponse`     | 性能指标      | `total_requests`, `success_rate`, `cache_stats` |
+
 ### 1. scrape_webpage
 
 基础网页爬取工具，支持多种方法和自定义提取规则。
@@ -407,6 +428,18 @@ uv run python -m extractor.server
 - `method`: 爬取方法 (auto/simple/scrapy/selenium)
 - `extract_config`: 数据提取配置 (可选)
 - `wait_for_element`: 等待的 CSS 选择器 (Selenium 专用)
+
+**返回值类型:** `ScrapeResponse`
+
+| 字段名      | 类型             | 描述               |
+| ----------- | ---------------- | ------------------ |
+| `success`   | `bool`           | 操作是否成功       |
+| `url`       | `str`            | 被抓取的 URL       |
+| `method`    | `str`            | 使用的抓取方法     |
+| `data`      | `Dict[str, Any]` | 抓取到的数据       |
+| `metadata`  | `Dict[str, Any]` | 页面元数据         |
+| `error`     | `str`            | 错误信息（如果有） |
+| `timestamp` | `datetime`       | 抓取时间戳         |
 
 **示例:**
 
@@ -425,9 +458,39 @@ uv run python -m extractor.server
 }
 ```
 
+**返回值示例:**
+
+```json
+{
+  "success": true,
+  "url": "https://example.com",
+  "method": "auto",
+  "data": {
+    "title": "网站标题",
+    "content": ["段落1内容", "段落2内容"]
+  },
+  "metadata": {
+    "title": "网站标题",
+    "description": "网站描述"
+  },
+  "timestamp": "2025-09-17T13:45:00"
+}
+```
+
 ### 2. scrape_multiple_webpages
 
 并发爬取多个网页。
+
+**返回值类型:** `BatchScrapeResponse`
+
+| 字段名             | 类型                   | 描述                |
+| ------------------ | ---------------------- | ------------------- |
+| `success`          | `bool`                 | 整体操作是否成功    |
+| `total_urls`       | `int`                  | 总 URL 数量         |
+| `successful_count` | `int`                  | 成功抓取的数量      |
+| `failed_count`     | `int`                  | 失败的数量          |
+| `results`          | `List[ScrapeResponse]` | 每个 URL 的抓取结果 |
+| `summary`          | `Dict[str, Any]`       | 批量操作摘要信息    |
 
 **示例:**
 
@@ -503,6 +566,18 @@ uv run python -m extractor.server
 - `exclude_domains`: 排除这些域名的链接
 - `internal_only`: 只提取内部链接
 
+**返回值类型:** `LinksResponse`
+
+| 字段名                 | 类型             | 描述               |
+| ---------------------- | ---------------- | ------------------ |
+| `success`              | `bool`           | 操作是否成功       |
+| `url`                  | `str`            | 源页面 URL         |
+| `total_links`          | `int`            | 总链接数量         |
+| `links`                | `List[LinkItem]` | 提取的链接列表     |
+| `internal_links_count` | `int`            | 内部链接数量       |
+| `external_links_count` | `int`            | 外部链接数量       |
+| `error`                | `str`            | 错误信息（如果有） |
+
 **示例:**
 
 ```json
@@ -550,9 +625,33 @@ uv run python -m extractor.server
 
 获取服务器性能指标和统计信息。
 
+**返回值类型:** `MetricsResponse`
+
+| 字段名                  | 类型             | 描述               |
+| ----------------------- | ---------------- | ------------------ |
+| `success`               | `bool`           | 操作是否成功       |
+| `total_requests`        | `int`            | 总请求数           |
+| `successful_requests`   | `int`            | 成功请求数         |
+| `failed_requests`       | `int`            | 失败请求数         |
+| `success_rate`          | `float`          | 成功率             |
+| `average_response_time` | `float`          | 平均响应时间（秒） |
+| `uptime_seconds`        | `float`          | 运行时间（秒）     |
+| `cache_stats`           | `Dict[str, Any]` | 缓存统计           |
+
 ### 10. clear_cache
 
 清除缓存的爬取结果。
+
+**返回值类型:** `CacheOperationResponse`
+
+| 字段名              | 类型    | 描述             |
+| ------------------- | ------- | ---------------- |
+| `success`           | `bool`  | 操作是否成功     |
+| `cleared_items`     | `int`   | 清理的缓存项数量 |
+| `cache_size_before` | `int`   | 清理前缓存大小   |
+| `cache_size_after`  | `int`   | 清理后缓存大小   |
+| `operation_time`    | `float` | 操作耗时（秒）   |
+| `message`           | `str`   | 操作结果消息     |
 
 ### 11. convert_webpage_to_markdown
 
