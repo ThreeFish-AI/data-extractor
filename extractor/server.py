@@ -228,10 +228,10 @@ async def scrape_webpage(
         Field(
             default="auto",
             description="""抓取方法选择：
-                - auto（自动选择最佳方法）；
-                - simple（快速 HTTP 请求，不支持 JavaScript）；
-                - scrapy（Scrapy 框架，适合大规模抓取）；
-                - selenium（浏览器渲染，支持 JavaScript 和动态内容）；""",
+                auto（自动选择最佳方法）、
+                simple（快速 HTTP 请求，不支持 JavaScript）、
+                scrapy（Scrapy 框架，适合大规模抓取）、
+                selenium（浏览器渲染，支持 JavaScript 和动态内容）""",
         ),
     ],
     extract_config: Annotated[
@@ -312,24 +312,25 @@ async def scrape_multiple_webpages(
         str,
         Field(
             default="auto",
-            description="抓取方法选择：auto（自动选择最佳方法）、simple（快速HTTP请求，适合静态页面）、scrapy（Scrapy框架，适合批量处理和大规模抓取）、selenium（浏览器渲染，支持JavaScript和动态内容）",
+            description="""抓取方法选择：
+                auto（自动选择最佳方法）、
+                simple（快速HTTP请求，适合静态页面）、
+                scrapy（Scrapy框架，适合批量处理和大规模抓取）、
+                selenium（浏览器渲染，支持JavaScript和动态内容）""",
         ),
     ],
     extract_config: Annotated[
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="统一的数据提取配置，应用于所有URL。格式：{'字段名': '选择器', '复杂字段': {'selector': 'CSS选择器', 'multiple': True/False, 'attr': '属性名'}}。示例：{'title': 'h1', 'links': {'selector': 'a', 'multiple': True, 'attr': 'href'}}",
+            description="""统一的数据提取配置，应用于所有URL。
+                格式：{"字段名": "选择器", "复杂字段": {"selector": "CSS选择器", "multiple": True/False, "attr": "属性名"}}。
+                示例：{"title": "h1", "links": {"selector": "a", "multiple": True, "attr": "href"}}""",
         ),
     ],
 ) -> BatchScrapeResponse:
     """
     Scrape multiple webpages concurrently.
-
-    Args:
-        urls: List of URLs to scrape
-        method: Scraping method: auto, simple, scrapy, selenium (default: auto)
-        extract_config: Configuration for data extraction (optional)
 
     This tool allows you to scrape multiple URLs at once, which is much faster
     than scraping them one by one. All URLs will be processed concurrently.
@@ -404,48 +405,42 @@ async def extract_links(
         str,
         Field(
             ...,
-            description="目标网页URL，必须包含协议前缀（http://或https://），将从此页面提取所有链接。支持http和https协议的有效URL格式",
+            description="""目标网页 URL，必须包含协议前缀（http://或https://），将从此页面提取所有链接。
+                支持 http 和 https 协议的有效 URL 格式""",
         ),
     ],
     filter_domains: Annotated[
         Optional[List[str]],
         Field(
             default=None,
-            description="白名单域名列表，仅包含这些域名的链接。设置后只返回指定域名的链接。示例：['example.com', 'subdomain.example.com', 'blog.example.org']",
+            description="""白名单域名列表，仅包含这些域名的链接。设置后只返回指定域名的链接。
+                示例：["example.com", "subdomain.example.com", "blog.example.org"]""",
         ),
     ],
     exclude_domains: Annotated[
         Optional[List[str]],
         Field(
             default=None,
-            description="黑名单域名列表，排除这些域名的链接。用于过滤广告、跟踪器等不需要的外部链接。示例：['ads.com', 'tracker.net', 'analytics.google.com']",
+            description="""黑名单域名列表，排除这些域名的链接。用于过滤广告、跟踪器等不需要的外部链接。
+                示例：["ads.com", "tracker.net", "analytics.google.com"]""",
         ),
     ],
     internal_only: Annotated[
         bool,
         Field(
             default=False,
-            description="是否仅提取内部链接（同域名链接）。设为True时只返回与源页面相同域名的链接，忽略所有外部链接",
+            description="是否仅提取内部链接（同域名链接）。设为 True 时只返回与源页面相同域名的链接，忽略所有外部链接",
         ),
     ],
 ) -> LinksResponse:
     """
     Extract all links from a webpage.
 
-    Args:
-        url (str): 目标网页URL，必须包含协议前缀（http://或https://），将从此页面提取所有链接
-        filter_domains (List[str], optional): 白名单域名列表，仅包含这些域名的链接。
-            示例：['example.com', 'subdomain.example.com']
-        exclude_domains (List[str], optional): 黑名单域名列表，排除这些域名的链接。
-            示例：['ads.com', 'tracker.net']
-        internal_only (bool, optional): 是否仅提取内部链接，即与源页面相同域名的链接。
-            默认值：False
-
     This tool is specialized for link extraction and can filter links by domain,
     extract only internal links, or exclude specific domains.
 
     Returns:
-        Dict containing success status, extracted links list, and optional filtering statistics.
+        LinksResponse object containing success status, extracted links list, and optional filtering statistics.
         Each link includes url, text, and additional attributes if available.
     """
     try:
@@ -534,21 +529,19 @@ async def get_page_info(
         str,
         Field(
             ...,
-            description="目标网页URL，必须包含协议前缀（http://或https://），用于获取页面基础信息和元数据。这是一个轻量级工具，不会提取完整页面内容",
+            description="""目标网页 URL，必须包含协议前缀（http://或https://），用于获取页面基础信息和元数据。
+                这是一个轻量级工具，不会提取完整页面内容""",
         ),
     ],
 ) -> PageInfoResponse:
     """
     Get basic information about a webpage (title, description, status).
 
-    Args:
-        url (str): 目标网页URL，必须包含协议前缀（http://或https://），用于获取页面基础信息和元数据
-
     This is a lightweight tool for quickly checking page accessibility and
     getting basic metadata without full content extraction.
 
     Returns:
-        Dict containing success status, URL, status_code, title, meta_description, and domain.
+        PageInfoResponse object containing success status, URL, status_code, title, meta_description, and domain.
         Useful for quick page validation and metadata extraction.
     """
     try:
@@ -588,22 +581,19 @@ async def check_robots_txt(
         str,
         Field(
             ...,
-            description="网站域名URL，必须包含协议前缀（http://或https://），将检查该域名的robots.txt文件。示例：'https://example.com'将检查'https://example.com/robots.txt'。用于确保道德抓取，遵循网站的爬虫规则",
+            description="""网站域名 URL，必须包含协议前缀（http://或https://），将检查该域名的 robots.txt文件。
+                示例："https://example.com"将检查"https://example.com/robots.txt"。用于确保道德抓取，遵循网站的爬虫规则""",
         ),
     ],
 ) -> RobotsResponse:
     """
     Check the robots.txt file for a domain to understand crawling permissions.
 
-    Args:
-        url (str): 网站域名URL，必须包含协议前缀（http://或https://），将检查该域名的robots.txt文件。
-            示例：'https://example.com' 将检查 'https://example.com/robots.txt'
-
     This tool helps ensure ethical scraping by checking the robots.txt file
     of a website to see what crawling rules are in place.
 
     Returns:
-        Dict containing success status, robots.txt content, base domain, and content availability.
+        RobotsResponse object containing success status, robots.txt content, base domain, and content availability.
         Helps determine crawling permissions and restrictions for the specified domain.
     """
     try:
@@ -668,28 +658,32 @@ async def scrape_with_stealth(
         str,
         Field(
             ...,
-            description="目标网页URL，必须包含协议前缀（http://或https://），使用反检测技术抓取复杂的反爬虫网站",
+            description="目标网页 URL，必须包含协议前缀（http:// 或 https://），使用反检测技术抓取复杂的反爬虫网站",
         ),
     ],
     method: Annotated[
         str,
         Field(
             default="selenium",
-            description="隐身方法选择，可选值：'selenium'（使用undetected-chromedriver反检测技术）、'playwright'（使用Playwright隐身模式）",
+            description="""隐身方法选择，可选值：
+                "selenium"（使用 undetected-chromedriver 反检测技术）、
+                "playwright"（使用 Playwright 隐身模式）""",
         ),
     ],
     extract_config: Annotated[
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="数据提取配置字典，支持CSS选择器和属性提取。示例：{'title': 'h1', 'content': '.article-body', 'links': {'selector': 'a', 'attr': 'href', 'multiple': True}}",
+            description="""数据提取配置字典，支持 CSS 选择器和属性提取。
+                示例：{"title": "h1", "content": ".article-body", "links": {"selector": "a", "attr": "href", "multiple": True}}""",
         ),
     ],
     wait_for_element: Annotated[
         Optional[str],
         Field(
             default=None,
-            description="等待加载的元素CSS选择器，确保动态内容完全加载。示例：'.content'、'#main-article'",
+            description="""等待加载的元素 CSS 选择器，确保动态内容完全加载。
+                示例：".content"、"#main-article\"""",
         ),
     ],
     scroll_page: Annotated[
@@ -703,17 +697,6 @@ async def scrape_with_stealth(
     """
     Scrape a webpage using advanced stealth techniques to avoid detection.
 
-    Args:
-        url (str): 目标网页URL，必须包含协议前缀（http://或https://），使用反检测技术抓取
-        method (str, optional): 隐身方法选择，默认值："selenium"
-            - "selenium": 使用undetected-chromedriver反检测技术
-            - "playwright": 使用Playwright隐身模式
-        extract_config (Dict[str, Any], optional): 数据提取配置字典，格式同标准抓取工具。
-            示例：{"title": "h1", "content": ".article-body"}
-        wait_for_element (str, optional): 等待加载的元素CSS选择器，确保动态内容完全加载。
-            示例：".content", "#main-article"
-        scroll_page (bool, optional): 是否滚动页面加载动态内容，默认值：False
-
     This tool uses sophisticated anti-detection methods including:
     - Undetected browser automation
     - Randomized behavior patterns
@@ -723,7 +706,7 @@ async def scrape_with_stealth(
     Use this for websites with strong anti-bot protection.
 
     Returns:
-        Dict containing success status, scraped data, stealth method used, and performance metrics.
+        ScrapeResponse object containing success status, scraped data, stealth method used, and performance metrics.
         Designed for bypassing sophisticated bot detection systems.
     """
     try:
@@ -856,14 +839,16 @@ async def fill_and_submit_form(
     url: Annotated[
         str,
         Field(
-            ..., description="包含表单的网页URL，必须包含协议前缀（http://或https://）"
+            ...,
+            description="包含表单的网页 URL，必须包含协议前缀（http:// 或 https://）",
         ),
     ],
     form_data: Annotated[
         Dict[str, Any],
         Field(
             ...,
-            description="表单字段数据，格式为{'选择器': '值'}，支持各种表单元素。示例：{'#username': 'admin', 'input[name=password]': 'secret', 'select[name=country]': 'US', 'input[type=checkbox]': True}",
+            description="""表单字段数据，格式为{"选择器": "值"}，支持各种表单元素。
+                示例：{"#username": "admin", "input[name=password]": "secret", "select[name=country]": "US", "input[type=checkbox]": True}""",
         ),
     ],
     submit: Annotated[bool, Field(default=False, description="是否提交表单")],
@@ -871,44 +856,30 @@ async def fill_and_submit_form(
         Optional[str],
         Field(
             default=None,
-            description="提交按钮的CSS选择器，如未指定则尝试自动查找。示例：'button[type=submit]'、'#submit-btn'",
+            description="""提交按钮的CSS选择器，如未指定则尝试自动查找。
+                示例："button[type=submit]"、"#submit-btn\"""",
         ),
     ],
     method: Annotated[
         str,
         Field(
             default="selenium",
-            description="自动化方法选择，可选值：'selenium'（使用Selenium WebDriver）、'playwright'（使用Playwright浏览器自动化）",
+            description="""自动化方法选择，可选值：
+                "selenium"（使用Selenium WebDriver）、
+                "playwright"（使用Playwright浏览器自动化）""",
         ),
     ],
     wait_for_element: Annotated[
         Optional[str],
         Field(
             default=None,
-            description="表单填写前等待加载的元素CSS选择器。示例：'.form-container'、'#login-form'",
+            description="""表单填写前等待加载的元素CSS选择器。
+                示例：".form-container"、"#login-form\"""",
         ),
     ],
 ) -> ScrapeResponse:
     """
     Fill and optionally submit a form on a webpage.
-
-    Args:
-        url (str): 包含表单的网页URL，必须包含协议前缀（http://或https://）
-        form_data (Dict[str, Any]): 表单字段数据，格式为{"选择器": "值"}，支持各种表单元素。
-            示例：{
-                "#username": "admin",
-                "input[name='password']": "secret",
-                "select[name='country']": "US",
-                "input[type='checkbox']": True
-            }
-        submit (bool, optional): 是否提交表单，默认值：False
-        submit_button_selector (str, optional): 提交按钮的CSS选择器，如未指定则尝试自动查找。
-            示例："button[type='submit']", "#submit-btn"
-        method (str, optional): 自动化方法选择，默认值："selenium"
-            - "selenium": 使用Selenium WebDriver
-            - "playwright": 使用Playwright浏览器自动化
-        wait_for_element (str, optional): 表单填写前等待加载的元素CSS选择器。
-            示例：".form-container", "#login-form"
 
     This tool can handle various form elements including:
     - Text inputs
@@ -920,7 +891,7 @@ async def fill_and_submit_form(
     Useful for interacting with search forms, contact forms, login forms, etc.
 
     Returns:
-        Dict containing success status, form interaction results, and optional submission response.
+        ScrapeResponse object containing success status, form interaction results, and optional submission response.
         Supports complex form automation workflows.
     """
     try:
@@ -1099,7 +1070,7 @@ async def get_server_metrics() -> MetricsResponse:
     - Server configuration details
 
     Returns:
-        Dict containing detailed server metrics including scraping performance,
+        MetricsResponse object containing detailed server metrics including scraping performance,
         cache statistics, server configuration, and real-time statistics.
     """
     try:
@@ -1144,7 +1115,7 @@ async def clear_cache() -> CacheOperationResponse:
     for all subsequent scraping operations.
 
     Returns:
-        Dict containing success status and cache clearing confirmation message.
+        CacheOperationResponse object containing success status and cache clearing confirmation message.
         Useful for forcing fresh data retrieval and managing memory usage.
     """
     try:
@@ -1181,29 +1152,26 @@ async def extract_structured_data(
         str,
         Field(
             ...,
-            description="目标网页URL，必须包含协议前缀（http://或https://），从中提取结构化数据。支持自动识别联系信息、社交媒体链接等内容",
+            description="""目标网页URL，必须包含协议前缀（http:// 或 https://），从中提取结构化数据。
+            支持自动识别联系信息、社交媒体链接等内容""",
         ),
     ],
     data_type: Annotated[
         str,
         Field(
             default="all",
-            description="数据类型过滤器，指定要提取的结构化数据类型。可选值：all（提取所有类型）、contact（联系信息：邮箱、电话号码）、social（社交媒体链接：Facebook、Twitter等）、content（文章内容和元数据）、products（产品信息和价格）、addresses（地址和位置信息）",
+            description="""数据类型过滤器，指定要提取的结构化数据类型。可选值：
+                all（提取所有类型）、
+                contact（联系信息：邮箱、电话号码）、
+                social（社交媒体链接：Facebook、Twitter等）、
+                content（文章内容和元数据）、
+                products（产品信息和价格）、
+                addresses（地址和位置信息）""",
         ),
     ],
 ) -> StructuredDataResponse:
     """
     Extract structured data from a webpage using advanced techniques.
-
-    Args:
-        url (str): 目标网页URL，必须包含协议前缀（http://或https://），从中提取结构化数据
-        data_type (str, optional): 数据类型过滤，默认值："all"
-            - "all": 提取所有结构化数据
-            - "contact": 仅提取联系信息（邮箱、电话）
-            - "social": 仅提取社交媒体链接
-            - "content": 仅提取文章内容
-            - "products": 仅提取产品信息
-            - "addresses": 仅提取地址信息
 
     Automatically detects and extracts:
     - Contact information (emails, phone numbers)
@@ -1213,7 +1181,7 @@ async def extract_structured_data(
     - Article content
 
     Returns:
-        Dict containing success status and structured data organized by type.
+        StructuredDataResponse object containing success status and structured data organized by type.
         Supports filtering for specific data categories as needed.
     """
     try:
@@ -1331,21 +1299,25 @@ async def convert_webpage_to_markdown(
         str,
         Field(
             ...,
-            description="目标网页URL，必须包含协议前缀（http://或https://），将抓取并转换为Markdown格式",
+            description="目标网页URL，必须包含协议前缀（http:// 或 https://），将抓取并转换为 Markdown 格式",
         ),
     ],
     method: Annotated[
         str,
         Field(
             default="auto",
-            description="抓取方法选择，可选值：'auto'（自动选择最佳方法）、'simple'（快速HTTP请求，不支持JavaScript）、'scrapy'（Scrapy框架，适合大规模抓取）、'selenium'（浏览器渲染，支持JavaScript）",
+            description="""抓取方法选择，可选值：
+                "auto"（自动选择最佳方法）、
+                "simple"（快速 HTTP 请求，不支持 JavaScript）、
+                "scrapy"（Scrapy 框架，适合大规模抓取）、
+                "selenium"（浏览器渲染，支持 JavaScript）""",
         ),
     ],
     extract_main_content: Annotated[
         bool,
         Field(
             default=True,
-            description="是否仅提取主要内容区域，设为True时排除导航、广告、侧边栏等非主要内容",
+            description="是否仅提取主要内容区域，设为 True 时排除导航、广告、侧边栏等非主要内容",
         ),
     ],
     include_metadata: Annotated[
@@ -1358,57 +1330,40 @@ async def convert_webpage_to_markdown(
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="自定义Markdown转换选项，支持markdownify库的各种参数配置",
+            description="自定义 Markdown 转换选项，支持 markdownify 库的各种参数配置",
         ),
     ],
     wait_for_element: Annotated[
         Optional[str],
         Field(
             default=None,
-            description="Selenium模式下等待加载的元素CSS选择器。示例：'.content'、'#main-article'",
+            description="""Selenium模式下等待加载的元素CSS选择器。
+                示例：".content"、"#main-article\"""",
         ),
     ],
     formatting_options: Annotated[
         Optional[Dict[str, bool]],
         Field(
             default=None,
-            description="高级格式化选项，如表格对齐、代码检测等。示例：{'table_alignment': True, 'code_detection': True}",
+            description="""高级格式化选项，如表格对齐、代码检测等。
+                示例：{"table_alignment": True, "code_detection": True}""",
         ),
     ],
     embed_images: Annotated[
-        bool, Field(default=False, description="是否嵌入图片作为数据URI，默认值：False")
+        bool,
+        Field(default=False, description="是否嵌入图片作为数据 URI，默认值：False"),
     ],
     embed_options: Annotated[
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="图片嵌入选项配置。示例：{'max_bytes_per_image': 100000, 'allowed_types': ['png', 'jpg']}",
+            description="""图片嵌入选项配置。
+                示例：{"max_bytes_per_image": 100000, "allowed_types": ["png", "jpg"]}""",
         ),
     ],
 ) -> MarkdownResponse:
     """
     Scrape a webpage and convert it to Markdown format.
-
-    Args:
-        url (str): 目标网页URL，必须包含协议前缀（http://或https://），将抓取并转换为Markdown格式
-        method (str, optional): 抓取方法选择，默认值："auto"
-            - "auto": 自动选择最佳方法
-            - "simple": 快速HTTP请求（不支持JavaScript）
-            - "scrapy": Scrapy框架（适合大规模抓取）
-            - "selenium": 浏览器渲染（支持JavaScript和动态内容）
-        extract_main_content (bool, optional): 是否仅提取主要内容区域，默认值：True
-            设为True时排除导航、广告、侧边栏等
-        include_metadata (bool, optional): 是否在结果中包含页面元数据，默认值：True
-            包含标题、描述、字数统计等信息
-        custom_options (Dict[str, Any], optional): 自定义Markdown转换选项，用于控制转换行为。
-            示例：{"strip": ["a", "img"], "convert": ["div"]}
-        wait_for_element (str, optional): CSS选择器，等待特定元素加载（仅Selenium方法有效）。
-            示例：".content", "#main-article"
-        formatting_options (Dict[str, bool], optional): 高级格式化选项，控制输出格式。
-            选项：format_tables, detect_code_language, apply_typography等
-        embed_images (bool, optional): 是否嵌入图片作为数据URI，默认值：False
-        embed_options (Dict[str, Any], optional): 图片嵌入选项配置。
-            示例：{"max_bytes_per_image": 100000, "allowed_types": ["png", "jpg"]}
 
     This tool combines web scraping with Markdown conversion to provide clean,
     readable text format suitable for documentation, analysis, or storage.
@@ -1421,7 +1376,7 @@ async def convert_webpage_to_markdown(
     - Advanced formatting and image embedding capabilities
 
     Returns:
-        Dict containing success status, Markdown content, conversion metadata,
+        MarkdownResponse object containing success status, Markdown content, conversion metadata,
         and optional image embedding statistics.
     """
 
@@ -1549,21 +1504,25 @@ async def batch_convert_webpages_to_markdown(
         List[str],
         Field(
             ...,
-            description="要批量转换为Markdown的URL列表，每个URL必须包含协议前缀，支持并发处理以提高效率",
+            description="要批量转换为 Markdown 的 URL 列表，每个 URL 必须包含协议前缀，支持并发处理以提高效率",
         ),
     ],
     method: Annotated[
         str,
         Field(
             default="auto",
-            description="统一的抓取方法：'auto'（智能选择最佳方法）、'simple'（轻量级HTTP请求）、'scrapy'（适合大批量抓取）、'selenium'（支持JavaScript动态页面）",
+            description="""统一的抓取方法：
+                "auto"（智能选择最佳方法）、
+                "simple"（轻量级 HTTP 请求）、
+                "scrapy"（适合大批量抓取）、
+                "selenium"（支持 JavaScript 动态页面）""",
         ),
     ],
     extract_main_content: Annotated[
         bool,
         Field(
             default=True,
-            description="是否统一提取主要内容区域，过滤掉导航、广告、页脚等非核心内容，获得更纯净的Markdown文档",
+            description="是否统一提取主要内容区域，过滤掉导航、广告、页脚等非核心内容，获得更纯净的 Markdown 文档",
         ),
     ],
     include_metadata: Annotated[
@@ -1577,42 +1536,28 @@ async def batch_convert_webpages_to_markdown(
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="统一的markdownify自定义选项，应用于所有URL。支持HTML标签处理、格式化选项等",
+            description="""统一的 markdownify 自定义选项，应用于所有 URL。支持 HTML 标签处理、格式化选项等。
+                示例：{"strip": ["nav", "footer"], "convert": ["article"]}""",
         ),
     ],
     embed_images: Annotated[
         bool,
         Field(
             default=False,
-            description="是否在所有页面中嵌入图片作为数据URI，默认值：False",
+            description="是否在所有页面中嵌入图片作为数据 URI，默认值：False",
         ),
     ],
     embed_options: Annotated[
         Optional[Dict[str, Any]],
-        Field(default=None, description="统一的图片嵌入选项配置，应用于所有URL"),
+        Field(
+            default=None,
+            description="""统一的图片嵌入选项配置，应用于所有 URL。
+                示例：{"max_bytes_per_image": 100000}""",
+        ),
     ],
 ) -> BatchMarkdownResponse:
     """
     Scrape multiple webpages and convert them to Markdown format.
-
-    Args:
-    - urls (List[str]): URL列表，每个URL必须包含协议前缀，将批量转换为Markdown格式
-    - method (str, optional): 批量抓取方法，默认值："auto"，应用于所有URL
-        - "auto": 自动选择最佳方法
-        - "simple": 快速HTTP请求（适合静态内容）
-        - "scrapy": Scrapy框架（适合大规模抓取）
-        - "selenium": 浏览器渲染（支持JavaScript）
-    - extract_main_content (bool, optional): 统一的主要内容提取设置，默认值：True
-        应用于所有页面，排除导航和广告
-    - include_metadata (bool, optional): 统一的元数据包含设置，默认值：True
-        为每个页面包含标题、描述等元数据
-    - custom_options (Dict[str, Any], optional): 统一的自定义转换选项，应用于所有页面。
-        示例：{"strip": ["nav", "footer"], "convert": ["article"]}
-    - formatting_options (Dict[str, bool], optional): 统一的高级格式化选项。
-        选项：format_tables, detect_code_language, apply_typography等
-    - embed_images (bool, optional): 是否在所有页面中嵌入图片，默认值：False
-    - embed_options (Dict[str, Any], optional): 统一的图片嵌入配置。
-        示例：{"max_bytes_per_image": 100000}
 
     This tool provides batch processing for converting multiple webpages to Markdown.
     It processes all URLs concurrently for better performance.
@@ -1625,7 +1570,7 @@ async def batch_convert_webpages_to_markdown(
     - Same conversion options as single page tool
 
     Returns:
-        Dict containing success status, batch conversion results, summary statistics,
+        BatchMarkdownResponse object containing success status, batch conversion results, summary statistics,
         and individual page conversion details with error handling.
     """
     try:
@@ -1765,56 +1710,49 @@ async def convert_pdf_to_markdown(
         str,
         Field(
             ...,
-            description="PDF源路径，支持HTTP/HTTPS URL或本地文件绝对路径。URL将自动下载处理，本地路径需确保文件存在",
+            description="""PDF 源路径，支持 HTTP/HTTPS URL 或本地文件绝对路径。
+                URL 将自动下载处理，本地路径需确保文件存在。
+                URL示例："https://example.com/document.pdf"
+                本地路径示例："/path/to/document.pdf""",
         ),
     ],
     method: Annotated[
         str,
         Field(
             default="auto",
-            description="PDF提取方法：'auto'（自动选择最佳引擎）、'pymupdf'（PyMuPDF引擎，适合复杂布局）、'pypdf'（PyPDF引擎，适合简单文本）",
+            description="""PDF 提取方法：
+                "auto"（自动选择最佳引擎）、
+                "pymupdf"（PyMuPDF引擎，适合复杂布局）、
+                "pypdf"（PyPDF引擎，适合简单文本）""",
         ),
     ],
     include_metadata: Annotated[
         bool,
         Field(
             default=True,
-            description="是否在结果中包含PDF元数据（标题、作者、创建日期、页数等）和处理统计信息",
+            description="是否在结果中包含 PDF 元数据（标题、作者、创建日期、页数等）和处理统计信息",
         ),
     ],
     page_range: Annotated[
         Optional[List[int]],
         Field(
             default=None,
-            description="页面范围[start, end]用于部分提取，两个整数表示起始页和结束页。示例：[1, 10]提取第1-10页。页码从0开始计数",
+            description="""页面范围 [start, end] 用于部分提取，两个整数表示起始页和结束页。
+                示例：[1, 10]提取第 1-10页。页码从 0 开始计数""",
         ),
     ],
     output_format: Annotated[
         str,
         Field(
             default="markdown",
-            description="输出格式选择：'markdown'（结构化Markdown文档，保留格式信息）或'text'（纯文本内容，去除所有格式）",
+            description="""输出格式选择：
+                "markdown"（结构化Markdown文档，保留格式信息）、
+                "text"（纯文本内容，去除所有格式）""",
         ),
     ],
 ) -> PDFResponse:
     """
     Convert a PDF document to Markdown format.
-
-    Args:
-        pdf_source (str): PDF来源，可以是URL或本地文件路径。
-            URL示例："https://example.com/document.pdf"
-            本地路径示例："/path/to/document.pdf"
-        method (str, optional): PDF处理引擎选择，默认值："auto"
-            - "auto": 自动选择最佳引擎（PyMuPDF → PyPDF2）
-            - "pymupdf": 使用PyMuPDF(fitz)引擎，功能强大，支持复杂排版
-            - "pypdf": 使用PyPDF2引擎，兼容性好，适合简单文档
-        include_metadata (bool, optional): 是否在结果中包含PDF元数据，默认值：True
-            包含标题、作者、创建日期等信息
-        page_range (List[int], optional): 页面范围[开始页, 结束页]，用于部分提取。
-            示例：[1, 10] 提取第1-10页，页码从0开始计数
-        output_format (str, optional): 输出格式选择，默认值："markdown"
-            - "markdown": Markdown格式输出，适合文档处理
-            - "text": 纯文本格式输出，适合简单文本提取
 
     This tool can process PDF files from URLs or local file paths:
     - auto: Automatically choose the best extraction method
@@ -1829,7 +1767,7 @@ async def convert_pdf_to_markdown(
     - Multiple extraction methods for reliability
 
     Returns:
-        Dict containing success status, extracted content, metadata, processing method used,
+        PDFResponse object containing success status, extracted content, metadata, processing method used,
         and page/word count statistics.
     """
     try:
@@ -1977,14 +1915,22 @@ async def batch_convert_pdfs_to_markdown(
         List[str],
         Field(
             ...,
-            description="PDF源列表，支持混合使用URL和本地文件路径。URL将并发下载，本地文件需确保存在且可读",
+            description="""PDF 源列表，支持混合使用 URL 和本地文件路径。URL 将并发下载，本地文件需确保存在且可读。
+                示例：[
+                    "https://example.com/doc1.pdf",
+                    "/path/to/doc2.pdf",
+                    "https://example.com/doc3.pdf"
+                ]""",
         ),
     ],
     method: Annotated[
         str,
         Field(
             default="auto",
-            description="统一的PDF提取方法：'auto'（智能选择最佳引擎）、'pymupdf'（适合复杂排版和图表）、'pypdf'（适合简单纯文本文档）",
+            description="""统一的PDF提取方法：
+                "auto"（智能选择最佳引擎）、
+                "pymupdf"（适合复杂排版和图表）、
+                "pypdf"（适合简单纯文本文档）""",
         ),
     ],
     include_metadata: Annotated[
@@ -1998,38 +1944,22 @@ async def batch_convert_pdfs_to_markdown(
         Optional[List[int]],
         Field(
             default=None,
-            description="应用于所有PDF的统一页面范围[start, end]。如未指定则提取全部页面。页码从0开始计数",
+            description="""应用于所有PDF的统一页面范围 [start, end]。如未指定则提取全部页面。页码从 0 开始计数。
+                示例：[0, 5] 为所有PDF提取前 5 页""",
         ),
     ],
     output_format: Annotated[
         str,
         Field(
             default="markdown",
-            description="统一输出格式：'markdown'（保留标题、列表等结构化信息）或'text'（纯文本，去除所有格式化）",
+            description="""统一输出格式：
+                "markdown"（保留标题、列表等结构化信息）、
+                "text"（纯文本，去除所有格式化）""",
         ),
     ],
 ) -> BatchPDFResponse:
     """
     Convert multiple PDF documents to Markdown format concurrently.
-
-    Args:
-        pdf_sources (List[str]): PDF来源列表，可混合URL和本地文件路径。
-            示例：[
-                "https://example.com/doc1.pdf",
-                "/path/to/doc2.pdf",
-                "https://example.com/doc3.pdf"
-            ]
-        method (str, optional): 批量处理的统一引擎选择，默认值："auto"
-            - "auto": 自动选择最佳引擎，应用于所有PDF
-            - "pymupdf": 使用PyMuPDF引擎处理所有PDF
-            - "pypdf": 使用PyPDF2引擎处理所有PDF
-        include_metadata (bool, optional): 统一的元数据包含设置，默认值：True
-            为所有PDF包含标题、作者等元数据
-        page_range (List[int], optional): 统一的页面范围设置，应用于所有PDF。
-            示例：[0, 5] 为所有PDF提取前5页
-        output_format (str, optional): 统一的输出格式设置，默认值："markdown"
-            - "markdown": 所有PDF输出为Markdown格式
-            - "text": 所有PDF输出为纯文本格式
 
     This tool provides batch processing for converting multiple PDFs to Markdown.
     It processes all PDFs concurrently for better performance.
@@ -2043,7 +1973,7 @@ async def batch_convert_pdfs_to_markdown(
     - Same conversion options as single PDF tool
 
     Returns:
-        Dict containing success status, batch conversion results, comprehensive statistics
+        BatchPDFResponse object containing success status, batch conversion results, comprehensive statistics
         (total PDFs, success/failure counts, total pages, total words), and individual PDF results.
     """
     try:
