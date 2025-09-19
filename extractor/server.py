@@ -239,7 +239,8 @@ async def scrape_webpage(
         Field(
             default=None,
             description="""数据提取配置字典，支持 CSS 选择器和属性提取。
-                示例：{"title": "h1", "content": {"selector": ".content p", "multiple": True, "attr": "text"}}""",
+                格式：配置字典，键为字段名，值为选择器或配置对象。
+                示例：{"title": "h1", "content": {"selector": ".content p", "multiple": true, "attr": "text"}}""",
         ),
     ],
     wait_for_element: Annotated[
@@ -275,10 +276,22 @@ async def scrape_webpage(
     try:
         logger.info(f"Scraping webpage: {url} with method: {method}")
 
+        # Validate extract_config if provided
+        parsed_extract_config = None
+        if extract_config:
+            if not isinstance(extract_config, dict):
+                return ScrapeResponse(
+                    success=False,
+                    url=url,
+                    method=method,
+                    error="extract_config must be a dictionary",
+                )
+            parsed_extract_config = extract_config
+
         result = await web_scraper.scrape_url(
             url=url,
             method=method,
-            extract_config=extract_config,
+            extract_config=parsed_extract_config,
             wait_for_element=wait_for_element,
         )
 
@@ -323,9 +336,9 @@ async def scrape_multiple_webpages(
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="""统一的数据提取配置，应用于所有URL。
-                格式：{"字段名": "选择器", "复杂字段": {"selector": "CSS选择器", "multiple": True/False, "attr": "属性名"}}。
-                示例：{"title": "h1", "links": {"selector": "a", "multiple": True, "attr": "href"}}""",
+            description="""统一的数据提取配置字典，应用于所有URL。
+                格式：配置字典，键为字段名，值为选择器或配置对象。
+                示例：{"title": "h1", "links": {"selector": "a", "multiple": true, "attr": "href"}}""",
         ),
     ],
 ) -> BatchScrapeResponse:
@@ -350,10 +363,24 @@ async def scrape_multiple_webpages(
 
         logger.info(f"Scraping {len(urls)} webpages with method: {method}")
 
+        # Validate extract_config if provided
+        parsed_extract_config = None
+        if extract_config:
+            if not isinstance(extract_config, dict):
+                return BatchScrapeResponse(
+                    success=False,
+                    total_urls=len(urls),
+                    successful_count=0,
+                    failed_count=len(urls),
+                    results=[],
+                    summary={"error": "extract_config must be a dictionary"},
+                )
+            parsed_extract_config = extract_config
+
         results = await web_scraper.scrape_multiple_urls(
             urls=urls,
             method=method,
-            extract_config=extract_config,
+            extract_config=parsed_extract_config,
         )
 
         # Convert results to ScrapeResponse objects
@@ -1089,7 +1116,7 @@ async def get_server_metrics() -> MetricsResponse:
             method_usage=metrics.get("method_usage", {}),
             error_categories=metrics.get("error_categories", {}),
         )
-    except Exception as e:
+    except Exception:
         return MetricsResponse(
             success=False,
             total_requests=0,
