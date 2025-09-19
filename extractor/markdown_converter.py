@@ -1,11 +1,19 @@
-"""Markdown conversion utilities for HTML content."""
+"""Markdown conversion utilities for various content types using MarkItDown."""
 
 import logging
 import re
-from typing import Dict, Any, List, Optional
+import tempfile
+import os
+from typing import Dict, Any, List, Optional, Union
 from urllib.parse import urljoin, urlparse
+from pathlib import Path
 
-from markdownify import markdownify as md
+try:
+    from markitdown import MarkItDown
+except ImportError:
+    # Fallback for testing or if markitdown is not available
+    MarkItDown = None
+
 from bs4 import BeautifulSoup, Comment
 import base64
 import mimetypes
@@ -15,42 +23,130 @@ logger = logging.getLogger(__name__)
 
 
 class MarkdownConverter:
-    """Convert HTML content to Markdown format."""
+    """Convert various content types to Markdown format using Microsoft's MarkItDown."""
 
-    def __init__(self):
-        """Initialize the Markdown converter."""
+    def __init__(
+        self, enable_plugins: bool = False, llm_client=None, llm_model: str = None
+    ):
+        """
+        Initialize the Markdown converter.
+
+        Args:
+            enable_plugins: Whether to enable MarkItDown plugins
+            llm_client: Optional LLM client for enhanced image descriptions
+            llm_model: LLM model to use (e.g., "gpt-4o")
+        """
+        if MarkItDown is None:
+            raise ImportError(
+                "MarkItDown is not available. Please install it with: pip install 'markitdown[all]'"
+            )
+
+        self.markitdown = MarkItDown(
+            enable_plugins=enable_plugins, llm_client=llm_client, llm_model=llm_model
+        )
+
+        # Configuration options for different conversion scenarios
         self.default_options = {
-            "heading_style": "ATX",  # Use # style headings
-            "bullets": "-",  # Use - for bullet points
-            "emphasis_mark": "*",  # Use * for emphasis
-            "strong_mark": "**",  # Use ** for strong
-            "link_style": "INLINE",  # Use inline links [text](url)
-            "autolinks": True,  # Convert plain URLs to links
-            "wrap": False,  # Disable wrapping
-            "strip": ["script", "style"],  # Strip unwanted tags
-            "default_title": False,  # Don't include title in links
-            "escape_asterisks": False,  # Don't escape asterisks in text
-            "escape_underscores": False,  # Don't escape underscores in text
+            "extract_main_content": True,
+            "preserve_structure": True,
+            "clean_output": True,
+            "include_links": True,
+            "include_images": True,
         }
 
         # Advanced formatting options
         self.formatting_options = {
-            "format_tables": True,  # Enable table formatting
-            "detect_code_language": True,  # Auto-detect code language
-            "format_quotes": True,  # Improve blockquote formatting
-            "enhance_images": True,  # Improve image alt text
-            "optimize_links": True,  # Optimize link formatting
-            "format_lists": True,  # Improve list formatting
-            "format_headings": True,  # Add proper heading spacing
-            "apply_typography": True,  # Apply typography fixes (smart quotes, em dashes)
-            "smart_quotes": True,  # Enable smart quotes
-            "em_dashes": True,  # Convert double hyphens to em dashes
-            "fix_spacing": True,  # Fix spacing issues
+            "format_tables": True,
+            "enhance_images": True,
+            "optimize_links": True,
+            "format_lists": True,
+            "format_headings": True,
+            "apply_typography": True,
+            "smart_quotes": True,
+            "em_dashes": True,
+            "fix_spacing": True,
         }
+
+    def html_to_markdown(
+        self,
+        html_content: str,
+        base_url: Optional[str] = None,
+        custom_options: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        Convert HTML content to Markdown using MarkItDown.
+
+        Args:
+            html_content: HTML content to convert
+            base_url: Base URL for resolving relative URLs
+            custom_options: Custom options (maintained for compatibility)
+
+        Returns:
+            Markdown formatted content
+        """
+        try:
+            # Preprocess HTML if needed
+            processed_html = self.preprocess_html(html_content, base_url)
+
+            # Create a temporary HTML file for MarkItDown to process
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".html", delete=False, encoding="utf-8"
+            ) as temp_file:
+                temp_file.write(processed_html)
+                temp_file_path = temp_file.name
+
+            try:
+                # Convert using MarkItDown
+                result = self.markitdown.convert(temp_file_path)
+                markdown_content = result.text_content
+
+                # Post-process the markdown for better formatting
+                markdown_content = self.postprocess_markdown(markdown_content)
+
+                return markdown_content
+
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_file_path)
+                except OSError:
+                    pass
+
+        except Exception as e:
+            logger.error(f"Error converting HTML to Markdown with MarkItDown: {str(e)}")
+            # Fallback to basic conversion if MarkItDown fails
+            return self._fallback_html_conversion(html_content)
+
+    def _fallback_html_conversion(self, html_content: str) -> str:
+        """Fallback HTML conversion when MarkItDown fails."""
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+
+            # Remove unwanted elements
+            for tag in soup.find_all(["script", "style", "nav", "header", "footer"]):
+                tag.decompose()
+
+            # Simple conversion logic
+            text_content = soup.get_text()
+
+            # Basic markdown formatting
+            lines = text_content.split("\n")
+            markdown_lines = []
+
+            for line in lines:
+                line = line.strip()
+                if line:
+                    markdown_lines.append(line)
+
+            return "\n\n".join(markdown_lines)
+
+        except Exception as e:
+            logger.warning(f"Fallback conversion failed: {str(e)}")
+            return f"Conversion failed: {str(e)}"
 
     def preprocess_html(self, html_content: str, base_url: Optional[str] = None) -> str:
         """
-        Preprocess HTML content before Markdown conversion.
+        Preprocess HTML content before MarkItDown conversion.
 
         Args:
             html_content: Raw HTML content
@@ -67,7 +163,7 @@ class MarkdownConverter:
             for comment in comments:
                 comment.extract()
 
-            # Remove unwanted elements
+            # Remove unwanted elements that typically don't contain main content
             unwanted_tags = [
                 "script",
                 "style",
@@ -99,88 +195,25 @@ class MarkdownConverter:
             if base_url:
                 # Convert relative links
                 for link in soup.find_all("a", href=True):
-                    if hasattr(link, "get"):
-                        href = link.get("href", "")
-                        if isinstance(href, str) and not href.startswith(
-                            ("http://", "https://")
-                        ):
-                            link["href"] = urljoin(base_url, href)
+                    href = link.get("href", "")
+                    if isinstance(href, str) and not href.startswith(
+                        ("http://", "https://")
+                    ):
+                        link["href"] = urljoin(base_url, href)
 
                 # Convert relative image sources
                 for img in soup.find_all("img", src=True):
-                    if hasattr(img, "get"):
-                        src = img.get("src", "")
-                        if isinstance(src, str) and not src.startswith(
-                            ("http://", "https://")
-                        ):
-                            img["src"] = urljoin(base_url, src)
-
-            # Mark paragraph boundaries for later processing
-            for i, tag in enumerate(soup.find_all("p")):
-                text_content = tag.get_text(strip=True)
-                if text_content:  # Only if paragraph has content
-                    # Check if paragraph contains only images or other media without text
-                    media_tags = tag.find_all(["img", "video", "audio"])
-                    if media_tags and not text_content:
-                        # Skip paragraphs that only contain media elements
-                        continue
-
-                    # Simple and safe approach: add markers around the entire paragraph
-                    from bs4 import NavigableString
-
-                    tag.insert(0, NavigableString(f"PARAGRAPH_START_{i} "))
-                    tag.append(NavigableString(f" PARAGRAPH_END_{i}"))
-
-            # Clean up empty paragraphs and divs
-            for tag in soup.find_all(["p", "div"]):
-                if not tag.get_text(strip=True) and not tag.find_all(
-                    ["img", "video", "audio"]
-                ):
-                    tag.decompose()
+                    src = img.get("src", "")
+                    if isinstance(src, str) and not src.startswith(
+                        ("http://", "https://")
+                    ):
+                        img["src"] = urljoin(base_url, src)
 
             return str(soup)
 
         except Exception as e:
             logger.warning(f"Error preprocessing HTML: {str(e)}")
             return html_content
-
-    def html_to_markdown(
-        self,
-        html_content: str,
-        base_url: Optional[str] = None,
-        custom_options: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """
-        Convert HTML content to Markdown.
-
-        Args:
-            html_content: HTML content to convert
-            base_url: Base URL for resolving relative URLs
-            custom_options: Custom options for markdownify
-
-        Returns:
-            Markdown formatted content
-        """
-        try:
-            # Use custom options if provided, otherwise use defaults
-            options = self.default_options.copy()
-            if custom_options:
-                options.update(custom_options)
-
-            # Preprocess HTML
-            processed_html = self.preprocess_html(html_content, base_url)
-
-            # Convert to Markdown
-            markdown_content = md(processed_html, **options)
-
-            # Post-process Markdown
-            markdown_content = self.postprocess_markdown(markdown_content)
-
-            return markdown_content
-
-        except Exception as e:
-            logger.error(f"Error converting HTML to Markdown: {str(e)}")
-            return f"Error converting content: {str(e)}"
 
     def postprocess_markdown(self, markdown_content: str) -> str:
         """
@@ -197,12 +230,6 @@ class MarkdownConverter:
             if self.formatting_options.get("format_tables", True):
                 markdown_content = self._format_tables(markdown_content)
 
-            if self.formatting_options.get("detect_code_language", True):
-                markdown_content = self._format_code_blocks(markdown_content)
-
-            if self.formatting_options.get("format_quotes", True):
-                markdown_content = self._format_quotes(markdown_content)
-
             if self.formatting_options.get("enhance_images", True):
                 markdown_content = self._format_images(markdown_content)
 
@@ -215,10 +242,14 @@ class MarkdownConverter:
             if self.formatting_options.get("format_headings", True):
                 markdown_content = self._format_headings(markdown_content)
 
+            # Add code block and quote formatting
+            markdown_content = self._format_code_blocks(markdown_content)
+            markdown_content = self._format_quotes(markdown_content)
+
             if self.formatting_options.get("apply_typography", True):
                 markdown_content = self._apply_typography_fixes(markdown_content)
 
-            # Basic cleanup (existing functionality)
+            # Basic cleanup
             markdown_content = self._basic_cleanup(markdown_content)
 
             return markdown_content
@@ -235,11 +266,7 @@ class MarkdownConverter:
         max_bytes_per_image: int = 2_000_000,
         timeout_seconds: int = 10,
     ) -> Dict[str, Any]:
-        """Embed remote images referenced in Markdown as data URIs.
-
-        Best-effort: on failure or limits exceeded, preserves original links.
-        Returns new markdown and embedding stats for diagnostics.
-        """
+        """Embed remote images referenced in Markdown as data URIs."""
         try:
             pattern = re.compile(r"!\[(.*?)\]\((.*?)\)")
 
@@ -331,30 +358,28 @@ class MarkdownConverter:
                     and line.strip().endswith("|")
                 ):
                     # This looks like a table row
-                    cells = [
-                        cell.strip() for cell in line.split("|")[1:-1]
-                    ]  # Remove empty first/last elements
+                    cells = [cell.strip() for cell in line.split("|")[1:-1]]
 
                     # Check if next line is a separator (header separator)
                     if i + 1 < len(lines) and re.match(
                         r"^\s*\|[\s\-:]+\|\s*$", lines[i + 1]
                     ):
-                        # This is a header row, format it
+                        # This is a header row
                         formatted_line = "| " + " | ".join(cells) + " |"
                         formatted_lines.append(formatted_line)
                     elif re.match(r"^\s*\|[\s\-:]+\|\s*$", line):
-                        # This is a separator row, format it
+                        # This is a separator row
                         separator_cells = []
                         for cell in cells:
                             if ":" in cell:
                                 if cell.startswith(":") and cell.endswith(":"):
-                                    separator_cells.append(":---:")  # Center aligned
+                                    separator_cells.append(":---:")
                                 elif cell.endswith(":"):
-                                    separator_cells.append("---:")  # Right aligned
+                                    separator_cells.append("---:")
                                 else:
-                                    separator_cells.append(":---")  # Left aligned
+                                    separator_cells.append(":---")
                             else:
-                                separator_cells.append("---")  # Default alignment
+                                separator_cells.append("---")
                         formatted_line = "| " + " | ".join(separator_cells) + " |"
                         formatted_lines.append(formatted_line)
                     else:
@@ -369,21 +394,63 @@ class MarkdownConverter:
             logger.warning(f"Error formatting tables: {str(e)}")
             return markdown_content
 
+    def _format_images(self, markdown_content: str) -> str:
+        """Enhance image formatting with better alt text."""
+        try:
+
+            def improve_image_alt(match):
+                alt_text = match.group(1)
+                image_url = match.group(2)
+
+                if not alt_text or alt_text in ["", "image", "img", "photo", "picture"]:
+                    # Try to generate better alt text from URL
+                    filename = os.path.basename(image_url).split(".")[0]
+                    alt_text = filename.replace("-", " ").replace("_", " ").title()
+
+                return f"![{alt_text}]({image_url})"
+
+            markdown_content = re.sub(
+                r"!\[(.*?)\]\((.*?)\)", improve_image_alt, markdown_content
+            )
+
+            # Add proper spacing around images
+            markdown_content = re.sub(r"(!\[.*?\]\(.*?\))", r"\n\1\n", markdown_content)
+
+            return markdown_content
+        except Exception as e:
+            logger.warning(f"Error formatting images: {str(e)}")
+            return markdown_content
+
+    def _format_links(self, markdown_content: str) -> str:
+        """Optimize link formatting."""
+        try:
+            # Fix link formatting issues
+            markdown_content = re.sub(
+                r"\[([^\]]+)\]\s*\(\s*([^\s\)]+)\s*\)", r"[\1](\2)", markdown_content
+            )
+
+            # Ensure links don't break across lines improperly
+            markdown_content = re.sub(
+                r"\[([^\]]+)\]\s*\n\s*\(([^\)]+)\)", r"[\1](\2)", markdown_content
+            )
+
+            return markdown_content
+        except Exception as e:
+            logger.warning(f"Error formatting links: {str(e)}")
+            return markdown_content
+
     def _format_code_blocks(self, markdown_content: str) -> str:
         """Enhance code block formatting with language detection."""
         try:
-            # Detect common code patterns and add language hints (handle indented code blocks)
-            # Use more specific patterns to avoid overlapping matches
+            # Detect common code patterns and add language hints
             code_patterns = {
-                r"(?m)^(\s*)```\s*\n((?:(?!```).)*?function\s+\w+(?:(?!```).)*?)^\1```": r"\1```javascript\n\2\1```",
                 r"(?m)^(\s*)```\s*\n((?:(?!```).)*?def\s+\w+(?:(?!```).)*?)^\1```": r"\1```python\n\2\1```",
+                r"(?m)^(\s*)```\s*\n((?:(?!```).)*?function\s+\w+(?:(?!```).)*?)^\1```": r"\1```javascript\n\2\1```",
                 r"(?m)^(\s*)```\s*\n((?:(?!```).)*?class\s+\w+(?:(?!```).)*?)^\1```": r"\1```python\n\2\1```",
                 r"(?m)^(\s*)```\s*\n((?:(?!```).)*?import\s+(?:(?!```).)*?)^\1```": r"\1```python\n\2\1```",
                 r"(?m)^(\s*)```\s*\n((?:(?!```).)*?<\?php(?:(?!```).)*?)^\1```": r"\1```php\n\2\1```",
                 r"(?m)^(\s*)```\s*\n((?:(?!```).)*?<html(?:(?!```).)*?)^\1```": r"\1```html\n\2\1```",
-                r"(?m)^(\s*)```\s*\n((?:(?!```).)*?<!DOCTYPE(?:(?!```).)*?)^\1```": r"\1```html\n\2\1```",
                 r"(?m)^(\s*)```\s*\n((?:(?!```).)*?SELECT\s+(?:(?!```).)*?)^\1```": r"\1```sql\n\2\1```",
-                r'(?m)^(\s*)```\s*\n((?:(?!```).)*?\{.*?".*?".*?\}(?:(?!```).)*?)^\1```': r"\1```json\n\2\1```",
             }
 
             for pattern, replacement in code_patterns.items():
@@ -407,7 +474,7 @@ class MarkdownConverter:
     def _format_quotes(self, markdown_content: str) -> str:
         """Improve blockquote formatting."""
         try:
-            # Ensure blockquotes are properly formatted (handle indented quotes)
+            # Ensure blockquotes are properly formatted
             markdown_content = re.sub(
                 r"^(\s*)>\s*(.+)$", r"\1> \2", markdown_content, flags=re.MULTILINE
             )
@@ -422,197 +489,6 @@ class MarkdownConverter:
             logger.warning(f"Error formatting quotes: {str(e)}")
             return markdown_content
 
-    def _format_images(self, markdown_content: str) -> str:
-        """Enhance image formatting with better alt text and titles."""
-        try:
-            # Improve image alt text when it's missing or poor
-            def improve_image_alt(match):
-                alt_text = match.group(1)
-                image_url = match.group(2)
-
-                if not alt_text or alt_text in ["", "image", "img", "photo", "picture"]:
-                    # Try to generate better alt text from URL
-                    import os
-
-                    filename = os.path.basename(image_url).split(".")[0]
-                    alt_text = filename.replace("-", " ").replace("_", " ").title()
-
-                return f"![{alt_text}]({image_url})"
-
-            markdown_content = re.sub(
-                r"!\[(.*?)\]\((.*?)\)", improve_image_alt, markdown_content
-            )
-
-            # Add proper spacing around images
-            markdown_content = re.sub(r"(!\[.*?\]\(.*?\))", r"\n\1\n", markdown_content)
-
-            return markdown_content
-        except Exception as e:
-            logger.warning(f"Error formatting images: {str(e)}")
-            return markdown_content
-
-    def _format_links(self, markdown_content: str) -> str:
-        """Optimize link formatting and reference links."""
-        try:
-            # Convert inline links to reference links for better readability (optional)
-            # For now, just ensure proper spacing and formatting
-
-            # Fix link formatting issues
-            markdown_content = re.sub(
-                r"\[([^\]]+)\]\s*\(\s*([^\s\)]+)\s*\)", r"[\1](\2)", markdown_content
-            )
-
-            # Ensure links don't break across lines improperly
-            markdown_content = re.sub(
-                r"\[([^\]]+)\]\s*\n\s*\(([^\)]+)\)", r"[\1](\2)", markdown_content
-            )
-
-            return markdown_content
-        except Exception as e:
-            logger.warning(f"Error formatting links: {str(e)}")
-            return markdown_content
-
-    def _format_lists(self, markdown_content: str) -> str:
-        """Improve list formatting and nesting while preserving paragraph structure."""
-        try:
-            lines = markdown_content.split("\n")
-            formatted_lines = []
-
-            for line in lines:
-                # Ensure consistent list marker spacing (normalize to -)
-                line = re.sub(r"^(\s*)([-\*\+])\s*(.+)$", r"\1- \3", line)
-
-                # Ensure consistent numbered list formatting
-                line = re.sub(r"^(\s*)(\d+)[\.\)]\s*(.+)$", r"\1\2. \3", line)
-
-                formatted_lines.append(line)
-
-            # Clean up empty list items only if they're truly empty
-            markdown_content = "\n".join(formatted_lines)
-            markdown_content = re.sub(r"\n[-*+]\s*\n(?=\n)", "\n", markdown_content)
-
-            return markdown_content
-        except Exception as e:
-            logger.warning(f"Error formatting lists: {str(e)}")
-            return markdown_content
-
-    def _format_headings(self, markdown_content: str) -> str:
-        """Improve heading formatting and hierarchy while preserving paragraph structure."""
-        try:
-            lines = markdown_content.split("\n")
-            formatted_lines = []
-
-            for i, line in enumerate(lines):
-                if re.match(r"^#{1,6}\s", line):
-                    # Ensure proper heading spacing
-                    heading = line.strip()
-
-                    # Add spacing before headings (except if first line or after blank line)
-                    if (
-                        i > 0
-                        and lines[i - 1].strip() != ""
-                        and not re.match(r"^#{1,6}\s", lines[i - 1])
-                    ):
-                        formatted_lines.append("")  # Add blank line before heading
-
-                    formatted_lines.append(heading)
-
-                    # Add spacing after headings (except if next line is blank)
-                    if i < len(lines) - 1 and lines[i + 1].strip() != "":
-                        formatted_lines.append("")  # Add blank line after heading
-                else:
-                    # Always append non-heading lines preserving original structure
-                    formatted_lines.append(line)
-
-            return "\n".join(formatted_lines)
-        except Exception as e:
-            logger.warning(f"Error formatting headings: {str(e)}")
-            return markdown_content
-
-    def _apply_typography_fixes(self, markdown_content: str) -> str:
-        """Apply typography improvements while preserving paragraph structure."""
-        try:
-            # Convert double hyphens to em dashes
-            markdown_content = re.sub(r"(?<!\-)\-\-(?!\-)", "—", markdown_content)
-
-            # Convert straight quotes to smart quotes (be careful in code blocks)
-            def replace_quotes(match):
-                text = match.group(0)
-                # Don't replace quotes in code blocks or inline code
-                if "`" in text or text.startswith("    "):
-                    return text
-
-                # Simple smart quote replacement
-                text = re.sub(r'"([^"]*)"', r'"\1"', text)
-                text = re.sub(r"'([^']*)'", r"'\1'", text)
-                return text
-
-            # Apply smart quotes to paragraphs, avoiding code
-            markdown_content = re.sub(
-                r"^(?![ ]*```|[ ]*`|[ ]{4})(.+)$",
-                replace_quotes,
-                markdown_content,
-                flags=re.MULTILINE,
-            )
-
-            # Fix multiple spaces within lines (but not between lines)
-            lines = markdown_content.split("\n")
-            fixed_lines = []
-            for line in lines:
-                # Fix multiple spaces in all lines, including those with only whitespace
-                line = re.sub(r" {2,}", " ", line)
-                fixed_lines.append(line)
-            markdown_content = "\n".join(fixed_lines)
-
-            # Fix spacing around punctuation within lines
-            markdown_content = re.sub(r"\s+([.!?:;,])", r"\1", markdown_content)
-            markdown_content = re.sub(r"([.!?])\s*([A-Z])", r"\1 \2", markdown_content)
-
-            return markdown_content
-        except Exception as e:
-            logger.warning(f"Error applying typography fixes: {str(e)}")
-            return markdown_content
-
-    def _basic_cleanup(self, markdown_content: str) -> str:
-        """Apply basic cleanup operations while preserving paragraph structure."""
-        try:
-            # Restore paragraph boundaries from markers
-            # Handle both complete and partial markers
-            markdown_content = re.sub(
-                r"PARAGRAPH_START_\d+ (.*?) PARAGRAPH_END_\d+",
-                r"\1\n\n",
-                markdown_content,
-                flags=re.DOTALL,
-            )
-
-            # Clean up any remaining markers that weren't matched
-            markdown_content = re.sub(
-                r"PARAGRAPH_START_\d+[.?]?\s*", "", markdown_content
-            )
-            markdown_content = re.sub(r"\s*PARAGRAPH_END_\d+", "\n\n", markdown_content)
-
-            # Clean up excessive spaces but preserve line structure
-            lines = []
-            for line in markdown_content.split("\n"):
-                # Remove trailing spaces but preserve intentional line breaks
-                cleaned_line = line.rstrip()
-                lines.append(cleaned_line)
-
-            markdown_content = "\n".join(lines)
-
-            # Remove excessive blank lines (more than 2 consecutive) while preserving paragraph breaks
-            # This removes multiple consecutive empty lines but keeps essential paragraph separators
-            markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
-
-            # Remove leading/trailing whitespace
-            markdown_content = markdown_content.strip()
-
-            return markdown_content
-
-        except Exception as e:
-            logger.warning(f"Error in basic cleanup: {str(e)}")
-            return markdown_content
-
     def _split_text_into_paragraphs(self, text_content: str) -> list:
         """
         Split text content into paragraphs using various heuristics.
@@ -624,23 +500,20 @@ class MarkdownConverter:
             List of paragraph strings
         """
         try:
-            import re
-
-            # Pre-processing: clean up text
+            # Clean up text
             text = text_content.strip()
 
-            # Step 1: Split by double newlines (most reliable)
+            # Step 1: Split by double newlines
             parts = text.split("\n\n")
             if len(parts) > 1:
                 paragraphs = []
                 for part in parts:
                     part = part.replace("\n", " ").strip()
                     if part:
-                        # Further split long parts
                         paragraphs.extend(self._split_long_text(part))
                 return paragraphs
 
-            # Step 2: Split by newline + capital letter patterns
+            # Step 2: Split by sentence patterns
             sentence_pattern = r"([.!?])\s*\n+\s*([A-Z])"
             text_with_markers = re.sub(
                 sentence_pattern, r"\1\n\nPARAGRAPH_SPLIT\n\n\2", text
@@ -655,12 +528,7 @@ class MarkdownConverter:
                         paragraphs.extend(self._split_long_text(part))
                 return paragraphs
 
-            # Step 3: Split by semantic patterns (topic transitions)
-            paragraphs = self._split_by_semantic_patterns(text)
-            if len(paragraphs) > 1:
-                return paragraphs
-
-            # Step 4: Split by sentence boundaries with smart grouping
+            # Step 3: Split by sentences with smart grouping
             return self._split_by_sentences(text)
 
         except Exception as e:
@@ -669,8 +537,6 @@ class MarkdownConverter:
 
     def _split_long_text(self, text: str, max_length: int = 150) -> list:
         """Split text that's too long into smaller chunks."""
-        import re
-
         if len(text) <= max_length:
             return [text]
 
@@ -699,52 +565,8 @@ class MarkdownConverter:
 
         return paragraphs
 
-    def _split_by_semantic_patterns(self, text: str) -> list:
-        """Split text by semantic patterns like topic changes."""
-        import re
-
-        # Patterns that indicate new topics/sections
-        topic_patterns = [
-            r"([.!?])\s+(However|Therefore|Furthermore|Moreover|Additionally|Meanwhile|In contrast|For example|Similarly|On the other hand|In fact|Indeed|Specifically|Generally|Overall|Finally)",
-            r"([.!?])\s+(The\s+[A-Z][a-z]+)",
-            r"([.!?])\s+([A-Z][a-z]+\s+(agents?|tools?|methods?|approaches?|strategies?|techniques?|systems?|models?|applications?))",
-        ]
-
-        for pattern in topic_patterns:
-            if re.search(pattern, text):
-                parts = re.split(pattern, text)
-                if len(parts) > 3:  # We have actual splits
-                    paragraphs = []
-                    current = ""
-
-                    for i in range(
-                        0, len(parts), 4
-                    ):  # Groups of 4 due to capturing groups
-                        if i + 3 < len(parts):
-                            segment = (
-                                parts[i] + parts[i + 1] + parts[i + 2] + parts[i + 3]
-                            )
-                        else:
-                            segment = "".join(parts[i:])
-
-                        if current and len(current + segment) > 200:
-                            paragraphs.extend(self._split_long_text(current.strip()))
-                            current = segment
-                        else:
-                            current += segment
-
-                    if current:
-                        paragraphs.extend(self._split_long_text(current.strip()))
-
-                    if len(paragraphs) > 1:
-                        return paragraphs
-
-        return [text]
-
     def _split_by_sentences(self, text: str) -> list:
         """Split text by sentences with intelligent grouping."""
-        import re
-
         # Split by sentence boundaries
         sentences = re.split(r"([.!?])\s+", text)
 
@@ -757,26 +579,15 @@ class MarkdownConverter:
             ending = sentences[i + 1] if i + 1 < len(sentences) else ""
             full_sentence = sentence + ending
 
-            # Rules for paragraph boundaries:
+            # Rules for paragraph boundaries
             should_break = False
 
             if current_paragraph:
-                # Check length (ultra aggressive threshold)
-                if len(current_paragraph) > 90:
+                # Check length
+                if len(current_paragraph) > 120:
                     should_break = True
 
-                # Force break after any sentence if the paragraph already has content
-                # This handles the worst cases with many sentences crammed together
-                if current_paragraph.strip() and "." in current_paragraph:
-                    sentence_count = (
-                        current_paragraph.count(".")
-                        + current_paragraph.count("!")
-                        + current_paragraph.count("?")
-                    )
-                    if sentence_count >= 1 and len(current_paragraph) > 80:
-                        should_break = True
-
-                # Check for transition words (expanded list)
+                # Check for transition words
                 transition_words = [
                     "However",
                     "Therefore",
@@ -786,108 +597,10 @@ class MarkdownConverter:
                     "Additionally",
                     "In contrast",
                     "For example",
-                    "Similarly",
-                    "The",
-                    "This",
-                    "These",
-                    "That",
-                    "Agents",
-                    "Context",
-                    "Memory",
-                    "Tools",
-                    "When",
-                    "Where",
-                    "Why",
-                    "How",
-                    "First",
-                    "Second",
-                    "Third",
-                    "Finally",
-                    "Also",
-                    "But",
-                    "So",
-                    "And",
-                    "As",
-                    "If",
-                    "With",
-                    "For",
-                    "To",
-                    "In",
-                    "On",
-                    "At",
-                    "By",
-                    "From",
-                    "What",
-                    "Which",
-                    "Who",
-                    "ChatGPT",
-                    "Claude",
-                    "GPT",
-                    "AI",
-                    "LLM",
-                    "Another",
-                    "One",
-                    "Many",
-                    "Some",
-                    "All",
-                    "Most",
-                    "Few",
-                    "Several",
-                    "Each",
-                    "Every",
-                    "Any",
-                    "Other",
-                    "Both",
-                    "Either",
-                    "Neither",
                 ]
 
                 for word in transition_words:
                     if full_sentence.strip().startswith(word + " "):
-                        should_break = True
-                        break
-
-                # Additional rules for better splitting
-                # Break after questions
-                if (
-                    current_paragraph.strip().endswith("?")
-                    and len(current_paragraph) > 60
-                ):
-                    should_break = True
-
-                # Break before quotes
-                if (
-                    full_sentence.strip().startswith('"')
-                    and len(current_paragraph) > 50
-                ):
-                    should_break = True
-
-                # Break on topic shifts (detect capitalized nouns)
-                import re
-
-                if (
-                    re.match(r"^[A-Z][a-z]+\s+[a-z]+", full_sentence.strip())
-                    and len(current_paragraph) > 80
-                ):
-                    should_break = True
-
-                # Break on specific patterns that indicate new topics
-                topic_starters = [
-                    "LangGraph",
-                    "Claude Code",
-                    "ChatGPT",
-                    "Anthropic",
-                    "OpenAI",
-                    "Cognition",
-                    "HuggingFace",
-                    "Scrapy",
-                    "Selenium",
-                ]
-                for starter in topic_starters:
-                    if (
-                        full_sentence.strip().startswith(starter)
-                        and len(current_paragraph) > 60
-                    ):
                         should_break = True
                         break
 
@@ -902,130 +615,109 @@ class MarkdownConverter:
         if current_paragraph.strip():
             paragraphs.append(current_paragraph.strip())
 
-        # Final pass: split any remaining long paragraphs (ultra aggressive)
-        final_paragraphs = []
-        for para in paragraphs if len(paragraphs) > 1 else [text]:
-            if len(para) > 150:  # Very low threshold for ultra aggressive splitting
-                final_paragraphs.extend(self._force_split_long_paragraph(para))
-            elif (
-                len(para) > 120 and para.count(".") > 1
-            ):  # Split multi-sentence short paras too
-                final_paragraphs.extend(self._force_split_long_paragraph(para))
-            else:
-                final_paragraphs.append(para)
-
-        return final_paragraphs
-
-    def _force_split_long_paragraph(self, text: str) -> list:
-        """Force split very long paragraphs that other methods missed."""
-        import re
-
-        if len(text) <= 180:
-            return [text]
-
-        # Strategy 1: Split by sentences more aggressively
-        sentences = re.split(r"([.!?])\s+", text)
-        if len(sentences) > 2:
-            paragraphs = []
-            current = ""
-
-            i = 0
-            while i < len(sentences):
-                sentence = sentences[i]
-                ending = sentences[i + 1] if i + 1 < len(sentences) else ""
-                full_sentence = sentence + ending
-
-                # Ultra aggressive: break after every sentence if current has any content
-                # This handles cases where multiple sentences are crammed together
-                if current and (
-                    len(current + full_sentence) > 120 or current.count(".") >= 1
-                ):
-                    paragraphs.append(current.strip())
-                    current = full_sentence
-                else:
-                    current += full_sentence
-
-                i += 2 if ending else 1
-
-            if current:
-                paragraphs.append(current.strip())
-
-            if len(paragraphs) > 1:
-                return paragraphs
-
-        # Strategy 2: Split at commas followed by space and capital letters
-        comma_splits = re.split(r"(,\s+)(?=[A-Z])", text)
-        if len(comma_splits) > 2:
-            paragraphs = []
-            current = ""
-            for i in range(0, len(comma_splits), 2):
-                chunk = comma_splits[i] + (
-                    comma_splits[i + 1] if i + 1 < len(comma_splits) else ""
-                )
-                if len(current + chunk) > 160 and current:
-                    paragraphs.append(current.strip())
-                    current = chunk
-                else:
-                    current += chunk
-            if current:
-                paragraphs.append(current.strip())
-            if len(paragraphs) > 1:
-                return paragraphs
-
-        # Strategy 3: Split at colons (often indicate lists or definitions)
-        colon_splits = re.split(r"(:)\s+", text)
-        if len(colon_splits) > 2:
-            paragraphs = []
-            current = ""
-            for i in range(0, len(colon_splits), 2):
-                chunk = colon_splits[i] + (
-                    colon_splits[i + 1] if i + 1 < len(colon_splits) else ""
-                )
-                if len(current + chunk) > 160 and current:
-                    paragraphs.append(current.strip())
-                    current = chunk
-                else:
-                    current += chunk
-            if current:
-                paragraphs.append(current.strip())
-            if len(paragraphs) > 1:
-                return paragraphs
-
-        # Strategy 4: Split at semicolons
-        semi_splits = text.split(";")
-        if len(semi_splits) > 1:
-            paragraphs = []
-            current = ""
-            for chunk in semi_splits:
-                chunk = (
-                    chunk.strip() + ";" if chunk != semi_splits[-1] else chunk.strip()
-                )
-                if len(current + chunk) > 160 and current:
-                    paragraphs.append(current.strip())
-                    current = chunk
-                else:
-                    current += " " + chunk if current else chunk
-            if current:
-                paragraphs.append(current.strip())
-            if len(paragraphs) > 1:
-                return paragraphs
-
-        # Strategy 5: Split at word boundaries (last resort)
-        words = text.split()
-        paragraphs = []
-        current = ""
-
-        for word in words:
-            if len(current + " " + word) > 150 and current:  # Even more aggressive
-                paragraphs.append(current.strip())
-                current = word
-            else:
-                current += " " + word if current else word
-
-        if current:
-            paragraphs.append(current.strip())
-
         return paragraphs if len(paragraphs) > 1 else [text]
+
+    def _format_lists(self, markdown_content: str) -> str:
+        """Improve list formatting and nesting."""
+        try:
+            lines = markdown_content.split("\n")
+            formatted_lines = []
+
+            for line in lines:
+                # Ensure consistent list marker spacing
+                line = re.sub(r"^(\s*)([-\*\+])\s*(.+)$", r"\1- \3", line)
+
+                # Ensure consistent numbered list formatting
+                line = re.sub(r"^(\s*)(\d+)[\.\)]\s*(.+)$", r"\1\2. \3", line)
+
+                formatted_lines.append(line)
+
+            # Clean up empty list items
+            markdown_content = "\n".join(formatted_lines)
+            markdown_content = re.sub(r"\n[-*+]\s*\n(?=\n)", "\n", markdown_content)
+
+            return markdown_content
+        except Exception as e:
+            logger.warning(f"Error formatting lists: {str(e)}")
+            return markdown_content
+
+    def _format_headings(self, markdown_content: str) -> str:
+        """Improve heading formatting and hierarchy."""
+        try:
+            lines = markdown_content.split("\n")
+            formatted_lines = []
+
+            for i, line in enumerate(lines):
+                if re.match(r"^#{1,6}\s", line):
+                    # Ensure proper heading spacing
+                    heading = line.strip()
+
+                    # Add spacing before headings
+                    if (
+                        i > 0
+                        and lines[i - 1].strip() != ""
+                        and not re.match(r"^#{1,6}\s", lines[i - 1])
+                    ):
+                        formatted_lines.append("")
+
+                    formatted_lines.append(heading)
+
+                    # Add spacing after headings
+                    if i < len(lines) - 1 and lines[i + 1].strip() != "":
+                        formatted_lines.append("")
+                else:
+                    formatted_lines.append(line)
+
+            return "\n".join(formatted_lines)
+        except Exception as e:
+            logger.warning(f"Error formatting headings: {str(e)}")
+            return markdown_content
+
+    def _apply_typography_fixes(self, markdown_content: str) -> str:
+        """Apply typography improvements."""
+        try:
+            # Convert double hyphens to em dashes
+            markdown_content = re.sub(r"(?<!\-)\-\-(?!\-)", "—", markdown_content)
+
+            # Fix multiple spaces
+            lines = markdown_content.split("\n")
+            fixed_lines = []
+            for line in lines:
+                line = re.sub(r" {2,}", " ", line)
+                fixed_lines.append(line)
+            markdown_content = "\n".join(fixed_lines)
+
+            # Fix spacing around punctuation
+            markdown_content = re.sub(r"\s+([.!?:;,])", r"\1", markdown_content)
+            markdown_content = re.sub(r"([.!?])\s*([A-Z])", r"\1 \2", markdown_content)
+
+            return markdown_content
+        except Exception as e:
+            logger.warning(f"Error applying typography fixes: {str(e)}")
+            return markdown_content
+
+    def _basic_cleanup(self, markdown_content: str) -> str:
+        """Apply basic cleanup operations."""
+        try:
+            # Clean up excessive spaces
+            lines = []
+            for line in markdown_content.split("\n"):
+                cleaned_line = line.rstrip()
+                lines.append(cleaned_line)
+
+            markdown_content = "\n".join(lines)
+
+            # Remove excessive blank lines
+            markdown_content = re.sub(r"\n{3,}", "\n\n", markdown_content)
+
+            # Remove leading/trailing whitespace
+            markdown_content = markdown_content.strip()
+
+            return markdown_content
+
+        except Exception as e:
+            logger.warning(f"Error in basic cleanup: {str(e)}")
+            return markdown_content
 
     def extract_content_area(self, html_content: str) -> str:
         """
@@ -1061,12 +753,9 @@ class MarkdownConverter:
             for selector in content_selectors:
                 elements = soup.select(selector)
                 if elements:
-                    # Take the first match that has substantial content
                     for element in elements:
                         text_length = len(element.get_text(strip=True))
-                        if (
-                            text_length > 10
-                        ):  # Minimum content length (very low for testing)
+                        if text_length > 10:
                             main_content = element
                             break
                     if main_content:
@@ -1081,6 +770,104 @@ class MarkdownConverter:
         except Exception as e:
             logger.warning(f"Error extracting content area: {str(e)}")
             return html_content
+
+    def convert_pdf_to_markdown(
+        self,
+        pdf_source: Union[str, Path],
+        page_range: Optional[List[int]] = None,
+        output_format: str = "markdown",
+        include_metadata: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Convert PDF to Markdown using MarkItDown.
+
+        Args:
+            pdf_source: Path to PDF file or URL
+            page_range: Optional page range [start, end]
+            output_format: Output format ("markdown" or "text")
+            include_metadata: Whether to include metadata
+
+        Returns:
+            Dictionary with conversion results
+        """
+        try:
+            # Handle URL downloads
+            temp_file_path = None
+            if isinstance(pdf_source, str) and pdf_source.startswith(
+                ("http://", "https://")
+            ):
+                # Download PDF from URL
+                response = requests.get(pdf_source, timeout=30)
+                response.raise_for_status()
+
+                with tempfile.NamedTemporaryFile(
+                    suffix=".pdf", delete=False
+                ) as temp_file:
+                    temp_file.write(response.content)
+                    temp_file_path = temp_file.name
+                    source_path = temp_file_path
+            else:
+                source_path = str(pdf_source)
+
+            try:
+                # Convert using MarkItDown
+                result = self.markitdown.convert(source_path)
+                content = result.text_content
+
+                # Apply output format preference
+                if output_format == "text":
+                    # Remove markdown formatting for plain text
+                    content = self._markdown_to_text(content)
+
+                return {
+                    "success": True,
+                    "content": content,
+                    "source": str(pdf_source),
+                    "method": "markitdown",
+                    "output_format": output_format,
+                    "metadata": {
+                        "word_count": len(content.split()),
+                        "character_count": len(content),
+                    }
+                    if include_metadata
+                    else None,
+                }
+
+            finally:
+                # Clean up temporary file if created
+                if temp_file_path and os.path.exists(temp_file_path):
+                    try:
+                        os.unlink(temp_file_path)
+                    except OSError:
+                        pass
+
+        except Exception as e:
+            logger.error(f"Error converting PDF to Markdown: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "source": str(pdf_source),
+            }
+
+    def _markdown_to_text(self, markdown_content: str) -> str:
+        """Convert markdown to plain text by removing formatting."""
+        try:
+            # Remove markdown formatting
+            text = re.sub(r"!\[.*?\]\(.*?\)", "", markdown_content)  # Images
+            text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)  # Links
+            text = re.sub(r"[*_]{1,2}([^*_]+)[*_]{1,2}", r"\1", text)  # Bold/italic
+            text = re.sub(r"`([^`]+)`", r"\1", text)  # Inline code
+            text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)  # Headers
+            text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)  # Blockquotes
+            text = re.sub(r"^\s*[-*+]\s+", "", text, flags=re.MULTILINE)  # Lists
+            text = re.sub(
+                r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE
+            )  # Numbered lists
+
+            return text.strip()
+        except Exception as e:
+            logger.warning(f"Error converting markdown to text: {str(e)}")
+            return markdown_content
 
     def convert_webpage_to_markdown(
         self,
@@ -1100,8 +887,8 @@ class MarkdownConverter:
             scrape_result: Result from web scraping
             extract_main_content: Whether to extract main content area
             include_metadata: Whether to include page metadata
-            custom_options: Custom options for markdownify
-            formatting_options: Advanced formatting options (overrides defaults)
+            custom_options: Custom options (maintained for compatibility)
+            formatting_options: Advanced formatting options
 
         Returns:
             Dictionary with Markdown content and metadata
@@ -1118,54 +905,15 @@ class MarkdownConverter:
             title = scrape_result.get("title", "")
             content_data = scrape_result.get("content", {})
 
-            # Get HTML content - try different sources
-            html_content = None
-            if "html" in content_data:
-                html_content = content_data["html"]
-            elif "text" in content_data and content_data["text"]:
-                # If we only have text, try to reconstruct basic HTML structure
-                text_content = content_data["text"]
-                links = content_data.get("links", [])
-                images = content_data.get("images", [])
+            # Get HTML content
+            html_content = content_data.get("html")
+            if not html_content and content_data.get("text"):
+                # Build basic HTML from text content
+                html_content = self._build_html_from_text(
+                    content_data["text"], title, content_data
+                )
 
-                # Build basic HTML structure
-                html_parts = ["<html><head>"]
-                if title:
-                    html_parts.append(f"<title>{title}</title>")
-                html_parts.append("</head><body>")
-
-                # Add main text content with smart paragraph splitting
-                html_parts.append("<div class='main-content'>")
-
-                # Smart paragraph detection and splitting
-                paragraphs = self._split_text_into_paragraphs(text_content)
-                for paragraph in paragraphs:
-                    if paragraph.strip():  # Skip empty paragraphs
-                        html_parts.append(f"<p>{paragraph.strip()}</p>")
-
-                html_parts.append("</div>")
-
-                # Add links if available
-                if links:
-                    html_parts.append("<div class='links'>")
-                    for link in links[:50]:  # Limit to first 50 links
-                        link_url = link.get("url", "")
-                        link_text = link.get("text", link_url)
-                        html_parts.append(f"<a href='{link_url}'>{link_text}</a><br>")
-                    html_parts.append("</div>")
-
-                # Add images if available
-                if images:
-                    html_parts.append("<div class='images'>")
-                    for img in images[:20]:  # Limit to first 20 images
-                        img_src = img.get("src", "")
-                        img_alt = img.get("alt", "")
-                        html_parts.append(f"<img src='{img_src}' alt='{img_alt}'>")
-                    html_parts.append("</div>")
-
-                html_parts.append("</body></html>")
-                html_content = "\n".join(html_parts)
-            else:
+            if not html_content:
                 return {
                     "success": False,
                     "error": "No content found in scrape result",
@@ -1176,7 +924,7 @@ class MarkdownConverter:
             if extract_main_content:
                 html_content = self.extract_content_area(html_content)
 
-            # Update formatting options if provided
+            # Update formatting options temporarily if provided
             original_formatting_options = None
             if formatting_options:
                 original_formatting_options = self.formatting_options.copy()
@@ -1192,7 +940,7 @@ class MarkdownConverter:
                 if original_formatting_options:
                     self.formatting_options = original_formatting_options
 
-            # Optionally embed images as data URIs for portability
+            # Optionally embed images as data URIs
             embed_stats = None
             if embed_images:
                 opts = embed_options or {}
@@ -1230,7 +978,6 @@ class MarkdownConverter:
                     "domain": urlparse(url).netloc if url else None,
                 }
 
-                # Add links and images count if available
                 if "links" in content_data:
                     metadata["links_count"] = len(content_data["links"])
                 if "images" in content_data:
@@ -1251,6 +998,54 @@ class MarkdownConverter:
                 "url": scrape_result.get("url", ""),
             }
 
+    def _build_html_from_text(
+        self, text_content: str, title: str, content_data: Dict
+    ) -> str:
+        """Build basic HTML structure from text content."""
+        try:
+            html_parts = ["<html><head>"]
+            if title:
+                html_parts.append(f"<title>{title}</title>")
+            html_parts.append("</head><body>")
+
+            # Add main text content
+            html_parts.append("<div class='main-content'>")
+
+            # Split text into paragraphs
+            paragraphs = [p.strip() for p in text_content.split("\n\n") if p.strip()]
+            for paragraph in paragraphs:
+                if paragraph:
+                    html_parts.append(f"<p>{paragraph}</p>")
+
+            html_parts.append("</div>")
+
+            # Add links if available
+            links = content_data.get("links", [])
+            if links:
+                html_parts.append("<div class='links'>")
+                for link in links[:50]:
+                    link_url = link.get("url", "")
+                    link_text = link.get("text", link_url)
+                    html_parts.append(f"<a href='{link_url}'>{link_text}</a><br>")
+                html_parts.append("</div>")
+
+            # Add images if available
+            images = content_data.get("images", [])
+            if images:
+                html_parts.append("<div class='images'>")
+                for img in images[:20]:
+                    img_src = img.get("src", "")
+                    img_alt = img.get("alt", "")
+                    html_parts.append(f"<img src='{img_src}' alt='{img_alt}'>")
+                html_parts.append("</div>")
+
+            html_parts.append("</body></html>")
+            return "\n".join(html_parts)
+
+        except Exception as e:
+            logger.warning(f"Error building HTML from text: {str(e)}")
+            return f"<html><body><p>{text_content}</p></body></html>"
+
     def batch_convert_to_markdown(
         self,
         scrape_results: List[Dict[str, Any]],
@@ -1269,8 +1064,8 @@ class MarkdownConverter:
             scrape_results: List of scraping results
             extract_main_content: Whether to extract main content area
             include_metadata: Whether to include page metadata
-            custom_options: Custom options for markdownify
-            formatting_options: Advanced formatting options (overrides defaults)
+            custom_options: Custom options (maintained for compatibility)
+            formatting_options: Advanced formatting options
 
         Returns:
             Dictionary with converted results and summary

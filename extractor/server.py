@@ -1357,7 +1357,7 @@ async def convert_webpage_to_markdown(
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="自定义 Markdown 转换选项，支持 markdownify 库的各种参数配置",
+            description="自定义 Markdown 转换选项，支持 markitdown 库的各种参数配置",
         ),
     ],
     wait_for_element: Annotated[
@@ -1563,7 +1563,7 @@ async def batch_convert_webpages_to_markdown(
         Optional[Dict[str, Any]],
         Field(
             default=None,
-            description="""统一的 markdownify 自定义选项，应用于所有 URL。支持 HTML 标签处理、格式化选项等。
+            description="""统一的 markitdown 自定义选项，应用于所有 URL。支持 HTML 标签处理、格式化选项等。
                 示例：{"strip": ["nav", "footer"], "convert": ["article"]}""",
         ),
     ],

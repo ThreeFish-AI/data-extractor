@@ -3,6 +3,7 @@
 import logging
 import tempfile
 import os
+import re
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from urllib.parse import urlparse
@@ -395,7 +396,38 @@ class PDFProcessor:
             return {"success": False, "error": f"pypdf extraction failed: {str(e)}"}
 
     def _convert_to_markdown(self, text: str) -> str:
-        """Convert extracted text to Markdown format."""
+        """Convert extracted text to Markdown format using MarkItDown."""
+        try:
+            # Try to use the new MarkdownConverter for better formatting
+            from .markdown_converter import MarkdownConverter
+
+            converter = MarkdownConverter()
+
+            # Create a simple HTML structure from the text for better conversion
+            html_content = f"<html><body><div>{text}</div></body></html>"
+
+            # Use MarkItDown through the converter
+            result = converter.html_to_markdown(html_content)
+
+            # Check if the result has proper markdown formatting (headers, structure)
+            # If not, fall back to our simple conversion which is better for PDFs
+            if not self._has_markdown_structure(result):
+                logger.info(
+                    "MarkdownConverter didn't add structure, using simple conversion"
+                )
+                return self._simple_markdown_conversion(text)
+
+            return result
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to use MarkdownConverter, falling back to simple conversion: {str(e)}"
+            )
+            # Fallback to the simple conversion method
+            return self._simple_markdown_conversion(text)
+
+    def _simple_markdown_conversion(self, text: str) -> str:
+        """Simple fallback markdown conversion."""
         # Clean up the text
         lines = text.split("\n")
         cleaned_lines = []
@@ -410,12 +442,46 @@ class PDFProcessor:
                 elif line.endswith(":") and len(line.split()) <= 8:
                     # Potential subheading
                     cleaned_lines.append(f"## {line}")
+                elif self._looks_like_title(line):
+                    # Check if it looks like a title (capitalized, short)
+                    cleaned_lines.append(f"# {line}")
                 else:
                     cleaned_lines.append(line)
             else:
                 cleaned_lines.append("")
 
         return "\n".join(cleaned_lines)
+
+    def _looks_like_title(self, line: str) -> bool:
+        """Check if a line looks like a title."""
+        # Title heuristics
+        words = line.split()
+        if len(words) > 8:  # Too long to be a title
+            return False
+
+        # Check if most words are capitalized
+        capitalized_count = sum(1 for word in words if word and word[0].isupper())
+
+        # If more than half the words are capitalized, it might be a title
+        return capitalized_count > len(words) * 0.6
+
+    def _has_markdown_structure(self, text: str) -> bool:
+        """Check if text has proper markdown structure (headers, formatting, etc.)."""
+        # Check for common markdown structures
+        has_headers = bool(re.search(r"^#{1,6}\s+", text, re.MULTILINE))
+        has_lists = bool(re.search(r"^[\s]*[-*+]\s+", text, re.MULTILINE))
+        has_bold = "**" in text or "__" in text
+        has_italic = "*" in text or "_" in text
+        has_links = "[" in text and "](" in text
+        has_code = "`" in text
+
+        # If it has any meaningful markdown structure, consider it good
+        structure_count = sum(
+            [has_headers, has_lists, has_bold, has_italic, has_links, has_code]
+        )
+
+        # We especially want headers for PDF content
+        return has_headers or structure_count >= 2
 
     def cleanup(self):
         """Clean up temporary files and directories."""

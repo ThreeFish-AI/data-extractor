@@ -15,43 +15,50 @@ class TestMarkdownConverter:
 
     def setup_method(self):
         """测试前准备"""
-        self.converter = MarkdownConverter()
+        try:
+            self.converter = MarkdownConverter()
+        except ImportError:
+            pytest.skip("MarkItDown not available, skipping tests")
 
     def test_converter_initialization(self):
         """测试转换器初始化"""
-        assert self.converter is not None
-        assert hasattr(self.converter, "html_to_markdown")
-        assert hasattr(self.converter, "convert_webpage_to_markdown")
-        assert hasattr(self.converter, "batch_convert_to_markdown")
-        assert isinstance(self.converter.default_options, dict)
-        assert isinstance(self.converter.formatting_options, dict)
+        try:
+            assert self.converter is not None
+            assert hasattr(self.converter, "html_to_markdown")
+            assert hasattr(self.converter, "convert_webpage_to_markdown")
+            assert hasattr(self.converter, "batch_convert_to_markdown")
+            assert hasattr(self.converter, "convert_pdf_to_markdown")
+            assert isinstance(self.converter.default_options, dict)
+            assert isinstance(self.converter.formatting_options, dict)
+            # Check if markitdown is properly initialized
+            assert hasattr(self.converter, "markitdown")
+        except ImportError:
+            pytest.skip("MarkItDown not available, skipping initialization test")
 
     def test_default_options(self):
         """测试默认选项配置"""
         options = self.converter.default_options
 
-        assert options["heading_style"] == "ATX"
-        assert options["bullets"] == "-"
-        assert options["emphasis_mark"] == "*"
-        assert options["strong_mark"] == "**"
-        assert options["link_style"] == "INLINE"
-        assert options["autolinks"] is True
-        assert options["wrap"] is False
-        assert "script" in options["strip"]
-        assert "style" in options["strip"]
+        # Updated options for MarkItDown
+        assert options["extract_main_content"] is True
+        assert options["preserve_structure"] is True
+        assert options["clean_output"] is True
+        assert options["include_links"] is True
+        assert options["include_images"] is True
 
     def test_formatting_options(self):
         """测试格式化选项配置"""
         options = self.converter.formatting_options
 
         assert options["format_tables"] is True
-        assert options["detect_code_language"] is True
-        assert options["format_quotes"] is True
         assert options["enhance_images"] is True
         assert options["optimize_links"] is True
         assert options["format_lists"] is True
         assert options["format_headings"] is True
         assert options["apply_typography"] is True
+        assert options["smart_quotes"] is True
+        assert options["em_dashes"] is True
+        assert options["fix_spacing"] is True
 
     def test_basic_html_conversion(self):
         """测试基本HTML转换为Markdown"""

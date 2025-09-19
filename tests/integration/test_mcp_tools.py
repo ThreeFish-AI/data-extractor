@@ -251,7 +251,7 @@ class TestMarkdownConversionToolIntegration:
         converter = MarkdownConverter()
 
         # Verify initialization
-        assert converter.default_options["heading_style"] == "ATX"
+        assert converter.default_options["extract_main_content"] is True
         assert converter.formatting_options["format_tables"] is True
 
         # Test basic conversion
