@@ -17,10 +17,6 @@
         "/Users/cm.huang/Documents/workspace/projects/aurelius/attention"
       ]
     },
-    "everything": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-everything"]
-    },
     "time": {
       "command": "uvx",
       "args": ["mcp-server-time"]
