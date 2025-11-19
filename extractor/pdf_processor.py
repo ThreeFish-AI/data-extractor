@@ -11,6 +11,8 @@ import asyncio
 
 import aiohttp
 
+from .enhanced_pdf_processor import EnhancedPDFProcessor
+
 
 # 延迟导入 PDF 处理库，避免启动时的 SWIG 警告
 def _import_fitz():
@@ -39,9 +41,25 @@ logger = logging.getLogger(__name__)
 class PDFProcessor:
     """PDF processor for extracting text and converting to Markdown."""
 
-    def __init__(self):
+    def __init__(
+        self, enable_enhanced_features: bool = True, output_dir: Optional[str] = None
+    ):
+        """
+        Initialize the PDF processor.
+
+        Args:
+            enable_enhanced_features: Whether to enable enhanced extraction features
+            output_dir: Directory to save extracted images and assets
+        """
         self.supported_methods = ["pymupdf", "pypdf", "auto"]
         self.temp_dir = tempfile.mkdtemp(prefix="pdf_extractor_")
+        self.enable_enhanced_features = enable_enhanced_features
+
+        # Initialize enhanced processor for images, tables, and formulas
+        if self.enable_enhanced_features:
+            self.enhanced_processor = EnhancedPDFProcessor(output_dir)
+        else:
+            self.enhanced_processor = None
 
     async def process_pdf(
         self,
@@ -50,6 +68,12 @@ class PDFProcessor:
         include_metadata: bool = True,
         page_range: Optional[tuple] = None,
         output_format: str = "markdown",
+        *,
+        extract_images: bool = True,
+        extract_tables: bool = True,
+        extract_formulas: bool = True,
+        embed_images: bool = False,
+        enhanced_options: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Process a PDF file from URL or local path.
@@ -60,9 +84,14 @@ class PDFProcessor:
             include_metadata: Include PDF metadata in result (default: True)
             page_range: Tuple of (start_page, end_page) for partial extraction (optional)
             output_format: Output format: markdown, text (default: markdown)
+            extract_images: Whether to extract images (default: True)
+            extract_tables: Whether to extract tables (default: True)
+            extract_formulas: Whether to extract mathematical formulas (default: True)
+            embed_images: Whether to embed images as base64 in markdown (default: False)
+            enhanced_options: Additional options for enhanced processing (optional)
 
         Returns:
-            Dict containing extracted text/markdown and metadata
+            Dict containing extracted text/markdown and metadata, including enhanced assets
         """
         pdf_path = None
         try:
@@ -114,9 +143,42 @@ class PDFProcessor:
                     "source": pdf_source,
                 }
 
+            # Enhanced processing for images, tables, and formulas
+            enhanced_assets = None
+            if self.enable_enhanced_features and self.enhanced_processor:
+                enhanced_assets = await self._extract_enhanced_assets(
+                    pdf_path,
+                    page_range,
+                    extract_images,
+                    extract_tables,
+                    extract_formulas,
+                )
+
             # Convert to markdown if requested
             if output_format == "markdown":
                 markdown_content = self._convert_to_markdown(extraction_result["text"])
+
+                # Enhance markdown with extracted assets
+                if enhanced_assets:
+                    enhanced_options = enhanced_options or {}
+                    embed_images_setting = enhanced_options.get(
+                        "embed_images", embed_images
+                    )
+                    image_size = enhanced_options.get("image_size")
+
+                    markdown_content = (
+                        self.enhanced_processor.enhance_markdown_with_assets(
+                            markdown_content,
+                            embed_images=embed_images_setting,
+                            image_size=image_size,
+                        )
+                    )
+
+                    # Add enhanced assets summary to result
+                    extraction_result["enhanced_assets"] = (
+                        self.enhanced_processor.get_extraction_summary()
+                    )
+
                 extraction_result["markdown"] = markdown_content
 
             # Add processing info
@@ -483,10 +545,117 @@ class PDFProcessor:
         # We especially want headers for PDF content
         return has_headers or structure_count >= 2
 
+    async def _extract_enhanced_assets(
+        self,
+        pdf_path: Path,
+        page_range: Optional[tuple],
+        extract_images: bool,
+        extract_tables: bool,
+        extract_formulas: bool,
+    ) -> Dict[str, Any]:
+        """
+        Extract enhanced assets (images, tables, formulas) from PDF.
+
+        Args:
+            pdf_path: Path to PDF file
+            page_range: Optional page range tuple
+            extract_images: Whether to extract images
+            extract_tables: Whether to extract tables
+            extract_formulas: Whether to extract formulas
+
+        Returns:
+            Dict with extraction results
+        """
+        if not self.enhanced_processor:
+            return {}
+
+        try:
+            # Open PDF document
+            fitz = _import_fitz()
+            doc = fitz.open(str(pdf_path))
+
+            # Determine page range
+            start_page = 0
+            end_page = len(doc)
+
+            if page_range:
+                start_page = max(0, page_range[0])
+                end_page = min(len(doc), page_range[1])
+
+            extracted_assets = {
+                "success": True,
+                "pages_processed": end_page - start_page,
+            }
+
+            # Extract images
+            if extract_images:
+                for page_num in range(start_page, end_page):
+                    try:
+                        images = (
+                            await self.enhanced_processor.extract_images_from_pdf_page(
+                                doc, page_num
+                            )
+                        )
+                        self.enhanced_processor.images.extend(images)
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to extract images from page {page_num}: {str(e)}"
+                        )
+
+                extracted_assets["images_extracted"] = len(
+                    self.enhanced_processor.images
+                )
+
+            # Extract text for table and formula processing
+            for page_num in range(start_page, end_page):
+                try:
+                    page = doc[page_num]
+                    text = page.get_text()
+
+                    # Extract tables
+                    if extract_tables:
+                        tables = self.enhanced_processor.extract_tables_from_text(
+                            text, page_num
+                        )
+                        self.enhanced_processor.tables.extend(tables)
+
+                    # Extract formulas
+                    if extract_formulas:
+                        formulas = self.enhanced_processor.extract_formulas_from_text(
+                            text, page_num
+                        )
+                        self.enhanced_processor.formulas.extend(formulas)
+
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to process page {page_num} for tables/formulas: {str(e)}"
+                    )
+
+            # Add extraction summaries
+            if extract_tables:
+                extracted_assets["tables_extracted"] = len(
+                    self.enhanced_processor.tables
+                )
+            if extract_formulas:
+                extracted_assets["formulas_extracted"] = len(
+                    self.enhanced_processor.formulas
+                )
+
+            doc.close()
+            return extracted_assets
+
+        except Exception as e:
+            logger.error(f"Error in enhanced asset extraction: {str(e)}")
+            return {"success": False, "error": str(e)}
+
     def cleanup(self):
         """Clean up temporary files and directories."""
         try:
             import shutil
+
+            # Clean up enhanced processor
+            if self.enhanced_processor:
+                self.enhanced_processor.cleanup()
 
             if os.path.exists(self.temp_dir):
                 shutil.rmtree(self.temp_dir)

@@ -60,5 +60,6 @@ tests/reports/*
 coverage.json
 coverage.xml
 
-# .claude
-settings.local.json
+# Claude Code
+.claude
+

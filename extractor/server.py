@@ -39,11 +39,15 @@ markdown_converter = MarkdownConverter()
 
 
 # 延迟初始化 PDF 处理器，避免启动时加载 PyMuPDF
-def _get_pdf_processor():
+def _get_pdf_processor(
+    enable_enhanced_features: bool = True, output_dir: Optional[str] = None
+):
     """获取 PDF 处理器实例，延迟导入以避免启动警告"""
     from .pdf_processor import PDFProcessor
 
-    return PDFProcessor()
+    return PDFProcessor(
+        enable_enhanced_features=enable_enhanced_features, output_dir=output_dir
+    )
 
 
 # ScrapeRequest removed - now uses individual parameters with Annotated Field
@@ -164,7 +168,7 @@ class BatchMarkdownResponse(BaseModel):
 
 
 class PDFResponse(BaseModel):
-    """Response model for PDF conversion."""
+    """Response model for PDF conversion with enhanced features."""
 
     success: bool = Field(..., description="操作是否成功")
     pdf_source: str = Field(..., description="PDF源路径或URL")
@@ -175,6 +179,9 @@ class PDFResponse(BaseModel):
     page_count: int = Field(default=0, description="页数")
     word_count: int = Field(default=0, description="字数统计")
     conversion_time: float = Field(..., description="转换耗时（秒）")
+    enhanced_assets: Optional[Dict[str, Any]] = Field(
+        default=None, description="增强资源提取统计（图像、表格、公式）"
+    )
     error: Optional[str] = Field(default=None, description="错误信息（如果有）")
 
 
@@ -1777,16 +1784,60 @@ async def convert_pdf_to_markdown(
                 "text"（纯文本内容，去除所有格式）""",
         ),
     ],
+    extract_images: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否从PDF中提取图像并保存为本地文件，在Markdown文档中引用",
+        ),
+    ],
+    extract_tables: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否从PDF中提取表格并转换为Markdown表格格式",
+        ),
+    ],
+    extract_formulas: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否从PDF中提取数学公式并保持LaTeX格式",
+        ),
+    ],
+    embed_images: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="是否将提取的图像以base64格式嵌入到Markdown文档中（而非引用本地文件）",
+        ),
+    ],
+    enhanced_options: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="""增强处理选项：
+                - image_size: 图像尺寸调整，如 [800, 600]
+                - output_dir: 自定义输出目录路径
+                其他高级配置选项""",
+        ),
+    ],
 ) -> PDFResponse:
     """
-    Convert a PDF document to Markdown format.
+    Convert a PDF document to Markdown format with enhanced content extraction.
 
     This tool can process PDF files from URLs or local file paths:
     - auto: Automatically choose the best extraction method
     - pymupdf: Use PyMuPDF (fitz) library for extraction
     - pypdf: Use pypdf library for extraction
 
-    Features:
+    Enhanced Features:
+    - 🖼️ **Image Extraction**: Extract images from PDF and save as local files or embed as base64
+    - 📊 **Table Extraction**: Identify and convert tables to standard Markdown table format
+    - 🧮 **Formula Extraction**: Extract mathematical formulas and preserve LaTeX formatting
+    - 📝 **Content Organization**: Automatically organize extracted content in structured sections
+
+    Standard Features:
     - Support for PDF URLs and local file paths
     - Partial page extraction with page range
     - Metadata extraction (title, author, etc.)
@@ -1795,7 +1846,7 @@ async def convert_pdf_to_markdown(
 
     Returns:
         PDFResponse object containing success status, extracted content, metadata, processing method used,
-        and page/word count statistics.
+        enhanced assets summary, and page/word count statistics.
     """
     try:
         # Validate inputs
@@ -1859,14 +1910,29 @@ async def convert_pdf_to_markdown(
         # Apply rate limiting
         await rate_limiter.wait()
 
-        # Process PDF
-        pdf_processor = _get_pdf_processor()
+        # Determine output directory for enhanced assets
+        output_dir = None
+        if enhanced_options and "output_dir" in enhanced_options:
+            output_dir = enhanced_options["output_dir"]
+
+        # Determine if enhanced features should be enabled
+        enable_enhanced = extract_images or extract_tables or extract_formulas
+
+        # Process PDF with enhanced features
+        pdf_processor = _get_pdf_processor(
+            enable_enhanced_features=enable_enhanced, output_dir=output_dir
+        )
         result = await pdf_processor.process_pdf(
             pdf_source=pdf_source,
             method=method,
             include_metadata=include_metadata,
             page_range=page_range_tuple,
             output_format=output_format,
+            extract_images=extract_images,
+            extract_tables=extract_tables,
+            extract_formulas=extract_formulas,
+            embed_images=embed_images,
+            enhanced_options=enhanced_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -1888,6 +1954,7 @@ async def convert_pdf_to_markdown(
                 ),
                 word_count=result.get("word_count", 0),
                 conversion_time=duration_ms / 1000.0,
+                enhanced_assets=result.get("enhanced_assets"),
             )
         else:
             error_response = ErrorHandler.handle_scraping_error(
