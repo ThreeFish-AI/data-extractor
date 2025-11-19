@@ -4,6 +4,52 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.6
+
+#### Released on 2025/11/19
+
+**版本亮点**: PDF处理能力重大升级，新增深度内容提取功能，支持图像、表格、数学公式的智能识别和转换。显著增强PDF转Markdown的质量和完整性，提供结构化输出和详细的提取统计。同时完成文档体系归并优化，统一项目文档结构，提升用户体验和维护便利性。
+
+### 🆕 新增功能
+
+#### 📄 PDF增强处理模块
+- **EnhancedPDFProcessor**: 全新的PDF深度内容提取处理器
+  - **图像提取**: 支持从PDF页面提取图像元素，保存为PNG/JPG格式或base64嵌入
+  - **表格识别**: 智能识别各种格式表格，转换为标准Markdown表格格式
+  - **数学公式提取**: 识别LaTeX格式数学公式，保持原始格式完整性
+  - **结构化输出**: 自动生成包含提取资源的结构化Markdown文档
+
+#### ⚙️ 配置与参数增强
+- **convert_pdf_to_markdown工具参数扩展**
+  - `extract_images`: 图像提取开关（默认true）
+  - `extract_tables`: 表格提取开关（默认true）
+  - `extract_formulas`: 数学公式提取开关（默认true）
+  - `embed_images`: base64图像嵌入选项（默认false）
+  - `enhanced_options`: 高级配置选项，支持自定义输出目录、图像尺寸、质量控制
+
+#### 🧪 测试与质量保障
+- **test_enhanced_pdf_processor.py**: 专用增强PDF处理器测试套件
+- **完整的功能测试覆盖**: 图像提取、表格转换、公式识别等功能验证
+- **性能基准测试**: 提供详细的性能对比参考和资源使用统计
+
+### 📝 文档与用户体验
+- **文档归并优化**: 完成ENHANCED_PDF_USAGE.md内容归并至README.md
+- **统一文档结构**: 删除冗余文档文件，建立统一的信息获取入口
+- **参数说明完善**: 新增增强PDF处理参数详解章节
+- **故障排除指南**: 新增PDF增强功能专用故障排除和调试模式说明
+- **使用场景示例**: 提供学术论文、技术文档等典型应用场景配置
+
+### 🔧 技术改进
+- **向后兼容性**: 保持所有现有API的向后兼容，新功能默认启用但可选择性关闭
+- **性能优化**: 支持选择性功能启用，避免不必要的资源消耗
+- **错误处理增强**: 完善的异常处理和回退机制
+- **资源管理**: 自动临时文件清理和内存优化
+
+### 📊 性能指标
+- **处理性能**: 仅文本提取基准，+图像提取+30-50%，+表格转换+10-20%，+公式提取+5-15%
+- **内存使用**: 基准内存使用，+图像提取+100-200%，全部功能+150-300%
+- **输出大小**: 根据启用功能动态调整，支持灵活配置
+
 ## v0.1.5
 
 #### Released on 2025/09/17
