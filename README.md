@@ -130,6 +130,40 @@
 }
 ```
 
+#### 增强PDF处理选项 (enhanced_options)
+
+用于 PDF 内容深度提取的高级配置选项：
+
+```json
+{
+  "output_dir": "./extracted_assets",  // 输出目录路径
+  "image_size": [800, 600],            // 图像尺寸调整 [width, height]
+  "image_format": "png",               // 图像格式 (png, jpg)
+  "image_quality": 90                  // 图像质量 (1-100，仅适用于JPEG)
+}
+```
+
+#### PDF增强提取参数
+
+- **extract_images**: 是否从PDF中提取图像并保存为本地文件 (默认: true)
+  - 支持 PNG/JPG 格式输出
+  - 可选择本地文件引用或 base64 嵌入
+  - 自动调整图像尺寸和优化质量
+
+- **extract_tables**: 是否从PDF中提取表格并转换为Markdown表格格式 (默认: true)
+  - 智能识别各种格式的表格（管道符分隔、制表符分隔、空格分隔）
+  - 自动保留表格的行列关系和内容完整性
+  - 转换为标准 Markdown 表格格式
+
+- **extract_formulas**: 是否从PDF中提取数学公式并保持LaTeX格式 (默认: true)
+  - 识别多种 LaTeX 格式的数学公式
+  - 支持内联公式 (`$...$` 或 `\(...\)` 格式)
+  - 支持块级公式 (`$$...$$` 或 `\[...\]` 格式)
+
+- **embed_images**: 是否将提取的图像以base64格式嵌入到Markdown文档中 (默认: false)
+  - true: 图像直接嵌入文档，便于分享
+  - false: 图像保存为本地文件，减少文档大小
+
 #### 隐身抓取参数
 
 - **scroll_page**: 滚动页面加载动态内容
@@ -217,6 +251,17 @@ data-extractor/
 - **输出模式优化**: 增强响应模型描述，提升 MCP Client 兼容性
 - **测试适配**: 全面更新测试用例，适配新的函数签名和参数传递方式
 - **文档同步**: 更新 README.md 和测试文档，反映架构变更
+
+**v0.1.6 (2025/11/19)** - PDF增强功能与内容深度提取
+
+- ✨ **PDF增强处理**: 新增增强版PDF处理器，支持图像、表格、数学公式的深度提取
+- **🖼️ 图像提取**: 从PDF中提取图像并保存为本地文件或base64嵌入，支持尺寸调整和质量优化
+- **📊 表格转换**: 智能识别PDF表格并转换为标准Markdown表格格式，保持数据结构完整性
+- **🧮 公式提取**: 识别并提取LaTeX格式的数学公式，支持内联和块级公式格式保持
+- **📝 结构化输出**: 自动生成包含提取资源的结构化Markdown文档，提供详细的提取统计信息
+- **⚙️ 高级配置**: 新增enhanced_options参数，支持自定义输出目录、图像格式、质量控制等高级配置
+- **📈 性能优化**: 提供详细的性能对比参考和故障排除指南，支持选择性功能启用
+- **🔧 向后兼容**: 保持所有现有API的向后兼容性，新功能默认启用但可选择性关闭
 
 **v0.1.4 (2025/09/06)** - 基于 Scrapy + FastMCP 构建的企业级网页抓取 MCP Server
 
@@ -823,9 +868,31 @@ uv run python -m extractor.server
 - `include_metadata`: 是否包含 PDF 元数据 (默认 true)
 - `page_range`: 页面范围 [start, end] 用于部分提取 (可选)
 - `output_format`: 输出格式 (markdown/text，默认 markdown)
+- `extract_images`: 是否从PDF中提取图像并保存为本地文件 (默认 true)
+- `extract_tables`: 是否从PDF中提取表格并转换为Markdown表格格式 (默认 true)
+- `extract_formulas`: 是否从PDF中提取数学公式并保持LaTeX格式 (默认 true)
+- `embed_images`: 是否将提取的图像以base64格式嵌入到Markdown文档中 (默认 false)
+- `enhanced_options`: 增强处理选项 (可选)
+
+**enhanced_options 详细配置:**
+
+```json
+{
+  "output_dir": "./extracted_assets",  // 输出目录路径
+  "image_size": [800, 600],            // 图像尺寸调整 [width, height]
+  "image_format": "png",               // 图像格式 (png, jpg)
+  "image_quality": 90                  // 图像质量 (1-100，仅适用于JPEG)
+}
+```
 
 **功能特性:**
 
+#### 🆕 增强内容提取功能
+- **🖼️ 图像提取**: 从 PDF 页面中提取所有图像元素，支持本地存储和 Markdown 集成
+- **📊 表格提取**: 智能识别各种格式的表格，转换为标准 Markdown 表格格式
+- **🧮 数学公式提取**: 识别多种 LaTeX 格式的数学公式，保持原始 LaTeX 格式
+
+#### 标准功能
 - **多源支持**: 支持 PDF URL 和本地文件路径
 - **多引擎支持**: PyMuPDF (fitz) 和 PyPDF2 双引擎自动选择
 - **部分提取**: 支持指定页面范围的部分提取
@@ -833,7 +900,41 @@ uv run python -m extractor.server
 - **智能转换**: 自动检测标题层级和格式化
 - **错误恢复**: 引擎失败时自动切换备用方法
 
-**示例:**
+#### 生成的 Markdown 结构示例
+```markdown
+# 原始文档内容
+...
+
+## Extracted Images
+
+![图表1](img_0_0_001.png)
+
+*Dimensions: 800×600px*
+*Source: Page 1*
+
+## Extracted Tables
+
+**数据统计表**
+
+| 项目   | 数值   | 单位 |
+| ------ | ------ | ---- |
+| 销售额 | 125000 | 元   |
+
+*Table: 3 rows × 3 columns*
+*Source: Page 2*
+
+## Mathematical Formulas
+
+爱因斯坦质能方程：$E = mc^2$
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+$$
+
+*Source: Page 3*
+```
+
+**基础示例:**
 
 ```json
 {
@@ -845,7 +946,25 @@ uv run python -m extractor.server
 }
 ```
 
-**返回示例:**
+**启用所有增强功能:**
+
+```json
+{
+  "pdf_source": "https://example.com/document.pdf",
+  "method": "pymupdf",
+  "output_format": "markdown",
+  "extract_images": true,
+  "extract_tables": true,
+  "extract_formulas": true,
+  "embed_images": false,
+  "enhanced_options": {
+    "output_dir": "./extracted_assets",
+    "image_size": [800, 600]
+  }
+}
+```
+
+**返回示例 (包含增强资源):**
 
 ```json
 {
@@ -863,10 +982,58 @@ uv run python -m extractor.server
     "source": "https://example.com/document.pdf",
     "method_used": "pymupdf",
     "word_count": 2500,
-    "character_count": 15000
+    "character_count": 15000,
+    "enhanced_assets": {
+      "images": {
+        "count": 3,
+        "files": ["img_0_0_001.png", "img_1_0_002.png"],
+        "total_size_mb": 2.4
+      },
+      "tables": {
+        "count": 2,
+        "total_rows": 8,
+        "total_columns": 6
+      },
+      "formulas": {
+        "count": 5,
+        "inline_count": 3,
+        "block_count": 2
+      },
+      "output_directory": "/path/to/extracted_assets"
+    }
   }
 }
 ```
+
+#### 使用场景示例
+
+**学术论文处理:**
+```json
+{
+  "pdf_source": "research_paper.pdf",
+  "extract_formulas": true,
+  "extract_images": true,
+  "extract_tables": true
+}
+```
+
+**技术文档转换:**
+```json
+{
+  "pdf_source": "technical_manual.pdf",
+  "extract_images": true,
+  "extract_tables": true,
+  "embed_images": true,
+  "enhanced_options": {
+    "image_size": [1200, 900]
+  }
+}
+```
+
+**性能注意事项:**
+- 启用所有增强功能会增加处理时间，特别是图像提取 (+30-50%)
+- 提取的图像会占用本地存储空间
+- 处理大型PDF文件时注意内存使用情况
 
 ### 14. batch_convert_pdfs_to_markdown
 
@@ -1679,6 +1846,49 @@ uv run python -c "from extractor import __version__; print(__version__)"
 - 减少并发请求数
 - 清理缓存
 - 检查是否有资源泄露
+
+### PDF增强功能故障排除
+
+**Q: 为什么没有提取到图像？**
+A: 检查PDF是否包含矢量图像或加密的图像内容。某些PDF可能使用PyMuPDF无法识别的图像格式。
+
+**Q: 表格格式不正确？**
+A: 增强工具通过文本模式识别表格，对于复杂格式的表格可能需要手动调整。
+
+**Q: 数学公式识别不准确？**
+A: 确保PDF中的数学公式使用标准的LaTeX格式。手写公式或特殊格式的公式可能无法识别。
+
+**Q: 图像文件很大？**
+A: 可以通过 `enhanced_options` 调整图像尺寸和质量来减小文件大小。
+
+**Q: 增强功能处理缓慢？**
+A: 启用所有增强功能会增加处理时间。可以选择性启用需要的功能，或处理较小的文件。
+
+### 调试模式
+
+```python
+# 启用详细日志记录
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# 处理PDF时会输出详细的提取信息
+result = await convert_pdf_to_markdown(
+    pdf_source="document.pdf",
+    extract_images=True,
+    extract_tables=True,
+    extract_formulas=True
+)
+```
+
+### 性能对比参考
+
+| 功能     | 处理时间 | 内存使用  | 输出大小 |
+| -------- | -------- | --------- | -------- |
+| 仅文本   | 基准     | 基准      | 小       |
+| +图像    | +30-50%  | +100-200% | 大       |
+| +表格    | +10-20%  | +20-30%   | 中       |
+| +公式    | +5-15%   | +10-20%   | 小       |
+| 全部功能 | +50-100% | +150-300% | 大       |
 
 ## 📊 性能指标
 
