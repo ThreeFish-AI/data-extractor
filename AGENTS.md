@@ -52,14 +52,10 @@ uv run --env DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true data-extractor
 ### 代码质量和测试
 
 ```bash
-# 使用 Black 格式化代码
-uv run black extractor/ examples/
-
-# 使用 flake8 进行代码检查
-uv run flake8 extractor/
-
-# 使用 mypy 进行类型检查
-uv run mypy extractor/
+# 使用 Ruff 进行代码格式化和检查（推荐）
+uv run ruff format extractor/ examples/    # 代码格式化
+uv run ruff check extractor/ examples/     # 代码检查
+uv run ruff check --fix extractor/ examples/  # 代码检查并自动修复
 
 # 运行测试
 uv run pytest

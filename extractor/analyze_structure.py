@@ -24,7 +24,7 @@ def analyze_markdown_structure():
         print(f"  Line {line_num:3d} ({length:4d} chars): {preview}")
 
     # Look for sentences that should be separate paragraphs
-    print(f"\n🔤 Checking for sentence boundaries:")
+    print("\n🔤 Checking for sentence boundaries:")
     sentence_issues = []
 
     for i, line in enumerate(lines):
@@ -39,7 +39,7 @@ def analyze_markdown_structure():
         print(f"  Line {line_num:3d} ({count} sentences): {preview}")
 
     # Check for missing paragraph breaks around key patterns
-    print(f"\n🎯 Checking for missing paragraph breaks:")
+    print("\n🎯 Checking for missing paragraph breaks:")
 
     patterns_to_check = [
         ("Headers/Titles", r"[A-Z][a-z]+ [A-Z][a-z]+[A-Z]"),
@@ -59,7 +59,7 @@ def analyze_markdown_structure():
         for line_num, preview in matches[:5]:
             print(f"    Line {line_num:3d}: {preview}")
 
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"  Total lines: {len(lines)}")
     print(f"  Empty lines: {len([l for l in lines if not l.strip()])}")
     print(f"  Content lines: {len([l for l in lines if l.strip()])}")

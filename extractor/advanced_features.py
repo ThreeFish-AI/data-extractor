@@ -652,7 +652,7 @@ class FormHandler:
                     try:
                         if "contains" in selector:
                             # Use XPath for text content
-                            xpath = f"//button[contains(text(), 'Submit')] | //button[contains(text(), 'Send')]"
+                            xpath = "//button[contains(text(), 'Submit')] | //button[contains(text(), 'Send')]"
                             submit_button = self.driver_or_page.find_element(
                                 By.XPATH, xpath
                             )

@@ -5,16 +5,11 @@ import tempfile
 import os
 import re
 import base64
-import mimetypes
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
-from urllib.parse import urlparse
-import asyncio
-import json
 from dataclasses import dataclass
 from datetime import datetime
 
-import aiohttp
 
 
 @dataclass
