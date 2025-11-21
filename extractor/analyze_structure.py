@@ -61,8 +61,8 @@ def analyze_markdown_structure():
 
     print("\n📊 Summary:")
     print(f"  Total lines: {len(lines)}")
-    print(f"  Empty lines: {len([l for l in lines if not l.strip()])}")
-    print(f"  Content lines: {len([l for l in lines if l.strip()])}")
+    print(f"  Empty lines: {len([line for line in lines if not line.strip()])}")
+    print(f"  Content lines: {len([line for line in lines if line.strip()])}")
     print(f"  Long lines (>200): {len(long_lines)}")
     print(f"  Multi-sentence lines: {len(sentence_issues)}")
 

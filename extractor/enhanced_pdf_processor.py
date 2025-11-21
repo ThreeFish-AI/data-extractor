@@ -10,6 +10,11 @@ from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
 
+# PyMuPDF imports for PDF processing
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
 
 
 @dataclass
@@ -105,8 +110,9 @@ class EnhancedPDFProcessor:
         images = []
 
         try:
-            # Import PyMuPDF here to avoid import issues
-            import fitz
+            # Check if PyMuPDF is available
+            if fitz is None:
+                raise ImportError("PyMuPDF (fitz) is not available")
 
             page = pdf_document[page_num]
             image_list = page.get_images(full=True)
@@ -204,7 +210,6 @@ class EnhancedPDFProcessor:
 
                 # Check if this looks like a table row (contains multiple separators)
                 if self._is_table_row(line):
-                    table_start = i
                     table_lines = []
 
                     # Collect consecutive table rows
@@ -220,13 +225,34 @@ class EnhancedPDFProcessor:
                         markdown_table = self._convert_to_markdown_table(table_lines)
 
                         if markdown_table:
+                            # Calculate actual rows and columns
+                            if "|" in table_lines[0]:
+                                columns = len(
+                                    [
+                                        cell.strip()
+                                        for cell in table_lines[0].split("|")
+                                        if cell.strip()
+                                    ]
+                                )
+                                # Count the number of actual data rows (non-separator)
+                                data_rows = len(
+                                    [
+                                        line
+                                        for line in table_lines
+                                        if not re.match(r"^[\s\|\-]+$", line.strip())
+                                    ]
+                                )
+                                # Count actual content rows (exclude markdown separator)
+                                total_rows = data_rows
+                            else:
+                                columns = len(table_lines[0].split("\t"))
+                                total_rows = len(table_lines)
+
                             extracted_table = ExtractedTable(
                                 id=table_id,
                                 markdown=markdown_table,
-                                rows=len(table_lines),
-                                columns=len(table_lines[0].split("|")) - 2
-                                if "|" in table_lines[0]
-                                else len(table_lines[0].split("\t")),
+                                rows=total_rows,
+                                columns=columns,
                                 page_number=page_num,
                                 headers=self._extract_table_headers(table_lines[0])
                                 if table_lines
@@ -312,17 +338,27 @@ class EnhancedPDFProcessor:
 
     def _is_table_row(self, line: str) -> bool:
         """Check if a line looks like a table row."""
-        # Remove extra spaces and check for patterns
-        cleaned = re.sub(r"\s+", " ", line.strip())
+        line_stripped = line.strip()
 
         # Check for tab-separated or pipe-separated values
-        tab_count = cleaned.count("\t")
-        pipe_count = cleaned.count("|")
+        tab_count = line_stripped.count("\t")
+        pipe_count = line_stripped.count("|")
 
         # Multiple separators suggest a table row
-        return tab_count >= 2 or (
-            pipe_count >= 2 and cleaned.startswith("|") and cleaned.endswith("|")
-        )
+        # For tabs: need at least 2 tabs (3 columns)
+        # For pipes: need at least 2 pipes (3 columns if properly formatted)
+        if tab_count >= 2 or pipe_count >= 2:
+            return True
+
+        # For space-separated, check for multiple spaces in original line
+        return self._has_multiple_space_separators(line_stripped)
+
+    def _has_multiple_space_separators(self, line: str) -> bool:
+        """Check if a line has multiple space separators (more than 2 spaces between words)."""
+        # Look for 2+ consecutive spaces
+        import re
+
+        return bool(re.search(r" {2,}", line)) and len(line.split()) >= 3
 
     def _convert_to_markdown_table(self, table_lines: List[str]) -> str:
         """Convert table lines to Markdown format."""
@@ -337,6 +373,10 @@ class EnhancedPDFProcessor:
                 # Pipe-separated table
                 rows = []
                 for line in table_lines:
+                    # Check if this is already a separator line (contains only dashes and pipes)
+                    if re.match(r"^[\s\|\-]+$", line.strip()):
+                        continue  # Skip existing separator lines
+
                     # Clean up pipe separators
                     cleaned = (
                         "| "
@@ -401,7 +441,7 @@ class EnhancedPDFProcessor:
                 return [cell.strip() for cell in header_line.split("\t")]
             else:
                 return re.split(r"\s{2,}", header_line.strip())
-        except:
+        except Exception:
             return []
 
     def enhance_markdown_with_assets(

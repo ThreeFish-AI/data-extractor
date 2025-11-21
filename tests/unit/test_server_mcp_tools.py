@@ -470,6 +470,11 @@ class TestMCPToolsPDF:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -484,6 +489,11 @@ class TestMCPToolsPDF:
             include_metadata=True,
             page_range=None,
             output_format="markdown",
+            extract_images=True,
+            extract_tables=True,
+            extract_formulas=True,
+            embed_images=False,
+            enhanced_options=None,
         )
         assert result.success is False
         assert "Method must be one of" in result.error
