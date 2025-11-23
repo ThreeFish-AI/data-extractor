@@ -81,14 +81,6 @@ Data Extractor 提供了 14 个专业的 MCP 工具，按功能分为四大类�
 - **图片嵌入**：支持 data URI 形式嵌入远程图片
 - **批量处理**：并发处理多个 URL 或 PDF 文档
 
-## 性能考虑
-
-- 服务器使用 asyncio 进行并发操作
-- Scrapy 运行在 Twisted 反应器上（单线程事件循环）
-- 浏览器自动化（Selenium/Playwright）资源密集
-- 缓存显著提高重复请求性能
-- 速率限制防止压垮目标服务器
-
 ## 浏览器依赖
 
 Selenium 和隐身功能需要 Chrome/Chromium 浏览器。Playwright 会自动下载自己的浏览器二进制文件。
