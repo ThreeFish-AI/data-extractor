@@ -70,31 +70,24 @@ Data Extractor 是一个基于 FastMCP 搭建的网页与 PDF 文档内容提取
 
 ## MCP 工具集
 
-### 网页抓取工具
+Data Extractor 提供了 14 个专业的 MCP 工具，按功能分为四大类别：
 
-1. **scrape_webpage** - 单页面抓取
-2. **scrape_multiple_webpages** - 批量页面抓取
-3. **scrape_with_stealth** - 反检测抓取
-4. **fill_and_submit_form** - 表单自动化
-
-### 链接和数据提取工具
-
-5. **extract_links** - 专业链接提取
-6. **extract_structured_data** - 结构化数据提取
-7. **get_page_info** - 页面信息获取
-8. **check_robots_txt** - 爬虫规则检查
-
-### Markdown 转换工具
-
-9. **convert_webpage_to_markdown** - 页面转 Markdown
-10. **batch_convert_webpages_to_markdown** - 批量页面转 Markdown
-11. **convert_pdf_to_markdown** - PDF 转 Markdown（增强功能）
-12. **batch_convert_pdfs_to_markdown** - 批量 PDF 转 Markdown
-
-### 服务管理工具
-
-13. **get_server_metrics** - 性能指标监控
-14. **clear_cache** - 缓存管理
+| 类别                   | 工具名称                           | 功能描述                    |
+| ---------------------- | ---------------------------------- | --------------------------- |
+| **网页抓取工具**       | scrape_webpage                     | 单页面抓取                  |
+|                        | scrape_multiple_webpages           | 批量页面抓取                |
+|                        | scrape_with_stealth                | 反检测抓取                  |
+|                        | fill_and_submit_form               | 表单自动化                  |
+| **链接和数据提取工具** | extract_links                      | 专业链接提取                |
+|                        | extract_structured_data            | 结构化数据提取              |
+|                        | get_page_info                      | 页面信息获取                |
+|                        | check_robots_txt                   | 爬虫规则检查                |
+| **Markdown 转换工具**  | convert_webpage_to_markdown        | 页面转 Markdown             |
+|                        | batch_convert_webpages_to_markdown | 批量页面转 Markdown         |
+|                        | convert_pdf_to_markdown            | PDF 转 Markdown（增强功能） |
+|                        | batch_convert_pdfs_to_markdown     | 批量 PDF 转 Markdown        |
+| **服务管理工具**       | get_server_metrics                 | 性能指标监控                |
+|                        | clear_cache                        | 缓存管理                    |
 
 ## 配置系统
 
