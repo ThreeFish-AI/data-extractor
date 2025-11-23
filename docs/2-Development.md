@@ -87,6 +87,189 @@ data-extractor/
 └── pyproject.toml            # 项目配置
 ```
 
+## Quick Started
+
+以下示例展示了如何快速开发一个完整的 MCP Tool，以创建一个简单的"网页标题提取器"为例：
+
+### 1. 定义请求和响应模型
+
+```python
+# 在 extractor/server.py 顶部添加响应模型
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+class TitleExtractionResponse(BaseModel):
+    """标题提取响应模型"""
+    success: bool = Field(..., description="操作是否成功")
+    url: str = Field(..., description="源页面URL")
+    title: Optional[str] = Field(default=None, description="提取的页面标题")
+    error: Optional[str] = Field(default=None, description="错误信息（如果有）")
+    timestamp: datetime = Field(default_factory=datetime.now, description="提取时间戳")
+```
+
+### 2. 实现 MCP Tool 函数
+
+```python
+@app.tool()
+async def extract_page_title(
+    url: Annotated[
+        str,
+        Field(
+            ...,
+            description="目标网页 URL，必须包含协议前缀（http://或https://），将提取此页面的标题"
+        ),
+    ],
+) -> TitleExtractionResponse:
+    """
+    提取网页标题
+
+    这是一个简单的工具，用于快速获取网页的标题信息，常用于：
+    - 网页内容分析前的预检查
+    - 批量网页处理时的标题收集
+    - 链接有效性验证
+
+    Args:
+        url: 目标网页 URL
+
+    Returns:
+        TitleExtractionResponse: 包含提取结果和元信息的响应对象
+    """
+    try:
+        # 验证 URL 格式
+        if not URLValidator.is_valid_url(url):
+            return TitleExtractionResponse(
+                success=False,
+                url=url,
+                error="Invalid URL format"
+            )
+
+        # 使用现有的网页抓取器获取页面信息
+        page_info = await web_scraper.get_page_info(url)
+
+        if not page_info.get("success", False):
+            return TitleExtractionResponse(
+                success=False,
+                url=url,
+                error=page_info.get("error", "Failed to fetch page")
+            )
+
+        # 提取标题
+        title = page_info.get("data", {}).get("title", "No title found")
+
+        return TitleExtractionResponse(
+            success=True,
+            url=url,
+            title=title
+        )
+
+    except Exception as e:
+        logger.error(f"Error extracting title from {url}: {str(e)}")
+        return TitleExtractionResponse(
+            success=False,
+            url=url,
+            error=f"Extraction failed: {str(e)}"
+        )
+```
+
+### 3. 添加单元测试
+
+```python
+# 在 tests/unit/ 目录下创建 test_title_extractor.py
+import pytest
+from unittest.mock import AsyncMock, patch
+from extractor.server import extract_page_title, TitleExtractionResponse
+
+@pytest.mark.asyncio
+async def test_extract_page_title_success():
+    """测试成功提取标题"""
+    # 模拟网页抓取器返回
+    mock_page_info = {
+        "success": True,
+        "data": {"title": "Example Page Title"}
+    }
+
+    with patch('extractor.server.web_scraper.get_page_info', new_callable=AsyncMock) as mock_scraper:
+        mock_scraper.return_value = mock_page_info
+
+        result = await extract_page_title("https://example.com")
+
+        assert result.success is True
+        assert result.title == "Example Page Title"
+        assert result.url == "https://example.com"
+        assert result.error is None
+
+@pytest.mark.asyncio
+async def test_extract_page_title_invalid_url():
+    """测试无效 URL"""
+    result = await extract_page_title("invalid-url")
+
+    assert result.success is False
+    assert "Invalid URL format" in result.error
+    assert result.title is None
+
+@pytest.mark.asyncio
+async def test_extract_page_title_scraping_failure():
+    """测试抓取失败"""
+    mock_page_info = {
+        "success": False,
+        "error": "Connection timeout"
+    }
+
+    with patch('extractor.server.web_scraper.get_page_info', new_callable=AsyncMock) as mock_scraper:
+        mock_scraper.return_value = mock_page_info
+
+        result = await extract_page_title("https://example.com")
+
+        assert result.success is False
+        assert "Connection timeout" in result.error
+```
+
+### 4. 测试新工具
+
+```bash
+# 运行特定测试
+uv run pytest tests/unit/test_title_extractor.py -v
+
+# 运行所有测试确保没有破坏现有功能
+uv run pytest
+
+# 启动开发服务器测试新工具
+uv run python -m extractor.server
+```
+
+### 5. 开发最佳实践
+
+**遵循现有模式**：
+
+- 使用 `@app.tool()` 装饰器注册工具
+- 使用 `Annotated` 和 `Field` 定义参数
+- 创建专门的响应模型类
+- 统一错误处理和日志记录
+
+**参数设计原则**：
+
+- 所有必需参数使用 `Field(...)` 标记
+- 提供详细的参数描述
+- 设置合理的默认值
+- 支持复杂数据类型（List、Dict、Optional）
+
+**错误处理策略**：
+
+- 验证输入参数
+- 捕获并记录异常
+- 返回结构化的错误信息
+- 使用现有的工具类（URLValidator、ErrorHandler）
+
+**性能优化考虑**：
+
+- 使用异步编程
+- 利用缓存机制
+- 添加适当的装饰器（如 `@timing_decorator`）
+- 控制并发访问
+
+通过遵循以上步骤，你可以快速创建一个功能完整、符合项目标准的 MCP Tool。
+
 ## 开发工具链
 
 ### 包管理器：uv
