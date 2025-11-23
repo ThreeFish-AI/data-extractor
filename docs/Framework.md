@@ -13,8 +13,6 @@ tags:
   - Engineering
 ---
 
-# Data Extractor 工程架构设计框架
-
 ## 概述
 
 Data Extractor 是一个基于 FastMCP 框架构建的企业级数据提取与转换 MCP Server，采用分层架构设计，集成了多种网页抓取技术、PDF 处理引擎和 Markdown 转换工具。本文档详细阐述项目的工程架构设计方案、技术选型、模块组织和核心设计模式。

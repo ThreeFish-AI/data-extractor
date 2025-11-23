@@ -30,6 +30,7 @@ Data Extractor 是一个基于 FastMCP 搭建的网页与 PDF 文档内容提取
 
 - [架构设计](docs/Framework.md)
 - [常用指令](docs/Commands.md)
+- [配置系统](docs/Configuration.md)
 
 ## MCP 工具集
 
