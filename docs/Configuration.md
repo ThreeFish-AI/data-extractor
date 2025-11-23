@@ -21,6 +21,54 @@ Data Extractor 采用分层配置，优先级从高到低：
 3. **环境文件** - `.env` 文件配置
 4. **默认配置** - 代码中定义的默认值
 
+## 运行时参数
+
+运行时参数具有最高优先级，在调用 MCP 工具时直接传递，可覆盖所有其他配置。
+
+### 数据提取配置
+
+灵活的数据提取配置支持简单 CSS 选择器和复杂属性提取：
+
+```python
+# 简单配置
+extract_config = {"title": "h1"}
+
+# 复杂配置
+extract_config = {
+    "products": {
+        "selector": ".product",
+        "multiple": true,
+        "attr": "text"
+    },
+    "images": {
+        "selector": ".product-image img",
+        "multiple": true,
+        "attr": "src"
+    }
+}
+```
+
+**支持的属性提取**：
+
+- `text` - 文本内容
+- `href` - 链接地址
+- `src` - 图片/资源地址
+- 自定义属性 - 如 `data-id`、`class` 等
+
+### 使用示例
+
+```python
+# 在 MCP 工具调用中使用
+result = await scrape_webpage(
+    url="https://example.com",
+    extract_config={
+        "title": "h1",
+        "content": ".main-content p",
+        "links": {"selector": "a", "multiple": true, "attr": "href"}
+    }
+)
+```
+
 ## 常用配置项
 
 ### 服务器配置

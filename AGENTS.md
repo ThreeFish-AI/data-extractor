@@ -53,16 +53,6 @@ Data Extractor 提供了 14 个专业的 MCP 工具，按功能分为四大类�
 | **服务管理工具**       | get_server_metrics                 | 性能指标监控                |
 |                        | clear_cache                        | 缓存管理                    |
 
-## 数据提取配置
-
-灵活的提取配置支持简单 CSS 选择器和复杂属性提取：
-
-- 简单配置：`{"title": "h1"}`
-- 复杂配置：`{"products": {"selector": ".product", "multiple": true, "attr": "text"}}`
-- 属性提取：文本内容、href 链接、src 图片、自定义属性
-
-参考 `examples/extraction_configs.py` 查看涵盖电商、新闻、招聘和房地产场景的综合示例。
-
 ## 代码库工作指南
 
 **添加新的 MCP 工具**：在 `server.py` 中使用 `@app.tool()` 装饰器添加。遵循现有模式：Pydantic 请求模型 → 错误处理 → 指标收集。
