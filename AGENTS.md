@@ -30,7 +30,8 @@ Data Extractor 是一个基于 FastMCP 搭建的网页与 PDF 文档内容提取
 
 - [架构设计](docs/1-Framework.md)
 - [开发指南](docs/2-Development.md)
-- [配置系统](docs/3-Configuration.md)
+- [测试指南](docs/3-Testing.md)
+- [配置系统](docs/4-Configuration.md)
 - [常用指令](docs/5-Commands.md)
 
 ## MCP 工具集
@@ -69,10 +70,6 @@ Data Extractor 提供了 14 个专业的 MCP 工具，按功能分为四大类�
 - **高级格式化**：表格对齐、代码语言检测、智能排版
 - **图片嵌入**：支持 data URI 形式嵌入远程图片
 - **批量处理**：并发处理多个 URL 或 PDF 文档
-
-## 浏览器依赖
-
-Selenium 和隐身功能需要 Chrome/Chromium 浏览器。Playwright 会自动下载自己的浏览器二进制文件。
 
 ## 安全注意事项
 
