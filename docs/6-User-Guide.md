@@ -20,7 +20,7 @@ tags:
 
 Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupdf 联合构建的强大、稳定的网页内容、PDF 内容提取 MCP Server，具备转换 Web Page、PDF Document 为 Markdown 的能力，专为商业环境中的长期使用而设计。
 
-### 核心特性
+**核心特性**
 
 - **14 个专业 MCP 工具**：涵盖网页抓取、PDF 转换、链接提取、表单自动化等
 - **多种抓取方法**：支持 simple、scrapy、selenium、playwright 等方法，智能选择最佳策略
@@ -1093,7 +1093,7 @@ async def batch_scraping_example():
 
 数据提取配置使用 JSON 格式，支持简单选择器和高级配置两种方式：
 
-### 简单选择器配置
+**简单选择器配置**
 
 ```json
 {
@@ -1104,19 +1104,19 @@ async def batch_scraping_example():
 }
 ```
 
-### 高级配置格式
+**高级配置格式**
 
 ```json
 {
   "field_name": {
     "selector": "CSS选择器",
-    "multiple": true/false,  // 是否提取多个元素
-    "attr": "text/属性名"     // 提取的属性类型
+    "multiple": true, // /false 是否提取多个元素
+    "attr": "text/属性名" // 提取的属性类型
   }
 }
 ```
 
-**属性类型说明**：
+属性类型说明：
 
 - `text`: 提取元素的文本内容
 - `href`: 提取链接 URL
@@ -1124,6 +1124,149 @@ async def batch_scraping_example():
 - `datetime`: 提取时间日期
 - `content`: 提取自定义属性内容
 - `outerHTML`: 提取完整的 HTML 元素
+
+### 抓取方法 (method)
+
+- **auto**: 智能选择最佳方法，基于网站特性自动判断
+- **simple**: 快速 HTTP 请求，不支持 JavaScript，适合静态网页
+- **scrapy**: Scrapy 框架，适合大规模数据抓取和复杂页面
+- **selenium**: 浏览器渲染，支持 JavaScript 和动态内容
+
+### 数据提取配置 (extract_config)
+
+```json
+{
+  "title": "h1",
+  "content": {
+    "selector": ".content p",
+    "multiple": true,
+    "attr": "text"
+  },
+  "links": {
+    "selector": "a",
+    "multiple": true,
+    "attr": "href"
+  }
+}
+```
+
+### 等待元素 (wait_for_element)
+
+- `.content` - 类选择器
+- `#main-article` - ID 选择器
+- `[data-loaded]` - 属性选择器
+- `button[type="submit"]` - 复合选择器
+
+### 表单数据 (form_data)
+
+```json
+{
+  "#username": "用户名",
+  "input[name=\"password\"]": "密码",
+  "select[name=country]": "China",
+  "input[value=male]": "click",
+  "input[name=agree]": true
+}
+```
+
+### 图片嵌入选项 (embed_options)
+
+```json
+{
+  "max_images": 50,
+  "max_bytes_per_image": 2000000,
+  "timeout_seconds": 10
+}
+```
+
+**PDF 处理方法 (method)**
+
+- **auto**: 自动选择最佳提取方法
+- **pymupdf**: PyMuPDF 引擎，适合复杂布局和图表
+- **pypdf**: PyPDF 引擎，适合简单纯文本文档
+
+**页面范围 (page_range)**
+
+- `[0, 10]` - 提取第 0-10 页（页码从 0 开始）
+- `[5, -1]` - 从第 5 页到最后一页
+- `null` - 提取所有页面（默认）
+
+**结构化数据类型 (data_type)**
+
+- **all**: 提取所有类型数据（默认）
+- **contact**: 仅提取联系方式（邮箱、电话、传真）
+- **social**: 仅提取社交媒体链接和账号
+- **content**: 仅提取文章内容和元数据
+- **products**: 仅提取产品和价格信息
+- **addresses**: 仅提取地址相关信息
+
+### 高级功能参数
+
+**格式化选项 (formatting_options)**
+
+```json
+{
+  "format_tables": true,
+  "detect_code_language": true,
+  "format_quotes": true,
+  "enhance_images": true,
+  "optimize_links": true,
+  "format_lists": true
+}
+```
+
+**增强 PDF 处理选项 (enhanced_options)**
+
+用于 PDF 内容深度提取的高级配置选项：
+
+```json
+{
+  "output_dir": "./extracted_assets", // 输出目录路径
+  "image_size": [800, 600], // 图像尺寸调整 [width, height]
+  "image_format": "png", // 图像格式 (png, jpg)
+  "image_quality": 90 // 图像质量 (1-100，仅适用于JPEG)
+}
+```
+
+**PDF 增强提取参数**
+
+- **extract_images**: 是否从 PDF 中提取图像并保存为本地文件 (默认: true)
+
+  - 支持 PNG/JPG 格式输出
+  - 可选择本地文件引用或 base64 嵌入
+  - 自动调整图像尺寸和优化质量
+
+- **extract_tables**: 是否从 PDF 中提取表格并转换为 Markdown 表格格式 (默认: true)
+
+  - 智能识别各种格式的表格（管道符分隔、制表符分隔、空格分隔）
+  - 自动保留表格的行列关系和内容完整性
+  - 转换为标准 Markdown 表格格式
+
+- **extract_formulas**: 是否从 PDF 中提取数学公式并保持 LaTeX 格式 (默认: true)
+
+  - 识别多种 LaTeX 格式的数学公式
+  - 支持内联公式 (`$...$` 或 `\(...\)` 格式)
+  - 支持块级公式 (`$$...$$` 或 `\[...\]` 格式)
+
+- **embed_images**: 是否将提取的图像以 base64 格式嵌入到 Markdown 文档中 (默认: false)
+  - true: 图像直接嵌入文档，便于分享
+  - false: 图像保存为本地文件，减少文档大小
+
+**隐身抓取参数**
+
+- **scroll_page**: 滚动页面加载动态内容
+- **method**: selenium(推荐) 或 playwright
+- **wait_for_element**: 建议设置以提高成功率
+
+**域名过滤示例**
+
+```json
+{
+  "filter_domains": ["example.com", "blog.example.com"],
+  "exclude_domains": ["ads.com", "tracker.net"],
+  "internal_only": false
+}
+```
 
 ### 预设配置模板
 
