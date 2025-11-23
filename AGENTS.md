@@ -53,17 +53,6 @@ Data Extractor 提供了 14 个专业的 MCP 工具，按功能分为四大类�
 | **服务管理工具**       | get_server_metrics                 | 性能指标监控                |
 |                        | clear_cache                        | 缓存管理                    |
 
-## 配置系统
-
-环境变量使用 `DATA_EXTRACTOR_` 前缀（参考 .env.example）：
-
-**关键设置：**
-
-- `DATA_EXTRACTOR_ENABLE_JAVASCRIPT` - 全局启用浏览器自动化
-- `DATA_EXTRACTOR_USE_RANDOM_USER_AGENT` - 反检测功能
-- `DATA_EXTRACTOR_CONCURRENT_REQUESTS` - 控制 Scrapy 并发数
-- `DATA_EXTRACTOR_BROWSER_TIMEOUT` - 浏览器等待超时
-
 ## 数据提取配置
 
 灵活的提取配置支持简单 CSS 选择器和复杂属性提取：
