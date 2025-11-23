@@ -12,11 +12,11 @@ tags:
   - Development
 ---
 
-本文档为 Vibe Coding Agents（如 Claude Code、Gemini Cli、CodeX、Cursor 等）提供 Data Extractor 项目的开发总则与使用指导。Data Extractor 包含各种 MCP (Model Context Protocol) 工具，文档包含了 Vibe Coding 在维护 Data Extractor 项目时应当遵循的基本规则与标准，还包含了这些 MCP 工具的功能特性和应用场景介绍。
+本文档通过对 Data Extractor 的整体介绍（包括架构设计、功能特性、应用场景与使用指引），为 Vibe Coding Agents（如 Claude Code、Gemini Cli、CodeX、Cursor 等）提供 Data Extractor 项目的详细开发与维护总则。
 
 ## 项目概述
 
-Data Extractor 是一个基于 FastMCP 搭建的网页、PDF 文档等转 Markdown 文档的 MCP Server。它基于 Scrapy 构建具备反检测能力的综合网络抓取能力，基于 markitdown、pypdf、pymupdf 等搭建 PDF 文档处理能力，形成专为企业级网页与 PDF 内容抓取与 Markdown 化的一套完整工具。Data Extractor 具备 14 个 MCP 工具，适用于各种文档内容抓取场景。
+Data Extractor 是一个基于 FastMCP 搭建的网页与 PDF 文档内容提取与转换 Markdown 文档的 MCP Server。它基于 Scrapy 构建具备反检测能力的综合网络抓取能力，基于 markitdown、pypdf、pymupdf 等搭建 PDF 文档内容处理能力，形成专为企业级网页、PDF 内容抓取与 Markdown 转化的一套完整工具。Data Extractor 具备 14 个 MCP 工具，适用于各种 WebPage、PDF 文档内容抓取场景。
 
 ## 开发总则
 
@@ -25,6 +25,10 @@ Data Extractor 是一个基于 FastMCP 搭建的网页、PDF 文档等转 Markdo
 - 对内容的维护需要先阅读并深入理解内容，而不是通过字符的模式匹配方式进行机械操作；
 - 保障代码健壮：维护完整的单元测试用例集、自动化的测试流程、说明书，通过自动化测试流程检查并修复工程模块的正确与健壮；
 - 保障代码质量：从本文「开发命令」部分找到正确的指令，对代码执行质量检查、修复、格式化，障代码质量；
+
+## 常用导航
+
+- [常用指令](docs/Commands.md)
 
 ## 架构概述
 
