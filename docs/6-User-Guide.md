@@ -14,20 +14,20 @@ tags:
   - Authentication
 ---
 
-本文档为 Data Extractor MCP Server 的完整用户使用指南，涵盖了 MCP Server 的所有用法、配置、鉴权、诊断以及 API 使用方法。
+本文档为 Data Extractor MCP Server 的完整用户使用指南，涵盖了 MCP Server 的所有用法、配置、部署、架构设计以及 API 使用方法。
 
 ## 概述
 
-Data Extractor 是一个基于 FastMCP 框架构建的专业级网页数据提取和文档转换服务器，提供 14 个强大的 MCP 工具，支持网页抓取、PDF 处理、Markdown 转换等功能。
+Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupdf 联合构建的强大、稳定的网页内容、PDF 内容提取 MCP Server，具备转换 Web Page、PDF Document 为 Markdown 的能力，专为商业环境中的长期使用而设计。
 
 ### 核心特性
 
-- **14 个专业 MCP 工具**：涵盖网页抓取、PDF 转换、链接提取等
-- **多种抓取方法**：支持 simple、scrapy、selenium、playwright 等方法
-- **反检测能力**：隐身抓取和表单自动化功能
-- **智能内容处理**：自动识别主要内容、格式化 Markdown
-- **PDF 深度处理**：图像、表格、数学公式提取
-- **企业级特性**：速率限制、缓存、重试、监控
+- **14 个专业 MCP 工具**：涵盖网页抓取、PDF 转换、链接提取、表单自动化等
+- **多种抓取方法**：支持 simple、scrapy、selenium、playwright 等方法，智能选择最佳策略
+- **反检测能力**：隐身抓取和表单自动化功能，绕过反爬虫检测
+- **智能内容处理**：自动识别主要内容、格式化 Markdown，支持 8 种格式化选项
+- **PDF 深度处理**：图像、表格、数学公式提取，支持增强内容处理
+- **企业级特性**：速率限制、缓存、重试、监控、代理支持、错误处理
 
 ## 快速开始
 
@@ -39,57 +39,68 @@ Data Extractor 是一个基于 FastMCP 框架构建的专业级网页数据提�
 - **内存**: 建议 2GB+
 - **网络**: 稳定的互联网连接
 
-### 安装部署
+### 安装启动
 
-#### 方法一：从源码安装
+**方法一：从源码安装**
 
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/ThreeFish-AI/data-extractor.git
 cd data-extractor
 
-# 2. 使用 uv 安装依赖
+# 2. 快速设置（推荐）
+./scripts/setup.sh
+
+# 3. 或手动安装
+# 使用 uv 安装依赖
 uv sync
 
-# 3. 安装开发依赖（可选）
+# 4. 安装包括开发依赖（可选）
 uv sync --extra dev
 
-# 4. 运行服务器
+# 5. 运行服务器
 uv run data-extractor
 ```
 
-#### 方法二：从 GitHub 直接安装（推荐生产环境）
+**方法二：从 GitHub 直接安装（推荐生产环境）**
 
 ```bash
 # 直接安装并运行
 uvx --with git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.5 data-extractor
 ```
 
-#### 方法三：使用 pip 安装
+**方法三：使用 pip 安装（WIP）**
 
 ```bash
 # 从 PyPI 安装（如果已发布）
 pip install data-extractor
-
-# 运行服务器
-data-extractor
 ```
 
-### 验证安装
+**方法四：使用命令**
 
 ```bash
-# 检查服务器是否正常运行
-curl http://localhost:3000/health
+# 使用命令行
+data-extractor
 
-# 检查工具列表
-curl http://localhost:3000/tools
+# 使用 uv 运行（推荐）
+uv run data-extractor
+
+# 或者使用Python
+python -m extractor.server
+
+# 使用 uv 运行 Python 模块
+uv run python -m extractor.server
+
+# 查看当前版本
+data-extractor --version
+
+# 查看帮助信息
+data-extractor --help
 ```
 
-## MCP Server 配置
+### 配置环境
 
-### 环境变量配置
-
-创建 `.env` 文件进行配置：
+创建 `.env` 文件来自定义配置：
 
 ```bash
 # 服务器基础配置
@@ -128,9 +139,91 @@ DATA_EXTRACTOR_LOG_REQUESTS=false
 DATA_EXTRACTOR_LOG_RESPONSES=false
 ```
 
-### MCP Client 配置
+### 验证安装
 
-#### Claude Desktop 配置
+```bash
+# 检查服务器是否正常运行
+curl http://localhost:3000/health
+
+# 检查工具列表
+curl http://localhost:3000/tools
+```
+
+### 更新和升级
+
+```bash
+# 从源码更新
+git pull origin main
+uv sync
+
+# 从 PyPI 更新
+pip install --upgrade data-extractor
+```
+
+## MCP Server 配置
+
+在您的 MCP Client (如 Claude Desktop) 中添加服务器配置：
+
+### 方式一：直接命令方式
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "data-extractor",
+      "args": []
+    }
+  }
+}
+```
+
+### 方式二：通过 uv 启动（推荐）
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": ["run", "data-extractor"],
+      "cwd": "/path/to/your/data-extractor"
+    }
+  }
+}
+```
+
+### 方式三：从 GitHub 仓库直接安装和运行（推荐用于生产环境）
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.5",
+        "data-extractor"
+      ]
+    }
+  }
+}
+```
+
+### 方式四：Python 模块方式（本地开发）
+
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "extractor.server"],
+      "cwd": "/path/to/your/data-extractor"
+    }
+  }
+}
+```
+
+### Claude Desktop 配置示例
 
 在 Claude Desktop 的 `claude_desktop_config.json` 文件中添加：
 
@@ -155,25 +248,16 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 本地开发配置
+**注意事项：**
 
-```json
-{
-  "mcpServers": {
-    "data-extractor": {
-      "command": "uv",
-      "args": ["run", "data-extractor"],
-      "cwd": "/path/to/your/data-extractor"
-    }
-  }
-}
-```
+- 将 `cwd` 路径替换为您的项目实际路径
+- GitHub 仓库地址：`https://github.com/ThreeFish-AI/data-extractor.git`
+- 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
+- 当前最新稳定版本：v0.1.5
 
-## MCP 工具详细使用指南
+## MCP 工具详细
 
-### 网页抓取工具组
-
-#### 1. scrape_webpage - 基础网页抓取
+### 1. scrape_webpage - 基础网页抓取
 
 **功能描述**：抓取单个网页内容，支持多种抓取方法和自定义数据提取配置
 
@@ -249,7 +333,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 2. scrape_multiple_webpages - 批量网页抓取
+### 2. scrape_multiple_webpages - 批量网页抓取
 
 **功能描述**：并发抓取多个网页，提高处理效率
 
@@ -308,7 +392,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 3. scrape_with_stealth - 反检测抓取
+### 3. scrape_with_stealth - 反检测抓取
 
 **功能描述**：使用高级反检测技术抓取有防护的网站
 
@@ -345,7 +429,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 4. fill_and_submit_form - 表单自动化
+### 4. fill_and_submit_form - 表单自动化
 
 **功能描述**：自动填写和提交网页表单
 
@@ -387,9 +471,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 - `input[type='checkbox']`: 复选框
 - `input[type='radio']`: 单选按钮
 
-### 数据提取工具组
-
-#### 5. extract_links - 专业链接提取
+### 5. extract_links - 专业链接提取
 
 **功能描述**：专门用于提取网页中的链接，支持过滤和分类
 
@@ -444,7 +526,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 6. extract_structured_data - 结构化数据提取
+### 6. extract_structured_data - 结构化数据提取
 
 **功能描述**：自动识别和提取网页中的结构化数据
 
@@ -488,9 +570,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-### 页面信息工具组
-
-#### 7. get_page_info - 页面基础信息
+### 7. get_page_info - 页面基础信息
 
 **功能描述**：快速获取网页的基础元数据信息
 
@@ -525,7 +605,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 8. check_robots_txt - 爬虫规则检查
+### 8. check_robots_txt - 爬虫规则检查
 
 **功能描述**：检查网站的 robots.txt 文件，确认爬取规则
 
@@ -558,9 +638,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-### Markdown 转换工具组
-
-#### 9. convert_webpage_to_markdown - 网页转 Markdown
+### 9. convert_webpage_to_markdown - 网页转 Markdown
 
 **功能描述**：将网页内容转换为结构化的 Markdown 格式
 
@@ -640,7 +718,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 10. batch_convert_webpages_to_markdown - 批量网页转 Markdown
+### 10. batch_convert_webpages_to_markdown - 批量网页转 Markdown
 
 **功能描述**：批量将多个网页转换为 Markdown 格式
 
@@ -672,9 +750,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-### PDF 处理工具组
-
-#### 11. convert_pdf_to_markdown - PDF 转 Markdown
+### 11. convert_pdf_to_markdown - PDF 转 Markdown
 
 **功能描述**：将 PDF 文档转换为 Markdown 格式，支持增强功能
 
@@ -777,7 +853,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 12. batch_convert_pdfs_to_markdown - 批量 PDF 转 Markdown
+### 12. batch_convert_pdfs_to_markdown - 批量 PDF 转 Markdown
 
 **功能描述**：批量转换多个 PDF 文档为 Markdown 格式
 
@@ -803,9 +879,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-### 服务管理工具组
-
-#### 13. get_server_metrics - 服务器性能监控
+### 13. get_server_metrics - 服务器性能监控
 
 **功能描述**：获取服务器的性能指标和运行统计信息
 
@@ -851,7 +925,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 14. clear_cache - 缓存管理
+### 14. clear_cache - 缓存管理
 
 **功能描述**：清空服务器的缓存数据
 
@@ -878,13 +952,148 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-## 数据提取配置详解
+## API 编程接口
 
-### 配置结构
+虽然主要通过 MCP 协议使用，但也支持直接 Python 调用：
+
+### Data Extractor 核心引擎使用方式
+
+#### 1. 直接使用核心引擎
+
+```python
+from extractor.scraper import WebScraper
+from extractor.advanced_features import AntiDetectionScraper, FormHandler
+
+# 基础抓取
+scraper = WebScraper()
+result = await scraper.scrape_url("https://example.com", method="simple")
+
+# 反检测抓取
+stealth_scraper = AntiDetectionScraper()
+result = await stealth_scraper.scrape_with_stealth("https://protected-site.com")
+
+# 表单自动化
+form_handler = FormHandler()
+result = await form_handler.fill_and_submit_form(
+    "https://example.com/contact",
+    {"input[name='email']": "test@example.com"}
+)
+```
+
+#### 2. 配置化数据提取
+
+```python
+# 简单配置
+extract_config = {
+    "title": "h1",
+    "content": ".article-content"
+}
+
+# 高级配置
+extract_config = {
+    "products": {
+        "selector": ".product-item",
+        "multiple": True,
+        "attr": "text"
+    },
+    "prices": {
+        "selector": ".price",
+        "multiple": True,
+        "attr": "data-price"
+    },
+    "images": {
+        "selector": "img.product-image",
+        "multiple": True,
+        "attr": "src"
+    }
+}
+
+result = await scraper.scrape_url(url, extract_config=extract_config)
+```
+
+#### 3. 企业级功能集成
+
+```python
+from extractor.utils import (
+    rate_limiter, retry_manager, cache_manager,
+    metrics_collector, error_handler
+)
+
+# 集成完整功能的抓取流程
+async def enterprise_scrape(url: str):
+    # 检查缓存
+    cached_result = cache_manager.get(url)
+    if cached_result:
+        return cached_result
+
+    # 速率限制
+    await rate_limiter.wait()
+
+    # 重试机制
+    try:
+        result = await retry_manager.retry_async(
+            scraper.scrape_url, url, method="auto"
+        )
+
+        # 记录指标
+        metrics_collector.record_request("GET", True, 1500, "scraper")
+
+        # 缓存结果
+        cache_manager.set(url, result, ttl=3600)
+
+        return result
+
+    except Exception as e:
+        error_handler.handle_error(e, "enterprise_scrape")
+        raise
+```
+
+### Data Extractor MCP 工具集使用方式
+
+#### 通过 MCP 协议调用工具
+
+```python
+import asyncio
+from extractor.server import (
+    scrape_webpage, scrape_multiple_webpages,
+    scrape_with_stealth, fill_and_submit_form
+)
+
+# 基础页面抓取
+async def basic_scraping_example():
+    result = await scrape_webpage(
+        url="https://example.com",
+        method="auto",
+        extract_config={
+            "title": "h1",
+            "content": ".main-content"
+        }
+    )
+    print(f"页面标题: {result['data']['extracted_data']['title']}")
+
+# 批量抓取
+async def batch_scraping_example():
+    urls = [
+        "https://site1.com",
+        "https://site2.com",
+        "https://site3.com"
+    ]
+
+    results = await scrape_multiple_webpages(
+        urls=urls,
+        method="simple",
+        extract_config={"title": "h1"}
+    )
+
+    for result in results['data']:
+        print(f"URL: {result['url']}, 标题: {result.get('title', 'N/A')}")
+```
+
+## 配置详解
 
 数据提取配置使用 JSON 格式，支持简单选择器和高级配置两种方式：
 
-#### 简单选择器配置
+### 简单选择器配置
 
 ```json
 {
@@ -895,7 +1104,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 高级配置格式
+### 高级配置格式
 
 ```json
 {
@@ -920,7 +1129,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 
 项目提供了 10 种常用网站类型的预设配置：
 
-#### 1. 电商网站配置
+**1. 电商网站配置**
 
 ```json
 {
@@ -947,7 +1156,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 2. 新闻文章配置
+**2. 新闻文章配置**
 
 ```json
 {
@@ -969,7 +1178,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-#### 3. 社交媒体配置
+**3. 社交媒体配置**
 
 ```json
 {
@@ -991,7 +1200,7 @@ DATA_EXTRACTOR_LOG_RESPONSES=false
 }
 ```
 
-## 高级使用技巧
+## 使用技巧
 
 ### 1. 智能方法选择
 
@@ -1048,6 +1257,272 @@ Data Extractor 支持自动选择最适合的抓取方法：
 }
 ```
 
+## 高级使用场景
+
+### 1. 电商数据抓取
+
+```python
+async def ecommerce_scraping():
+    # 抓取产品列表
+    products_result = await scrape_webpage(
+        url="https://shop.example.com/products",
+        extract_config={
+            "products": {
+                "selector": ".product-card",
+                "multiple": True,
+                "attr": "text"
+            },
+            "prices": {
+                "selector": ".price",
+                "multiple": True,
+                "attr": "text"
+            },
+            "product_links": {
+                "selector": ".product-card a",
+                "multiple": True,
+                "attr": "href"
+            }
+        }
+    )
+
+    # 批量抓取产品详情
+    product_urls = products_result['data']['extracted_data']['product_links']
+    details = await scrape_multiple_webpages(
+        urls=product_urls[:10],  # 限制前10个产品
+        extract_config={
+            "description": ".product-description",
+            "specifications": ".specs-table",
+            "images": {
+                "selector": ".product-images img",
+                "multiple": True,
+                "attr": "src"
+            }
+        }
+    )
+
+    return {
+        "products_overview": products_result,
+        "product_details": details
+    }
+```
+
+### 2. 新闻监控系统
+
+```python
+async def news_monitoring_system():
+    news_sites = [
+        "https://news.ycombinator.com",
+        "https://techcrunch.com",
+        "https://arstechnica.com"
+    ]
+
+    # 批量抓取新闻标题
+    news_results = await scrape_multiple_webpages(
+        urls=news_sites,
+        extract_config={
+            "headlines": {
+                "selector": "h1, h2, .headline",
+                "multiple": True,
+                "attr": "text"
+            },
+            "timestamps": {
+                "selector": ".timestamp, time",
+                "multiple": True,
+                "attr": "text"
+            }
+        }
+    )
+
+    # 提取所有链接用于深度分析
+    all_links = []
+    for site in news_sites:
+        links_result = await extract_links(
+            url=site,
+            internal_only=True
+        )
+        all_links.extend(links_result['data']['links'])
+
+    return {
+        "news_headlines": news_results,
+        "discovered_links": all_links
+    }
+```
+
+### 3. 合规性检查流程
+
+```python
+async def compliance_check_workflow(target_url: str):
+    # 1. 检查 robots.txt
+    robots_result = await check_robots_txt(target_url)
+
+    if not robots_result['data']['can_crawl']:
+        return {"error": "网站禁止爬取", "robots_txt": robots_result}
+
+    # 2. 获取页面基础信息
+    page_info = await get_page_info(target_url)
+
+    # 3. 执行合规的数据抓取
+    scrape_result = await scrape_webpage(
+        url=target_url,
+        method="simple",  # 使用最轻量的方法
+        extract_config={
+            "public_content": ".main-content, .article",
+            "meta_info": "meta[name='description']"
+        }
+    )
+
+    # 4. 检查服务器性能影响
+    metrics = await get_server_metrics()
+
+    return {
+        "compliance_check": robots_result,
+        "page_info": page_info,
+        "extracted_data": scrape_result,
+        "performance_metrics": metrics
+    }
+```
+
+### 4. 学术论文处理
+
+```python
+async def academic_paper_processing():
+    # 批量处理学术论文PDF
+    pdf_sources = [
+        "paper1.pdf",
+        "paper2.pdf",
+        "paper3.pdf"
+    ]
+
+    results = await batch_convert_pdfs_to_markdown(
+        pdf_sources=pdf_sources,
+        method="pymupdf",
+        extract_formulas=True,
+        extract_images=True,
+        extract_tables=True,
+        output_format="markdown"
+    )
+
+    return results
+```
+
+### 5. 技术文档转换
+
+```python
+async def technical_docs_conversion():
+    # 将技术文档PDF转换为结构化Markdown
+    result = await convert_pdf_to_markdown(
+        pdf_source="technical_manual.pdf",
+        extract_images=True,
+        extract_tables=True,
+        embed_images=True,
+        enhanced_options={
+            "output_dir": "./extracted_assets",
+            "image_size": [1200, 900]
+        }
+    )
+
+    return result
+```
+
+## 常见问题
+
+### 1. 连接超时
+
+**问题**：请求经常超时
+
+**解决方案**：
+
+```bash
+# 增加超时时间
+DATA_EXTRACTOR_REQUEST_TIMEOUT=60
+
+# 使用更稳定的抓取方法
+{
+  "url": "https://example.com",
+  "method": "simple"
+}
+```
+
+### 2. JavaScript 内容无法抓取
+
+**问题**：动态内容无法提取
+
+**解决方案**：
+
+```bash
+# 启用 JavaScript 支持
+DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true
+
+# 使用浏览器方法
+{
+  "url": "https://example.com",
+  "method": "selenium",
+  "wait_for_element": ".dynamic-content"
+}
+```
+
+### 3. 反爬虫检测
+
+**问题**：被网站反爬虫系统识别
+
+**解决方案**：
+
+```json
+{
+  "url": "https://protected-site.com",
+  "method": "selenium",
+  "use_stealth": true,
+  "random_user_agent": true,
+  "scroll_page": true
+}
+```
+
+### 4. 内存不足
+
+**问题**：处理大量数据时内存不足
+
+**解决方案**：
+
+```bash
+# 减少并发数量
+DATA_EXTRACTOR_CONCURRENT_REQUESTS=3
+
+# 启用缓存清理
+DATA_EXTRACTOR_ENABLE_CACHING=false
+```
+
+## 最佳实践
+
+### 1. 选择合适的抓取方法
+
+| 网站类型        | 推荐方法 | 原因                 |
+| --------------- | -------- | -------------------- |
+| 静态网页        | simple   | 速度最快，资源消耗低 |
+| JavaScript 网站 | selenium | 支持动态内容渲染     |
+| 大规模抓取      | scrapy   | 内置并发和管道处理   |
+| 有反爬保护      | stealth  | 避免被检测和封禁     |
+
+### 2. 数据提取策略
+
+- **从小开始**：先测试简单的选择器
+- **逐步复杂化**：在基础成功后增加复杂配置
+- **错误容忍**：设计容错的数据提取逻辑
+- **性能考虑**：避免过于复杂的 CSS 选择器
+
+### 3. 合规使用
+
+- **尊重 robots.txt**：遵守网站的爬虫规则
+- **合理频率**：设置适当的请求间隔
+- **身份标识**：使用明确的 User-Agent
+- **数据用途**：合法使用抓取的数据
+
+### 4. 监控和维护
+
+- **定期检查**：监控服务器性能和错误率
+- **缓存管理**：定期清理过期缓存
+- **日志分析**：分析请求模式和错误原因
+- **版本更新**：保持软件和依赖的更新
+
 ## 安全和合规
 
 ### 1. 遵守 robots.txt
@@ -1090,214 +1565,11 @@ DATA_EXTRACTOR_PROXY_URL=http://proxy-server:8080
 - 遵守数据保护法规（GDPR、CCPA 等）
 - 合理存储和处理抓取的数据
 
-## 性能优化
-
-### 1. 内存管理
-
-```json
-{
-  "max_memory_usage": "1GB",
-  "cleanup_interval": 100,
-  "batch_size": 50
-}
-```
-
-### 2. 网络优化
-
-```json
-{
-  "connection_timeout": 30,
-  "read_timeout": 60,
-  "max_retries": 3,
-  "keep_alive": true
-}
-```
-
-### 3. 缓存优化
-
-```json
-{
-  "cache_strategy": "LRU",
-  "max_cache_size": 1000,
-  "cache_ttl": 3600,
-  "compress_cache": true
-}
-```
-
-## 故障排除
-
-### 常见问题及解决方案
-
-#### 1. 连接超时
-
-**问题**：请求经常超时
-
-**解决方案**：
-
-```bash
-# 增加超时时间
-DATA_EXTRACTOR_REQUEST_TIMEOUT=60
-
-# 使用更稳定的抓取方法
-{
-  "url": "https://example.com",
-  "method": "simple"
-}
-```
-
-#### 2. JavaScript 内容无法抓取
-
-**问题**：动态内容无法提取
-
-**解决方案**：
-
-```bash
-# 启用 JavaScript 支持
-DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true
-
-# 使用浏览器方法
-{
-  "url": "https://example.com",
-  "method": "selenium",
-  "wait_for_element": ".dynamic-content"
-}
-```
-
-#### 3. 反爬虫检测
-
-**问题**：被网站反爬虫系统识别
-
-**解决方案**：
-
-```json
-{
-  "url": "https://protected-site.com",
-  "method": "selenium",
-  "use_stealth": true,
-  "random_user_agent": true,
-  "scroll_page": true
-}
-```
-
-#### 4. 内存不足
-
-**问题**：处理大量数据时内存不足
-
-**解决方案**：
-
-```bash
-# 减少并发数量
-DATA_EXTRACTOR_CONCURRENT_REQUESTS=3
-
-# 启用缓存清理
-DATA_EXTRACTOR_ENABLE_CACHING=false
-```
-
-### 调试模式
-
-启用详细日志进行问题诊断：
-
-```bash
-# 设置日志级别
-DATA_EXTRACTOR_LOG_LEVEL=DEBUG
-DATA_EXTRACTOR_LOG_REQUESTS=true
-DATA_EXTRACTOR_LOG_RESPONSES=true
-```
-
-### 性能监控
-
-定期检查服务器性能指标：
-
-```json
-{
-  "tool": "get_server_metrics"
-}
-```
-
-## 最佳实践
-
-### 1. 选择合适的抓取方法
-
-| 网站类型        | 推荐方法 | 原因                 |
-| --------------- | -------- | -------------------- |
-| 静态网页        | simple   | 速度最快，资源消耗低 |
-| JavaScript 网站 | selenium | 支持动态内容渲染     |
-| 大规模抓取      | scrapy   | 内置并发和管道处理   |
-| 有反爬保护      | stealth  | 避免被检测和封禁     |
-
-### 2. 数据提取策略
-
-- **从小开始**：先测试简单的选择器
-- **逐步复杂化**：在基础成功后增加复杂配置
-- **错误容忍**：设计容错的数据提取逻辑
-- **性能考虑**：避免过于复杂的 CSS 选择器
-
-### 3. 合规使用
-
-- **尊重 robots.txt**：遵守网站的爬虫规则
-- **合理频率**：设置适当的请求间隔
-- **身份标识**：使用明确的 User-Agent
-- **数据用途**：合法使用抓取的数据
-
-### 4. 监控和维护
-
-- **定期检查**：监控服务器性能和错误率
-- **缓存管理**：定期清理过期缓存
-- **日志分析**：分析请求模式和错误原因
-- **版本更新**：保持软件和依赖的更新
-
-## API 编程接口
-
-虽然主要通过 MCP 协议使用，但也支持直接 Python 调用：
-
-```python
-import asyncio
-from extractor.server import scrape_webpage
-
-async def example_usage():
-    result = await scrape_webpage(
-        url="https://example.com",
-        method="auto",
-        extract_config={
-            "title": "h1",
-            "content": ".main-content p"
-        }
-    )
-    return result
-
-# 运行示例
-result = asyncio.run(example_usage())
-print(result)
-```
-
-## 支持和帮助
-
-### 获取帮助
+## 获取帮助
 
 - **GitHub Issues**: [提交问题](https://github.com/ThreeFish-AI/data-extractor/issues)
 - **文档参考**: 查看 `docs/` 目录下的详细文档
 - **示例代码**: 查看 `examples/` 目录下的使用示例
-
-### 版本信息
-
-```bash
-# 查看当前版本
-data-extractor --version
-
-# 查看帮助信息
-data-extractor --help
-```
-
-### 更新和升级
-
-```bash
-# 从源码更新
-git pull origin main
-uv sync
-
-# 从 PyPI 更新
-pip install --upgrade data-extractor
-```
 
 ---
 
