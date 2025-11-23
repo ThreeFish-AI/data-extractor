@@ -1,6 +1,6 @@
 ---
 id: commands
-sidebar_position: 1
+sidebar_position: 2
 title: 常用 Commands
 description: 常用指令
 last_update:

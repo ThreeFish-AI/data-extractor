@@ -28,45 +28,8 @@ Data Extractor 是一个基于 FastMCP 搭建的网页与 PDF 文档内容提取
 
 ## 常用导航
 
+- [架构设计](docs/Framework.md)
 - [常用指令](docs/Commands.md)
-
-## 架构概述
-
-### 核心模块结构
-
-系统采用分层架构，以方法自动选择和企业级工具为中心：
-
-**extractor/server.py** - FastMCP 服务器，包含 14 个使用 `@app.tool()` 装饰器的 MCP 工具。每个工具遵循模式：Pydantic 请求模型 → 方法选择 → 错误处理 → 指标收集。
-
-**extractor/scraper.py** - 具有自动方法选择的多策略抓取引擎：
-
-- `WebScraper.scrape_url()` 根据需求协调方法选择
-- 支持 Simple HTTP、Scrapy 框架、Selenium 浏览器自动化
-- 方法选择逻辑考虑 JavaScript 检测和反爬虫保护需求
-
-**extractor/advanced_features.py** - 隐身能力和表单自动化：
-
-- `AntiDetectionScraper` 使用 undetected-chromedriver 和 Playwright
-- `FormHandler` 用于复杂表单交互（下拉框、复选框、文件上传）
-
-**extractor/utils.py** - 支持异步的企业级工具：
-
-- `RateLimiter`、`RetryManager`、`CacheManager`、`MetricsCollector`、`ErrorHandler`
-- 所有工具都遵循异步支持、错误处理和指标收集模式
-
-**extractor/config.py** - 使用 `DATA_EXTRACTOR_` 前缀自动环境变量映射的 Pydantic BaseSettings。
-
-**extractor/pdf_processor.py** - PDF 处理引擎，支持 PyMuPDF 和 PyPDF 双引擎，包含增强内容提取功能。
-
-**extractor/markdown_converter.py** - Markdown 转换引擎，支持高级格式化和图片嵌入功能。
-
-### 关键设计模式
-
-**方法自动选择**：`WebScraper` 根据 JavaScript 需求、反爬虫保护和性能需求智能选择抓取方法。
-
-**分层错误处理**：错误在多个级别被捕获，分类（超时、连接、反爬虫），并使用适当的重试策略处理。
-
-**企业级功能**：内置速率限制、带 TTL 的缓存、全面的指标收集和生产部署的代理支持。
 
 ## MCP 工具集
 
