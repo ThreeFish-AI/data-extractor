@@ -37,7 +37,7 @@ uv --version
 python --version
 ```
 
-### 手动环境配置
+### 环境准备
 
 ```bash
 # 安装 uv（如果未安装）
@@ -270,24 +270,234 @@ uv run python -m extractor.server
 
 通过遵循以上步骤，你可以快速创建一个功能完整、符合项目标准的 MCP Tool。
 
-## 开发工具链
+## CI/CD
 
-### 包管理器：uv
+项目配置了完整的 GitHub Actions 工作流，提供自动化的测试、构建和发布功能。
+
+**自动化流程**:
+
+- ✅ 运行完整测试套件
+- ✅ 构建分发包
+- ✅ 创建 GitHub Release
+- ✅ 发布到 PyPI
+- ✅ 更新文档
+
+### 版本维护
+
+项目使用语义化版本控制（Semantic Versioning），版本号格式为 `MAJOR.MINOR.PATCH`：
+
+- **MAJOR**: 重大不兼容变更
+- **MINOR**: 新功能增加，向后兼容
+- **PATCH**: 错误修复，向后兼容
+
+### 持续集成 (CI)
+
+- **多平台测试**: Ubuntu, Windows, macOS
+- **多版本支持**: Python 3.12, 3.13
+- **代码质量**: Ruff linting, MyPy type checking
+- **安全扫描**: Bandit security analysis
+- **覆盖率报告**: Codecov integration
+
+### 自动发布
+
+- **标签发布**: 推送 `v*.*.*` 标签自动触发发布
+- **PyPI 发布**: 使用 OIDC trusted publishing，无需 API 密钥
+- **GitHub Releases**: 自动生成 release notes
+- **构建验证**: 发布前完整测试套件验证
 
 ```bash
-# 安装依赖
-uv sync
+# 构建分发包
+uv build
 
-# 安装特定依赖
-uv add requests
+# 检查构建结果
+ls dist/
 
-# 安装开发依赖
-uv sync --extra dev
-
-# 运行命令
-uv run python script.py
-uv run pytest
+# 发布到 PyPI（如需要）
+uv publish
 ```
+
+### 版本管理
+
+1. **更新版本号**
+
+```bash
+# 编辑 pyproject.toml
+vim pyproject.toml
+# 更新 version = "x.y.z"
+```
+
+2. **更新变更日志**
+
+```bash
+# 编辑 CHANGELOG.md，添加新版本条目
+vim CHANGELOG.md
+```
+
+3. **创建发布标签**
+
+```bash
+git add pyproject.toml CHANGELOG.md
+git commit -m "chore: bump version to v1.2.3"
+git tag v1.2.3
+git push origin main --tags
+```
+
+4. **版本检查**
+
+```bash
+# 检查当前版本
+python -c "import extractor; print(extractor.__version__)"
+
+# 或使用 uv
+uv run python -c "from extractor import __version__; print(__version__)"
+```
+
+## 调试技巧
+
+### 日志调试
+
+```python
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class DataExtractor:
+    def __init__(self):
+        logger.info("Initializing DataExtractor")
+        # ...
+
+    async def extract_data(self, url: str):
+        logger.info(f"Starting extraction for URL: {url}")
+        # ...
+        logger.info(f"Extraction completed successfully")
+```
+
+### 异步调试
+
+```python
+import asyncio
+
+async def debug_async_function():
+    """调试异步函数"""
+    try:
+        result = await some_async_operation()
+        print(f"Result: {result}")
+    except Exception as e:
+        print(f"Error: {e}")
+        raise
+
+# 在调试环境中运行
+asyncio.run(debug_async_function())
+```
+
+### 浏览器调试
+
+```python
+# 在测试中启用浏览器调试
+@pytest.mark.requires_browser
+async def test_with_browser_debugging():
+    """启用浏览器调试的测试"""
+    from extractor.advanced_features import AntiDetectionScraper
+
+    scraper = AntiDetectionScraper()
+    # 添加调试配置
+    options = {
+        "headless": False,
+        "devtools": True,
+        "slow_mo": 1000  # 慢速执行
+    }
+    # ...
+```
+
+## 性能优化
+
+### 异步编程
+
+```python
+import asyncio
+from typing import List
+
+class BatchProcessor:
+    """批处理器"""
+
+    async def process_urls(self, urls: List[str]) -> List[Dict]:
+        """批量处理URL"""
+        # 使用信号量控制并发
+        semaphore = asyncio.Semaphore(10)
+
+        async def process_single(url: str) -> Dict:
+            async with semaphore:
+                return await self._process_single_url(url)
+
+        # 并发执行
+        tasks = [process_single(url) for url in urls]
+        return await asyncio.gather(*tasks)
+
+    async def _process_single_url(self, url: str) -> Dict:
+        # 实际处理逻辑
+        pass
+```
+
+### 缓存策略
+
+```python
+from functools import lru_cache
+from typing import Optional
+
+class CachedScraper:
+    """带缓存的抓取器"""
+
+    @lru_cache(maxsize=128)
+    def _get_cached_content(self, url: str) -> Optional[str]:
+        """获取缓存内容"""
+        # 实现缓存逻辑
+        pass
+
+    async def scrape_with_cache(self, url: str) -> Dict:
+        """带缓存的抓取"""
+        cached = self._get_cached_content(url)
+        if cached:
+            return {"success": True, "data": cached, "cached": True}
+
+        # 实际抓取
+        result = await self._scrape(url)
+        if result["success"]:
+            self._cache_result(url, result["data"])
+        return result
+```
+
+### 内存管理
+
+```python
+import gc
+import weakref
+from typing import Dict, Any
+
+class ResourceManager:
+    """资源管理器"""
+
+    def __init__(self):
+        self._instances = weakref.WeakValueDictionary()
+        self._max_instances = 100
+
+    def get_instance(self, instance_id: str) -> Any:
+        """获取实例"""
+        if instance_id in self._instances:
+            return self._instances[instance_id]
+
+        if len(self._instances) >= self._max_instances:
+            # 清理最旧的实例
+            gc.collect()
+
+        # 创建新实例
+        instance = self._create_instance(instance_id)
+        self._instances[instance_id] = instance
+        return instance
+```
+
+## 代码规范
 
 ### 代码质量工具
 
@@ -323,78 +533,6 @@ uv run pre-commit install
 # 手动运行所有检查
 uv run pre-commit run --all-files
 ```
-
-### 测试工具
-
-**pytest**：测试框架
-
-```bash
-# 运行所有测试
-uv run pytest
-
-# 运行特定测试文件
-uv run pytest tests/unit/test_config.py
-
-# 运行带覆盖率的测试
-uv run pytest --cov=extractor --cov-report=html
-
-# 并行运行测试
-uv run pytest -n auto
-```
-
-## 开发工作流
-
-### 1. 功能开发流程
-
-```bash
-# 1. 创建功能分支
-git checkout -b feature/new-feature
-
-# 2. 开发功能
-# 编辑代码文件...
-
-# 3. 运行测试
-uv run pytest tests/unit/
-
-# 4. 代码质量检查
-uv run ruff check .
-uv run mypy extractor/
-uv run pre-commit run --all-files
-
-# 5. 提交代码
-git add .
-git commit -m "feat: add new feature"
-
-# 6. 推送分支
-git push origin feature/new-feature
-```
-
-### 2. 代码质量检查
-
-在提交前，确保通过所有质量检查：
-
-```bash
-# 完整的质量检查流程
-uv run ruff check . && uv run ruff format . && uv run mypy extractor/ && uv run pytest
-```
-
-### 3. 测试策略
-
-**测试金字塔**：
-
-- **单元测试 (70%)**: 测试单个函数和类
-- \*\*集成测试 (25%): 测试模块间交互
-- **端到端测试 (5%)**: 测试完整业务流程
-
-**测试标记**：
-
-- `@pytest.mark.unit`: 单元测试
-- `@pytest.mark.integration`: 集成测试
-- `@pytest.mark.slow`: 慢速测试
-- `@pytest.mark.requires_network`: 需要网络访问
-- `@pytest.mark.requires_browser`: 需要浏览器环境
-
-## 代码规范
 
 ### Python 编码规范
 
@@ -468,248 +606,6 @@ def scrape_webpage(
         ExtractionError: 抓取失败
     """
     pass
-```
-
-## 测试指南
-
-### 单元测试
-
-```python
-import pytest
-from unittest.mock import AsyncMock, patch
-from extractor.config import settings
-
-class TestDataExtractor:
-    """测试数据提取器"""
-
-    def test_initialization(self):
-        """测试初始化"""
-        extractor = DataExtractor(settings)
-        assert extractor.config is settings
-        assert extractor._cache == {}
-
-    @pytest.mark.asyncio
-    async def test_extract_data_success(self):
-        """测试成功数据提取"""
-        extractor = DataExtractor(settings)
-        result = await extractor.extract_data("https://example.com")
-
-        assert "url" in result
-        assert "data" in result
-        assert result["success"] is True
-
-    @pytest.mark.asyncio
-    async def test_extract_data_invalid_url(self):
-        """测试无效URL"""
-        extractor = DataExtractor(settings)
-
-        with pytest.raises(ValueError, match="URL cannot be empty"):
-            await extractor.extract_data("")
-```
-
-### 集成测试
-
-```python
-import pytest
-from extractor.server import app
-
-@pytest.mark.integration
-@pytest.mark.asyncio
-async def test_web_scraping_integration():
-    """测试网页抓取集成"""
-    result = await app.scrape_webpage(
-        url="https://httpbin.org/html",
-        extract_config={"title": "h1"}
-    )
-
-    assert result.success is True
-    assert "data" in result
-```
-
-## 调试技巧
-
-### 日志调试
-
-```python
-import logging
-
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class DataExtractor:
-    def __init__(self):
-        logger.info("Initializing DataExtractor")
-        # ...
-
-    async def extract_data(self, url: str):
-        logger.info(f"Starting extraction for URL: {url}")
-        # ...
-        logger.info(f"Extraction completed successfully")
-```
-
-### 异步调试
-
-```python
-import asyncio
-
-async def debug_async_function():
-    """调试异步函数"""
-    try:
-        result = await some_async_operation()
-        print(f"Result: {result}")
-    except Exception as e:
-        print(f"Error: {e}")
-        raise
-
-# 在调试环境中运行
-asyncio.run(debug_async_function())
-```
-
-### 浏览器调试
-
-```python
-# 在测试中启用浏览器调试
-@pytest.mark.requires_browser
-async def test_with_browser_debugging():
-    """启用浏览器调试的测试"""
-    from extractor.advanced_features import AntiDetectionScraper
-
-    scraper = AntiDetectionScraper()
-    # 添加调试配置
-    options = {
-        "headless": False,
-        "devtools": True,
-        "slow_mo": 1000  # 慢速执行
-    }
-    # ...
-```
-
-## 性能优化
-
-### 1. 异步编程最佳实践
-
-```python
-import asyncio
-from typing import List
-
-class BatchProcessor:
-    """批处理器"""
-
-    async def process_urls(self, urls: List[str]) -> List[Dict]:
-        """批量处理URL"""
-        # 使用信号量控制并发
-        semaphore = asyncio.Semaphore(10)
-
-        async def process_single(url: str) -> Dict:
-            async with semaphore:
-                return await self._process_single_url(url)
-
-        # 并发执行
-        tasks = [process_single(url) for url in urls]
-        return await asyncio.gather(*tasks)
-
-    async def _process_single_url(self, url: str) -> Dict:
-        # 实际处理逻辑
-        pass
-```
-
-### 2. 缓存策略
-
-```python
-from functools import lru_cache
-from typing import Optional
-
-class CachedScraper:
-    """带缓存的抓取器"""
-
-    @lru_cache(maxsize=128)
-    def _get_cached_content(self, url: str) -> Optional[str]:
-        """获取缓存内容"""
-        # 实现缓存逻辑
-        pass
-
-    async def scrape_with_cache(self, url: str) -> Dict:
-        """带缓存的抓取"""
-        cached = self._get_cached_content(url)
-        if cached:
-            return {"success": True, "data": cached, "cached": True}
-
-        # 实际抓取
-        result = await self._scrape(url)
-        if result["success"]:
-            self._cache_result(url, result["data"])
-        return result
-```
-
-### 3. 内存管理
-
-```python
-import gc
-import weakref
-from typing import Dict, Any
-
-class ResourceManager:
-    """资源管理器"""
-
-    def __init__(self):
-        self._instances = weakref.WeakValueDictionary()
-        self._max_instances = 100
-
-    def get_instance(self, instance_id: str) -> Any:
-        """获取实例"""
-        if instance_id in self._instances:
-            return self._instances[instance_id]
-
-        if len(self._instances) >= self._max_instances:
-            # 清理最旧的实例
-            gc.collect()
-
-        # 创建新实例
-        instance = self._create_instance(instance_id)
-        self._instances[instance_id] = instance
-        return instance
-```
-
-## 部署准备
-
-### 1. 构建分发包
-
-```bash
-# 构建分发包
-uv build
-
-# 检查构建结果
-ls dist/
-```
-
-### 2. Docker 部署
-
-```dockerfile
-FROM python:3.12-slim
-
-WORKDIR /app
-
-COPY pyproject.toml uv.lock ./
-RUN pip install uv && \
-    uv sync --frozen && \
-    uv pip install .
-
-COPY extractor/ extractor/
-COPY scripts/ scripts/
-
-EXPOSE 8000
-CMD ["uv", "run", "data-extractor"]
-```
-
-### 3. 环境变量配置
-
-```bash
-# 生产环境变量
-export DATA_EXTRACTOR_LOG_LEVEL=INFO
-export DATA_EXTRACTOR_CONCURRENT_REQUESTS=32
-export DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true
-export DATA_EXTRACTOR_BROWSER_HEADLESS=true
 ```
 
 ## 故障排除

@@ -19,13 +19,27 @@ tags:
 
 Data Extractor 项目建立了完整的测试体系，包括单元测试、集成测试、性能测试和端到端测试。测试覆盖所有核心功能模块，确保代码质量和系统稳定性。
 
-### 测试体系特点
+**测试体系特点**：
 
 - **高覆盖率**：整体测试覆盖率达 98%+
 - **多层次测试**：单元测试 → 集成测试 → 端到端测试
 - **自动化执行**：完整的 CI/CD 集成和自动化测试流程
 - **详细报告**：HTML、JSON、XML 等多格式测试报告
 - **性能监控**：内存使用、响应时间、并发性能监控
+
+**测试金字塔**：
+
+- **单元测试 (70%)**: 测试单个函数和类
+- \*\*集成测试 (25%): 测试模块间交互
+- **端到端测试 (5%)**: 测试完整业务流程
+
+**测试标记**：
+
+- `@pytest.mark.unit`: 单元测试
+- `@pytest.mark.integration`: 集成测试
+- `@pytest.mark.slow`: 慢速测试
+- `@pytest.mark.requires_network`: 需要网络访问
+- `@pytest.mark.requires_browser`: 需要浏览器环境
 
 ## 测试架构
 
@@ -77,11 +91,61 @@ tests/
 - **特点**：快速执行、使用 Mock 隔离外部依赖、高代码覆盖率
 - **覆盖范围**：配置系统、网页抓取器、PDF 处理器、工具类等
 
+```python
+import pytest
+from unittest.mock import AsyncMock, patch
+from extractor.config import settings
+
+class TestDataExtractor:
+    """测试数据提取器"""
+
+    def test_initialization(self):
+        """测试初始化"""
+        extractor = DataExtractor(settings)
+        assert extractor.config is settings
+        assert extractor._cache == {}
+
+    @pytest.mark.asyncio
+    async def test_extract_data_success(self):
+        """测试成功数据提取"""
+        extractor = DataExtractor(settings)
+        result = await extractor.extract_data("https://example.com")
+
+        assert "url" in result
+        assert "data" in result
+        assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_extract_data_invalid_url(self):
+        """测试无效URL"""
+        extractor = DataExtractor(settings)
+
+        with pytest.raises(ValueError, match="URL cannot be empty"):
+            await extractor.extract_data("")
+```
+
 #### 2. 集成测试 (Integration Tests)
 
 - **目标**：验证多个组件之间的协作
 - **特点**：真实组件交互、端到端工作流验证
 - **覆盖范围**：MCP 工具集成、跨工具协作、真实场景模拟
+
+```python
+import pytest
+from extractor.server import app
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_web_scraping_integration():
+    """测试网页抓取集成"""
+    result = await app.scrape_webpage(
+        url="https://httpbin.org/html",
+        extract_config={"title": "h1"}
+    )
+
+    assert result.success is True
+    assert "data" in result
+```
 
 #### 3. 性能测试 (Performance Tests)
 

@@ -60,6 +60,21 @@ Data Extractor 是一个基于 FastMCP 框架构建的企业级数据提取与�
 - 错误处理和指标收集集成
 - 异步任务协调和生命周期管理
 
+**FastMCP 服务器设计**:
+
+```python
+from fastmcp import FastMCP
+
+app = FastMCP(settings.server_name, version=settings.server_version)
+web_scraper = WebScraper()
+anti_detection_scraper = AntiDetectionScraper()
+
+@app.tool()
+async def scrape_webpage(url: str, method: str = "auto",
+                        extract_config: Optional[Dict] = None) -> Dict:
+    """MCP 工具装饰器，自动处理输入验证和错误处理"""
+```
+
 **关键设计决策**：
 
 ```python
@@ -90,7 +105,7 @@ graph TD
     G --> H[统一格式返回]
 ```
 
-**方法自动选择算法**：
+**方法自选**：
 
 - 基于 JavaScript 检测和反爬虫保护需求
 - 考虑性能要求和资源消耗
