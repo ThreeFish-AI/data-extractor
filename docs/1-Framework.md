@@ -26,23 +26,18 @@ Data Extractor 是基于 FastMCP 框架构建的企业级数据提取与转换 M
 
 ### 核心架构层次
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    FastMCP Server Layer                     │
-│                 (14 MCP Tools via @app.tool)                │
-├─────────────────────────────────────────────────────────────┤
-│                   Business Logic Layer                      │
-│              (Service Classes & Orchestration)              │
-├─────────────────────────────────────────────────────────────┤
-│                  Data Processing Layer                      │
-│           (Scraping, PDF, Markdown Conversion)              │
-├─────────────────────────────────────────────────────────────┤
-│                  Infrastructure Layer                       │
-│        (Rate Limiter, Cache, Metrics, Error Handler)        │
-├─────────────────────────────────────────────────────────────┤
-│                  Configuration Layer                        │
-│              (Settings, Environment Variables)              │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[FastMCP Server Layer<br/>14 MCP Tools via @app.tool] --> B[Business Logic Layer<br/>Service Classes & Orchestration]
+    B --> C[Data Processing Layer<br/>Scraping, PDF, Markdown Conversion]
+    C --> D[Infrastructure Layer<br/>Rate Limiter, Cache, Metrics, Error Handler]
+    D --> E[Configuration Layer<br/>Settings, Environment Variables]
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
 ```
 
 ## 核心模块设计
