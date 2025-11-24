@@ -26,12 +26,14 @@ Data Extractor 是基于 FastMCP 框架构建的企业级数据提取与转换 M
 
 ### 核心架构层次
 
+<div align="center">
+
 ```mermaid
 graph TD
-    A[FastMCP Server Layer<br/>14 MCP Tools via @app.tool] --> B[Business Logic Layer<br/>Service Classes & Orchestration]
-    B --> C[Data Processing Layer<br/>Scraping, PDF, Markdown Conversion]
-    C --> D[Infrastructure Layer<br/>Rate Limiter, Cache, Metrics, Error Handler]
-    D --> E[Configuration Layer<br/>Settings, Environment Variables]
+    A["FastMCP Server Layer<br/><br/>14 MCP Tools via @app.tool<br/><br/>"] --> B["Business Logic Layer<br/><br/>Service Classes & Orchestration<br/><br/>"]
+    B --> C["Data Processing Layer<br/><br/>Scraping, PDF, Markdown Conversion<br/><br/>"]
+    C --> D["Infrastructure Layer<br/><br/>Rate Limiter, Cache, Metrics, Error Handler<br/><br/>"]
+    D --> E["Configuration Layer<br/><br/>Settings, Environment Variables<br/><br/>"]
 
     style A fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
     style B fill:#7c2d12,stroke:#ea580c,color:#ffffff
@@ -39,6 +41,8 @@ graph TD
     style D fill:#134e4a,stroke:#14b8a6,color:#ffffff
     style E fill:#581c87,stroke:#9333ea,color:#ffffff
 ```
+
+</div>
 
 ## 核心模块设计
 
