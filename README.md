@@ -44,43 +44,6 @@ Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupd
 | **get_server_metrics** | 性能指标监控 | 无参数 - 返回请求统计、性能指标、缓存情况 |
 | **clear_cache**        | 缓存管理     | 无参数 - 清空所有缓存数据                 |
 
-## 📋 版本里程碑
-
-### **v0.1.6 (2025/11/25)** - PDF 增强功能与内容深度提取
-
-- ✨ **PDF 增强处理**: 新增增强版 PDF 处理器，支持图像、表格、数学公式的深度提取
-  - **🖼️ 图像提取**: 从 PDF 中提取图像并保存为本地文件或 base64 嵌入，支持尺寸调整和质量优化
-  - **📊 表格转换**: 智能识别 PDF 表格并转换为标准 Markdown 表格格式，保持数据结构完整性
-  - **🧮 公式提取**: 识别并提取 LaTeX 格式的数学公式，支持内联和块级公式格式保持
-  - **📝 结构化输出**: 自动生成包含提取资源的结构化 Markdown 文档，提供详细的提取统计信息
-  - **⚙️ 高级配置**: 新增 enhanced_options 参数，支持自定义输出目录、图像格式、质量控制等高级配置
-
-### **v0.1.5 (2025/09/12)** - MCP 工具标准化
-
-- **MCP 工具标准化**: 统一使用 Annotated[*, Field(...)] 参数约束模式，提供清晰的参数描述和示例
-- **输出模式优化**: 增强响应模型描述，提升 MCP Client 兼容性
-
-### **v0.1.4 (2025/09/06)**
-
-- **测试体系优化**: 219 个测试用例，通过率 98.6%+，包含单元测试和强化集成测试
-
-### v0.1.3 (2025-09-06)
-
-- **Markdown 转换功能**: 新增 2 个 MCP 工具，包含页面转 Markdown 和批量转换功能
-- **测试体系优化**: 162 个测试用例 (131 个单元测试 + 31 个集成测试)，通过率 99.4%
-
-### v0.1.2 (2025-09-06)
-
-- **测试体系搭建**: 建立完整的单元测试和集成测试体系，初始化 19 个基础测试
-
-### v0.1.1 (2025-09-05)
-
-- **核心重构**: 包名从 `scrapy_mcp` 重构为 `extractor`，项目入口命令统一为 `data-extractor`，提升项目结构清晰度
-
-### v0.1.0 (2025-08-26)
-
-- **初始发布**: 核心的网页爬取 MCP Server 实现，10 个专业爬取工具
-
 ## 🎯 快速参考
 
 - [用户指南](docs/6-User-Guide.md)
@@ -89,14 +52,15 @@ Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupd
 - [测试指南](docs/3-Testing.md)
 - [配置系统](docs/4-Configuration.md)
 - [常用指令](docs/5-Commands.md)
+- [版本里程](CHANGELOG.md)
 
 ## 🤝 贡献
 
-欢迎提交 [Issue](https://github.com/ThreeFish-AI/data-extractor/issues) 和 Pull Request 来改进这个项目。
+欢迎提交 [Issue](https://github.com/ThreeFish-AI/data-extractor/issues) 和 [Pull Request](https://github.com/ThreeFish-AI/data-extractor/pulls) 来改进这个项目。
 
 ## 📄 许可证
 
-MIT License - 详见 LICENSE 文件
+MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ---
 
