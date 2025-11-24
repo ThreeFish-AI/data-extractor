@@ -33,11 +33,11 @@ graph TD
     C --> D[Infrastructure Layer<br/>Rate Limiter, Cache, Metrics, Error Handler]
     D --> E[Configuration Layer<br/>Settings, Environment Variables]
 
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style E fill:#fce4ec
+    style A fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style B fill:#7c2d12,stroke:#ea580c,color:#ffffff
+    style C fill:#166534,stroke:#22c55e,color:#ffffff
+    style D fill:#134e4a,stroke:#14b8a6,color:#ffffff
+    style E fill:#581c87,stroke:#9333ea,color:#ffffff
 ```
 
 ## 核心模块设计
@@ -209,6 +209,14 @@ graph TD
     F --> G[Update Both Caches]
     E --> C
     G --> C
+
+    style A fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style B fill:#7c2d12,stroke:#ea580c,color:#ffffff
+    style C fill:#166534,stroke:#22c55e,color:#ffffff
+    style D fill:#134e4a,stroke:#14b8a6,color:#ffffff
+    style E fill:#581c87,stroke:#9333ea,color:#ffffff
+    style F fill:#7c2d12,stroke:#ea580c,color:#ffffff
+    style G fill:#166534,stroke:#22c55e,color:#ffffff
 ```
 
 ### 性能监控系统
