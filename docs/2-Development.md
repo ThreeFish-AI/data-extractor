@@ -13,11 +13,9 @@ tags:
   - Workflow
 ---
 
-## 概述
-
 Data Extractor 采用现代化的 Python 开发工具链，基于 uv 包管理器构建高效的开发环境。本文档提供完整的开发指南、最佳实践和代码质量保障机制。
 
-## 环境设置
+## 环境配置
 
 ### 系统要求
 
@@ -26,7 +24,7 @@ Data Extractor 采用现代化的 Python 开发工具链，基于 uv 包管理�
 - **内存**: 最少 4GB RAM
 - **存储**: 最少 10GB 可用空间
 
-### 快速初始化
+### 快速开始
 
 ```bash
 # 使用提供的脚本快速设置（推荐）
@@ -37,7 +35,7 @@ uv --version
 python --version
 ```
 
-### 环境准备
+### 详细环境配置
 
 ```bash
 # 安装 uv（如果未安装）
@@ -87,11 +85,13 @@ data-extractor/
 └── pyproject.toml            # 项目配置
 ```
 
-## Quick Started
+## MCP 工具开发
+
+### 快速开发示例
 
 以下示例展示了如何快速开发一个完整的 MCP Tool，以创建一个简单的"网页标题提取器"为例：
 
-### 1. 定义请求和响应模型
+#### 1. 定义请求和响应模型
 
 ```python
 # 在 extractor/server.py 顶部添加响应模型
@@ -108,7 +108,7 @@ class TitleExtractionResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="提取时间戳")
 ```
 
-### 2. 实现 MCP Tool 函数
+#### 2. 实现 MCP Tool 函数
 
 ```python
 @app.tool()
@@ -172,7 +172,7 @@ async def extract_page_title(
         )
 ```
 
-### 3. 添加单元测试
+#### 3. 添加单元测试
 
 ```python
 # 在 tests/unit/ 目录下创建 test_title_extractor.py
@@ -225,7 +225,7 @@ async def test_extract_page_title_scraping_failure():
         assert "Connection timeout" in result.error
 ```
 
-### 4. 测试新工具
+#### 4. 测试新工具
 
 ```bash
 # 运行特定测试
@@ -238,55 +238,9 @@ uv run pytest
 uv run python -m extractor.server
 ```
 
-### 5. 开发最佳实践
+### 开发最佳实践
 
-**遵循现有模式**：
-
-- 使用 `@app.tool()` 装饰器注册工具
-- 使用 `Annotated` 和 `Field` 定义参数
-- 创建专门的响应模型类
-- 统一错误处理和日志记录
-
-**参数设计原则**：
-
-- 所有必需参数使用 `Field(...)` 标记
-- 提供详细的参数描述
-- 设置合理的默认值
-- 支持复杂数据类型（List、Dict、Optional）
-
-**错误处理策略**：
-
-- 验证输入参数
-- 捕获并记录异常
-- 返回结构化的错误信息
-- 使用现有的工具类（URLValidator、ErrorHandler）
-
-**性能优化考虑**：
-
-- 使用异步编程
-- 利用缓存机制
-- 添加适当的装饰器（如 `@timing_decorator`）
-- 控制并发访问
-
-通过遵循以上步骤，你可以快速创建一个功能完整、符合项目标准的 MCP Tool。
-
-### 6. Annotated Field 参数约束模式
-
-**BaseModel 模式（旧版）**
-
-```python
-# 定义请求模型
-class ExtractLinksRequest(BaseModel):
-    url: str
-    filter_domains: Optional[List[str]] = None
-    exclude_domains: Optional[List[str]] = None
-    internal_only: bool = False
-
-# MCP 工具函数
-@app.tool()
-async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
-    # 使用 request.url, request.filter_domains 等
-```
+#### 参数设计模式
 
 **Annotated Field 模式（推荐）**
 
@@ -309,150 +263,121 @@ async def extract_links(
 - **MCP Client 兼容**: 增强的参数描述提升了 MCP Client 的自动化识别能力
 - **减少样板代码**: 移除了大量 BaseModel 请求类定义，代码更简洁
 
-## CI/CD
+#### 错误处理策略
 
-项目配置了完整的 GitHub Actions 工作流，提供自动化的测试、构建和发布功能。
+- 验证输入参数
+- 捕获并记录异常
+- 返回结构化的错误信息
+- 使用现有的工具类（URLValidator、ErrorHandler）
 
-**自动化流程**:
+#### 性能优化考虑
 
-- ✅ 运行完整测试套件
-- ✅ 构建分发包
-- ✅ 创建 GitHub Release
-- ✅ 发布到 PyPI
-- ✅ 更新文档
+- 使用异步编程
+- 利用缓存机制
+- 添加适当的装饰器（如 `@timing_decorator`）
+- 控制并发访问
 
-### 版本维护
+## 代码质量保障
 
-项目使用语义化版本控制（Semantic Versioning），版本号格式为 `MAJOR.MINOR.PATCH`：
+### 代码质量工具
 
-- **MAJOR**: 重大不兼容变更
-- **MINOR**: 新功能增加，向后兼容
-- **PATCH**: 错误修复，向后兼容
-
-### 持续集成 (CI)
-
-- **多平台测试**: Ubuntu, Windows, macOS
-- **多版本支持**: Python 3.12, 3.13
-- **代码质量**: Ruff linting, MyPy type checking
-- **安全扫描**: Bandit security analysis
-- **覆盖率报告**: Codecov integration
-
-### 自动发布
-
-- **标签发布**: 推送 `v*.*.*` 标签自动触发发布
-- **PyPI 发布**: 使用 OIDC trusted publishing，无需 API 密钥
-- **GitHub Releases**: 自动生成 release notes
-- **构建验证**: 发布前完整测试套件验证
+**Ruff**：代码检查和格式化
 
 ```bash
-# 构建分发包
-uv build
+# 代码检查
+uv run ruff check .
 
-# 检查构建结果
-ls dist/
+# 代码格式化
+uv run ruff format .
 
-# 发布到 PyPI（如需要）
-uv publish
+# 导入排序
+uv run ruff check --select I .
 ```
 
-### 版本管理
-
-1. **更新版本号**
+**MyPy**：类型检查
 
 ```bash
-# 编辑 pyproject.toml
-vim pyproject.toml
-# 更新 version = "x.y.z"
+# 类型检查
+uv run mypy extractor/
+
+# 严格类型检查
+uv run mypy --strict extractor/
 ```
 
-2. **更新变更日志**
+**Pre-commit**：Git 钩子
 
 ```bash
-# 编辑 CHANGELOG.md，添加新版本条目
-vim CHANGELOG.md
+# 安装钩子
+uv run pre-commit install
+
+# 手动运行所有检查
+uv run pre-commit run --all-files
 ```
 
-3. **创建发布标签**
+### Python 编码规范
 
-```bash
-git add pyproject.toml CHANGELOG.md
-git commit -m "chore: bump version to v1.2.3"
-git tag v1.2.3
-git push origin main --tags
-```
-
-4. **版本检查**
-
-```bash
-# 检查当前版本
-python -c "import extractor; print(extractor.__version__)"
-
-# 或使用 uv
-uv run python -c "from extractor import __version__; print(__version__)"
-```
-
-## 调试技巧
-
-### 日志调试
+遵循 PEP 8 和 PEP 257 标准：
 
 ```python
-import logging
-
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+# 好的示例
 class DataExtractor:
-    def __init__(self):
-        logger.info("Initializing DataExtractor")
-        # ...
+    """数据提取器类"""
 
-    async def extract_data(self, url: str):
-        logger.info(f"Starting extraction for URL: {url}")
-        # ...
-        logger.info(f"Extraction completed successfully")
+    def __init__(self, config: DataExtractorSettings) -> None:
+        self.config = config
+        self._cache = {}
+
+    async def extract_data(self, url: str) -> Dict[str, Any]:
+        """提取数据
+
+        Args:
+            url: 目标URL
+
+        Returns:
+            提取的数据字典
+
+        Raises:
+            ExtractionError: 提取失败时抛出
+        """
+        if not url:
+            raise ValueError("URL cannot be empty")
+
+        # 实现提取逻辑...
+        return result
 ```
 
-### 异步调试
+### 类型注解与文档字符串
+
+所有函数和方法都应该有类型注解和 Google 风格的文档字符串：
 
 ```python
-import asyncio
+from typing import Dict, List, Optional, Any
 
-async def debug_async_function():
-    """调试异步函数"""
-    try:
-        result = await some_async_operation()
-        print(f"Result: {result}")
-    except Exception as e:
-        print(f"Error: {e}")
-        raise
+def scrape_webpage(
+    url: str,
+    method: str = "auto",
+    extract_config: Optional[Dict[str, Any]] = None
+) -> ScrapeResponse:
+    """抓取网页数据
 
-# 在调试环境中运行
-asyncio.run(debug_async_function())
-```
+    Args:
+        url: 要抓取的URL
+        method: 抓取方法 (auto/simple/scrapy/selenium)
+        extract_config: 数据提取配置
 
-### 浏览器调试
+    Returns:
+        抓取响应对象
 
-```python
-# 在测试中启用浏览器调试
-@pytest.mark.requires_browser
-async def test_with_browser_debugging():
-    """启用浏览器调试的测试"""
-    from extractor.advanced_features import AntiDetectionScraper
-
-    scraper = AntiDetectionScraper()
-    # 添加调试配置
-    options = {
-        "headless": False,
-        "devtools": True,
-        "slow_mo": 1000  # 慢速执行
-    }
-    # ...
+    Raises:
+        ValueError: URL格式错误
+        ExtractionError: 抓取失败
+    """
+    pass
 ```
 
 ## 性能优化
 
-### 异步编程
+### 异步编程模式
 
 ```python
 import asyncio
@@ -536,122 +461,130 @@ class ResourceManager:
         return instance
 ```
 
-## 代码规范
+## CI/CD 与版本管理
 
-### 代码质量工具
+### 持续集成流程
 
-**Ruff**：代码检查和格式化
+项目配置了完整的 GitHub Actions 工作流，提供自动化的测试、构建和发布功能：
+
+**自动化流程**:
+
+- ✅ 运行完整测试套件
+- ✅ 构建分发包
+- ✅ 创建 GitHub Release
+- ✅ 发布到 PyPI
+- ✅ 更新文档
+
+### 多平台测试
+
+- **多平台测试**: Ubuntu, Windows, macOS
+- **多版本支持**: Python 3.12, 3.13
+- **代码质量**: Ruff linting, MyPy type checking
+- **安全扫描**: Bandit security analysis
+- **覆盖率报告**: Codecov integration
+
+### 版本管理
+
+项目使用语义化版本控制（Semantic Versioning），版本号格式为 `MAJOR.MINOR.PATCH`：
+
+- **MAJOR**: 重大不兼容变更
+- **MINOR**: 新功能增加，向后兼容
+- **PATCH**: 错误修复，向后兼容
+
+### 发布流程
 
 ```bash
-# 代码检查
-uv run ruff check .
+# 1. 更新版本号
+vim pyproject.toml  # 更新 version = "x.y.z"
 
-# 代码格式化
-uv run ruff format .
+# 2. 更新变更日志
+vim CHANGELOG.md    # 添加新版本条目
 
-# 导入排序
-uv run ruff check --select I .
+# 3. 创建发布标签
+git add pyproject.toml CHANGELOG.md
+git commit -m "chore: bump version to v1.2.3"
+git tag v1.2.3
+git push origin main --tags
+
+# 4. 构建和检查
+uv build
+ls dist/
+
+# 5. 版本检查
+python -c "import extractor; print(extractor.__version__)"
 ```
 
-**MyPy**：类型检查
+### 自动发布机制
 
-```bash
-# 类型检查
-uv run mypy extractor/
+- **标签发布**: 推送 `v*.*.*` 标签自动触发发布
+- **PyPI 发布**: 使用 OIDC trusted publishing，无需 API 密钥
+- **GitHub Releases**: 自动生成 release notes
+- **构建验证**: 发布前完整测试套件验证
 
-# 严格类型检查
-uv run mypy --strict extractor/
-```
+## 调试与故障排除
 
-**Pre-commit**：Git 钩子
+### 调试技巧
 
-```bash
-# 安装钩子
-uv run pre-commit install
-
-# 手动运行所有检查
-uv run pre-commit run --all-files
-```
-
-### Python 编码规范
-
-遵循 PEP 8 和 PEP 257 标准：
+#### 日志调试
 
 ```python
-# 好的示例
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class DataExtractor:
-    """数据提取器类"""
+    def __init__(self):
+        logger.info("Initializing DataExtractor")
+        # ...
 
-    def __init__(self, config: DataExtractorSettings) -> None:
-        self.config = config
-        self._cache = {}
-
-    async def extract_data(self, url: str) -> Dict[str, Any]:
-        """提取数据
-
-        Args:
-            url: 目标URL
-
-        Returns:
-            提取的数据字典
-
-        Raises:
-            ExtractionError: 提取失败时抛出
-        """
-        if not url:
-            raise ValueError("URL cannot be empty")
-
-        # 实现提取逻辑...
-        return result
+    async def extract_data(self, url: str):
+        logger.info(f"Starting extraction for URL: {url}")
+        # ...
+        logger.info(f"Extraction completed successfully")
 ```
 
-### 类型注解
-
-所有函数和方法都应该有类型注解：
+#### 异步调试
 
 ```python
-from typing import Dict, List, Optional, Any
+import asyncio
 
-def process_data(
-    data: List[Dict[str, Any]],
-    config: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
-    """处理数据"""
-    pass
+async def debug_async_function():
+    """调试异步函数"""
+    try:
+        result = await some_async_operation()
+        print(f"Result: {result}")
+    except Exception as e:
+        print(f"Error: {e}")
+        raise
+
+# 在调试环境中运行
+asyncio.run(debug_async_function())
 ```
 
-### 文档字符串
-
-使用 Google 风格的文档字符串：
+#### 浏览器调试
 
 ```python
-def scrape_webpage(
-    url: str,
-    method: str = "auto",
-    extract_config: Optional[Dict[str, Any]] = None
-) -> ScrapeResponse:
-    """抓取网页数据
+# 在测试中启用浏览器调试
+@pytest.mark.requires_browser
+async def test_with_browser_debugging():
+    """启用浏览器调试的测试"""
+    from extractor.advanced_features import AntiDetectionScraper
 
-    Args:
-        url: 要抓取的URL
-        method: 抓取方法 (auto/simple/scrapy/selenium)
-        extract_config: 数据提取配置
-
-    Returns:
-        抓取响应对象
-
-    Raises:
-        ValueError: URL格式错误
-        ExtractionError: 抓取失败
-    """
-    pass
+    scraper = AntiDetectionScraper()
+    # 添加调试配置
+    options = {
+        "headless": False,
+        "devtools": True,
+        "slow_mo": 1000  # 慢速执行
+    }
+    # ...
 ```
 
-## 故障排除
+### 常见问题解决
 
-### 常见问题
-
-**问题 1: 浏览器驱动问题**
+#### 浏览器驱动问题
 
 ```bash
 # 解决方案：重新安装 Playwright
@@ -661,14 +594,14 @@ uv run playwright install --force
 export PLAYWRIGHT_BROWSERS_PATH=/usr/bin
 ```
 
-**问题 2: 测试超时**
+#### 测试超时问题
 
 ```bash
 # 解决方案：增加超时时间或跳过慢速测试
 uv run pytest -m "not slow" --timeout=300
 ```
 
-**问题 3: 类型检查错误**
+#### 类型检查错误
 
 ```bash
 # 解决方案：逐步修复类型问题
@@ -693,7 +626,7 @@ uv run python -m memory_profiler script.py
 
 ## 开发资源
 
-### 文档
+### 技术文档
 
 - [官方文档](https://docs.astral.sh/uv/)
 - [pytest 文档](https://docs.pytest.org/)
