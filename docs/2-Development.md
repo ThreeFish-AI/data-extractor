@@ -270,6 +270,45 @@ uv run python -m extractor.server
 
 通过遵循以上步骤，你可以快速创建一个功能完整、符合项目标准的 MCP Tool。
 
+### 6. Annotated Field 参数约束模式
+
+**BaseModel 模式（旧版）**
+
+```python
+# 定义请求模型
+class ExtractLinksRequest(BaseModel):
+    url: str
+    filter_domains: Optional[List[str]] = None
+    exclude_domains: Optional[List[str]] = None
+    internal_only: bool = False
+
+# MCP 工具函数
+@app.tool()
+async def extract_links(request: ExtractLinksRequest) -> LinksResponse:
+    # 使用 request.url, request.filter_domains 等
+```
+
+**Annotated Field 模式（推荐）**
+
+```python
+# 直接参数定义，无需请求模型类
+@app.tool()
+async def extract_links(
+    url: Annotated[str, Field(..., description="目标网页URL，必须包含协议前缀(http://或https://)")],
+    filter_domains: Annotated[Optional[List[str]], Field(default=None, description="白名单域名列表，仅提取这些域名的链接")],
+    exclude_domains: Annotated[Optional[List[str]], Field(default=None, description="黑名单域名列表，排除这些域名的链接")],
+    internal_only: Annotated[bool, Field(default=False, description="是否仅提取内部链接(相同域名)")],
+) -> LinksResponse:
+    # 直接使用参数 url, filter_domains 等
+```
+
+**优势和改进**
+
+- **参数透明性**: 所有参数都明确可见，无需查看请求模型定义
+- **描述清晰性**: 每个参数都有详细的中文描述和使用示例
+- **MCP Client 兼容**: 增强的参数描述提升了 MCP Client 的自动化识别能力
+- **减少样板代码**: 移除了大量 BaseModel 请求类定义，代码更简洁
+
 ## CI/CD
 
 项目配置了完整的 GitHub Actions 工作流，提供自动化的测试、构建和发布功能。
