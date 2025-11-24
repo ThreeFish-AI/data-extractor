@@ -2,7 +2,7 @@
 id: user-guide
 sidebar_position: 6
 title: User Guide
-description: Complete User Guide for Data Extractor MCP Server
+description: 本文档为 Data Extractor MCP Server 的完整用户使用指南，涵盖了 MCP Server 的所有用法、配置、部署、架构设计以及 API 使用方法。
 last_update:
   author: Aurelius
   date: 2025-11-23
@@ -13,8 +13,6 @@ tags:
   - Configuration
   - Authentication
 ---
-
-本文档为 Data Extractor MCP Server 的完整用户使用指南，涵盖了 MCP Server 的所有用法、配置、部署、架构设计以及 API 使用方法。
 
 ## 概述
 
