@@ -1,6 +1,15 @@
 """
-单元测试：高级功能模块
-测试 extractor.advanced_features 模块的反检测爬虫和表单处理功能
+## 高级功能测试 (`test_advanced_features.py`)
+
+### AntiDetectionScraper 反检测测试
+
+测试无痕 Chrome 浏览器抓取、Playwright 隐身抓取、鼠标移动、滚动等行为模拟、
+CDP 命令和隐身脚本注入、浏览器启动失败等异常场景。
+
+### FormHandler 表单处理测试
+
+测试输入框、密码框填写、下拉选择框、复选框处理、按钮点击和键盘提交、
+WebDriverWait 元素等待功能、元素未找到等异常处理。
 """
 
 import pytest
@@ -11,14 +20,30 @@ from extractor.advanced_features import AntiDetectionScraper, FormHandler
 
 
 class TestAntiDetectionScraper:
-    """测试反检测爬虫主要功能"""
+    """
+    AntiDetectionScraper 反检测测试
+
+    - **Undetected Chrome**: 测试无痕 Chrome 浏览器抓取
+    - **Playwright 隐身**: 测试 Playwright 反检测抓取
+    - **人类行为模拟**: 测试鼠标移动、滚动等行为模拟
+    - **隐身设置应用**: 测试 CDP 命令和隐身脚本注入
+    - **错误处理**: 测试浏览器启动失败等异常场景
+    """
 
     def setup_method(self):
-        """测试前准备"""
+        """
+        测试前准备 - 初始化反检测爬虫实例
+
+        确保每个测试都有干净的状态，避免测试间的相互影响
+        """
         self.scraper = AntiDetectionScraper()
 
     def teardown_method(self):
-        """测试后清理"""
+        """
+        测试后清理 - 确保资源正确释放
+
+        清理浏览器驱动器、Playwright 实例等资源，防止内存泄漏
+        """
         # 确保清理资源
         try:
             asyncio.create_task(self.scraper.cleanup())
@@ -26,7 +51,14 @@ class TestAntiDetectionScraper:
             pass
 
     def test_scraper_initialization(self):
-        """测试爬虫初始化"""
+        """
+        测试反检测爬虫初始化
+
+        验证 AntiDetectionScraper 实例包含所有必要的属性和方法：
+        - scrape_with_stealth 方法存在
+        - 用户代理设置存在
+        - 各种浏览器实例初始为 None
+        """
         assert self.scraper is not None
         assert hasattr(self.scraper, "scrape_with_stealth")
         assert hasattr(self.scraper, "ua")
@@ -38,7 +70,11 @@ class TestAntiDetectionScraper:
 
     @pytest.mark.asyncio
     async def test_invalid_stealth_method(self):
-        """测试无效的隐身方法"""
+        """
+        测试无效隐身方法的错误处理
+
+        验证当传入无效的隐身方法时，系统能够正确处理并返回适当的错误信息
+        """
         result = await self.scraper.scrape_with_stealth(
             "https://example.com", method="invalid_method"
         )
@@ -49,7 +85,11 @@ class TestAntiDetectionScraper:
 
     @pytest.mark.asyncio
     async def test_scraping_exception_handling(self):
-        """测试爬取异常处理"""
+        """
+        测试网络错误和异常处理
+
+        验证当爬取过程中发生异常时，系统能够优雅地处理并返回错误信息
+        """
         with patch.object(self.scraper, "_scrape_with_selenium_stealth") as mock_scrape:
             mock_scrape.side_effect = Exception("Network error")
 
@@ -62,7 +102,11 @@ class TestAntiDetectionScraper:
 
     @pytest.mark.asyncio
     async def test_cleanup_called_after_scraping(self):
-        """测试爬取后调用清理"""
+        """
+        测试爬取后自动调用资源清理
+
+        验证每次爬取操作完成后都会自动调用 cleanup 方法，确保资源正确释放
+        """
         with (
             patch.object(self.scraper, "_scrape_with_selenium_stealth") as mock_scrape,
             patch.object(self.scraper, "cleanup") as mock_cleanup,
@@ -77,14 +121,27 @@ class TestAntiDetectionScraper:
 
 
 class TestSeleniumStealth:
-    """测试Selenium隐身功能"""
+    """
+    Selenium 隐身功能测试
+
+    测试使用 undetected-chromedriver 进行反检测爬取的功能，包括
+    人类行为模拟、页面滚动、数据提取等
+    """
 
     def setup_method(self):
-        """测试前准备"""
+        """
+        测试前准备 - 初始化 Selenium 隐身爬虫
+
+        为每个测试创建独立的爬虫实例，确保测试隔离性
+        """
         self.scraper = AntiDetectionScraper()
 
     def teardown_method(self):
-        """测试后清理"""
+        """
+        测试后清理 - 清理 Selenium 资源
+
+        确保 Chrome 驱动器等资源被正确释放
+        """
         try:
             asyncio.create_task(self.scraper.cleanup())
         except Exception:
@@ -106,7 +163,16 @@ class TestSeleniumStealth:
         mock_wait,
         mock_chrome,
     ):
-        """测试Selenium隐身爬取成功"""
+        """
+        测试 Selenium 隐身爬取成功场景
+
+        验证完整的反检测爬取流程：
+        - undetected-chromedriver 启动
+        - 页面导航和加载
+        - 人类行为模拟执行
+        - 数据正确提取
+        - 资源正确清理
+        """
         # 模拟Chrome驱动器
         mock_driver = Mock()
         mock_driver.current_url = "https://example.com/final"
@@ -558,10 +624,22 @@ class TestResourceCleanup:
 
 
 class TestFormHandler:
-    """测试表单处理器"""
+    """
+    FormHandler 表单处理测试
+
+    - **基础表单填写**: 测试输入框、密码框填写
+    - **复杂表单元素**: 测试下拉选择框、复选框处理
+    - **表单提交**: 测试按钮点击和键盘提交
+    - **元素等待**: 测试 WebDriverWait 元素等待功能
+    - **错误恢复**: 测试元素未找到等异常处理
+    """
 
     def test_form_handler_initialization_selenium(self):
-        """测试表单处理器初始化（Selenium）"""
+        """
+        测试表单处理器 Selenium 驱动器初始化
+
+        验证 FormHandler 能够正确识别 Selenium WebDriver 并设置相应的处理模式
+        """
         mock_driver = Mock()
         # Selenium驱动器没有fill方法
         delattr(mock_driver, "fill") if hasattr(mock_driver, "fill") else None
@@ -572,7 +650,11 @@ class TestFormHandler:
         assert handler.is_playwright is False
 
     def test_form_handler_initialization_playwright(self):
-        """测试表单处理器初始化（Playwright）"""
+        """
+        测试表单处理器 Playwright 页面初始化
+
+        验证 FormHandler 能够正确识别 Playwright Page 对象并设置相应的处理模式
+        """
         mock_page = Mock()
         mock_page.fill = Mock()  # Playwright页面有fill方法
 
@@ -583,7 +665,14 @@ class TestFormHandler:
 
     @pytest.mark.asyncio
     async def test_form_filling_success(self):
-        """测试表单填充成功"""
+        """
+        测试表单填充成功场景
+
+        验证完整的表单填充流程：
+        - 多个表单字段正确填写
+        - 提交操作正确执行
+        - 结果状态正确返回
+        """
         mock_driver = Mock()
         handler = FormHandler(mock_driver)
         handler.is_playwright = False
@@ -611,7 +700,11 @@ class TestFormHandler:
 
     @pytest.mark.asyncio
     async def test_form_filling_error(self):
-        """测试表单填充错误"""
+        """
+        测试表单填充错误处理
+
+        验证当表单填充过程中发生异常时，系统能够正确处理并返回错误信息
+        """
         mock_driver = Mock()
         handler = FormHandler(mock_driver)
 

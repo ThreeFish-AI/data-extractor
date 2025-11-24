@@ -1,4 +1,47 @@
-"""Integration tests for MCP tools through FastMCP app."""
+"""
+## MCP 工具集成测试 (`test_mcp_tools.py`)
+
+### 14 个核心 MCP 工具测试覆盖
+
+#### 1. scrape_webpage - 单页面抓取
+
+**核心参数详解**:
+
+- **url** (必需): 目标网页 URL，必须包含协议前缀 (http:// 或 https://)
+- **method** (可选, 默认 "auto"): 抓取方法选择
+  - `auto`: 自动选择最佳方法（根据页面特征智能判断）
+  - `simple`: 快速 HTTP 请求（不支持 JavaScript，适合静态内容）
+  - `scrapy`: Scrapy 框架（适合大规模抓取，支持复杂场景）
+  - `selenium`: 浏览器渲染（支持 JavaScript 和动态内容加载）
+- **extract_config** (可选): 数据提取配置，支持 CSS 选择器和属性提取
+- **wait_for_element** (可选): CSS 选择器，仅 Selenium 方法生效，等待特定元素出现
+
+#### 2. scrape_multiple_webpages - 批量页面抓取
+
+#### 3. extract_links - 链接提取
+
+#### 4. get_page_info - 页面信息获取
+
+#### 5. check_robots_txt - robots.txt 检查
+
+#### 6. scrape_with_stealth - 反检测抓取
+
+#### 7. fill_and_submit_form - 表单自动化
+
+#### 8. get_server_metrics - 服务器指标
+
+#### 9. clear_cache - 缓存清理
+
+#### 10. extract_structured_data - 结构化数据提取
+
+#### 11. convert_webpage_to_markdown - 页面转 Markdown
+
+#### 12. batch_convert_webpages_to_markdown - 批量 Markdown 转换
+
+#### 13. convert_pdf_to_markdown - PDF 转 Markdown
+
+#### 14. batch_convert_pdfs_to_markdown - 批量 PDF 转换
+"""
 
 import asyncio
 import pytest
@@ -10,7 +53,11 @@ from extractor.markdown_converter import MarkdownConverter
 
 
 class TestMCPToolsIntegration:
-    """Integration tests for MCP tools functionality."""
+    """
+    14 个核心 MCP 工具集成测试
+
+    测试所有 MCP 工具的端到端功能、输入验证、错误处理和响应格式统一性
+    """
 
     @pytest.fixture
     def mock_scraper_result(self):

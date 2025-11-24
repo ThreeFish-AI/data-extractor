@@ -1,6 +1,43 @@
 """
-单元测试：Markdown转换模块
-测试 extractor.markdown_converter 模块的网页转Markdown功能
+## Markdown 转换器单元测试 (`test_markdown_converter.py`)
+
+### MarkdownConverter 核心类测试
+
+#### 1. 初始化和配置测试
+
+测试 MarkdownConverter 默认选项设置、标题样式、列表符号、链接格式等配置项。
+
+#### 2. HTML 预处理功能测试
+
+测试 HTML 注释的清理、script、style、nav、header 等无关标签移除、相对 URL 转换为绝对 URL、空的 p 和 div 标签移除。
+
+#### 3. HTML 到 Markdown 转换测试
+
+测试标题、段落、链接、图片的基本转换、有序和无序列表的 Markdown 转换、自定义 Markdown 格式化选项、转换过程中的异常处理。
+
+#### 4. Markdown 后处理测试
+
+测试多余空白行的清理、列表格式的优化处理、行尾空格和制表符的清理、开头结尾空白字符的清理。
+
+#### 5. 内容区域提取测试
+
+测试 main、article 标签的内容提取、.content、.post 等类选择器提取、找不到主要内容时回退到 body 的处理、内容最小长度要求的验证。
+
+#### 6. 完整转换流程测试
+
+测试包含完整 HTML 内容的网页转换、仅有文本内容时的 HTML 重构转换、元数据的计算和包含功能、各种转换配置选项的应用。
+
+#### 7. 批量转换测试
+
+测试多个页面的成功批量转换、部分页面失败时的处理逻辑、成功率和统计信息的计算、批量转换过程中的异常捕获。
+
+#### 8. 高级格式化功能测试 (TestAdvancedFormattingFeatures)
+
+测试表格格式化和对齐识别、代码块增强和语言自动检测、引用块优化和间距统一、图片描述增强和友好文本生成、链接格式优化和跨行修复、列表格式化和标记统一、标题优化和间距添加、排版增强和智能引号转换。
+
+#### 9. 图片嵌入测试 (TestImageEmbedding)
+
+测试小图嵌入转换为 data URI、大图跳过处理、转换流程中的图片嵌入集成。
 """
 
 import pytest
@@ -11,7 +48,11 @@ from extractor.markdown_converter import MarkdownConverter
 
 
 class TestMarkdownConverter:
-    """测试Markdown转换器主要功能"""
+    """
+    测试 Markdown 转换器主要功能
+
+    包含初始化配置、HTML 预处理、Markdown 转换、后处理、批量转换等完整的测试覆盖
+    """
 
     def setup_method(self):
         """测试前准备"""

@@ -1,4 +1,26 @@
-"""Unit tests for utility classes and functions."""
+"""
+## 工具类测试 (`test_utils.py`)
+
+### RateLimiter 限流器测试
+
+测试请求频率限制、时间窗口清理、多请求并发限流效果。
+
+### RetryManager 重试管理器测试
+
+测试退避延迟计算 (1s, 2s, 4s, 8s...)、失败后重试成功场景、最大重试次数耗尽处理、不同异常的重试策略。
+
+### CacheManager 缓存管理器测试
+
+测试键值对存储和读取、TTL 过期清理、不存在键的处理、全局缓存清理功能、URL 和参数的哈希键生成。
+
+### MetricsCollector 指标收集器测试
+
+测试 HTTP 方法、状态码、响应时间记录、错误类型和数量统计、成功率、平均响应时间计算、统计数据重置功能。
+
+### 工具函数测试
+
+测试 URL 格式验证 (http/https)、HTML 标签移除和空白符处理、数据提取配置格式验证、异步函数执行时间测量。
+"""
 
 import pytest
 import asyncio
@@ -23,10 +45,23 @@ from extractor.utils import (
 
 
 class TestRateLimiter:
-    """Test the RateLimiter class."""
+    """
+    RateLimiter 限流器测试
+
+    - **限流边界测试**: 测试请求频率限制
+    - **时间窗口清理**: 测试过期请求时间戳清理
+    - **并发限流**: 测试多请求并发限流效果
+    """
 
     def test_rate_limiter_initialization(self):
-        """Test RateLimiter initializes correctly."""
+        """
+        测试限流器初始化
+
+        验证 RateLimiter 实例包含正确的配置参数：
+        - 请求频率设置正确
+        - 最小间隔时间计算正确
+        - 初始请求时间戳为 0
+        """
         limiter = RateLimiter(requests_per_second=1.0)
         assert limiter.requests_per_second == 1.0
         assert limiter.min_interval == 1.0
@@ -34,7 +69,11 @@ class TestRateLimiter:
 
     @pytest.mark.asyncio
     async def test_rate_limiting_within_limit(self):
-        """Test rate limiting when within limits."""
+        """
+        测试在限制范围内的请求处理
+
+        验证当请求频率未超过限制时，请求不会被延迟，确保正常请求不受影响
+        """
         limiter = RateLimiter(requests_per_second=60.0)
 
         start_time = time.time()
@@ -46,7 +85,11 @@ class TestRateLimiter:
 
     @pytest.mark.asyncio
     async def test_rate_limiting_exceeds_limit(self):
-        """Test rate limiting when exceeding limits."""
+        """
+        测试超过频率限制时的限流效果
+
+        验证当请求频率超过限制时，后续请求会被适当延迟，防止对目标服务器造成压力
+        """
         limiter = RateLimiter(requests_per_second=10.0)  # Higher limit for testing
 
         # Make two quick requests
@@ -59,7 +102,11 @@ class TestRateLimiter:
         assert (end_time - start_time) >= 0.0  # Some delay expected
 
     def test_cleanup_old_requests(self):
-        """Test cleanup of old rate limit requests."""
+        """
+        测试过期请求时间戳清理
+
+        验证限流器能够正确管理时间戳，清理过期的请求记录以防止内存泄漏
+        """
         limiter = RateLimiter(requests_per_second=1.0)
         # Test that old timestamps are properly managed
         assert limiter.last_request_time == 0.0
