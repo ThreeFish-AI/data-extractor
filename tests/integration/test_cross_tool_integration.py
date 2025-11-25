@@ -252,6 +252,11 @@ class TestCrossToolIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert pdf_response.success is True
@@ -311,6 +316,11 @@ class TestCrossToolIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
             await markdown_tool.fn(
                 url="https://test.com",
@@ -372,6 +382,11 @@ class TestCrossToolIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
             assert pdf_response.success is False
             assert "PDF parsing failed" in (
@@ -440,6 +455,11 @@ class TestCrossToolIntegration:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
 
             # Perform batch operation
@@ -449,6 +469,11 @@ class TestCrossToolIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
         # Force garbage collection and check memory usage
@@ -514,6 +539,11 @@ class TestCrossToolIntegration:
                         include_metadata=True,
                         page_range=None,
                         output_format="markdown",
+                        extract_images=True,
+                        extract_tables=True,
+                        extract_formulas=True,
+                        embed_images=False,
+                        enhanced_options=None,
                     )
                     for i in range(3)
                 ]
@@ -659,6 +689,11 @@ class TestRealWorldIntegrationScenarios:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert batch_response.success is True
@@ -807,6 +842,11 @@ class TestRealWorldIntegrationScenarios:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
             assert pdf_result.success is True
 
@@ -914,6 +954,11 @@ class TestRealWorldIntegrationScenarios:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert pdf_response.success is True
