@@ -2235,6 +2235,7 @@ async def batch_convert_pdfs_to_markdown(
 def main() -> None:
     """Run the MCP server."""
     print(f"Starting {settings.server_name} v{settings.server_version}")
+    print(f"Transport mode: {settings.transport_mode}")
     print(
         f"JavaScript support: {'Enabled' if settings.enable_javascript else 'Disabled'}"
     )
@@ -2243,7 +2244,41 @@ def main() -> None:
     )
     print(f"Proxy: {'Enabled' if settings.use_proxy else 'Disabled'}")
 
-    app.run()
+    if settings.transport_mode == "http":
+        # HTTP transport mode for production deployments
+        print(f"Starting HTTP server on {settings.http_host}:{settings.http_port}")
+        print(
+            f"HTTP endpoint: http://{settings.http_host}:{settings.http_port}{settings.http_path}"
+        )
+        print(f"CORS origins: {settings.http_cors_origins}")
+
+        # Run with HTTP transport
+        app.run(
+            transport="http",
+            host=settings.http_host,
+            port=settings.http_port,
+            path=settings.http_path,
+            cors_origins=settings.http_cors_origins,
+        )
+    elif settings.transport_mode == "sse":
+        # Server-Sent Events transport mode (legacy)
+        print(f"Starting SSE server on {settings.http_host}:{settings.http_port}")
+        print(
+            f"SSE endpoint: http://{settings.http_host}:{settings.http_port}{settings.http_path}"
+        )
+
+        # Run with SSE transport
+        app.run(
+            transport="sse",
+            host=settings.http_host,
+            port=settings.http_port,
+            path=settings.http_path,
+            cors_origins=settings.http_cors_origins,
+        )
+    else:
+        # Default STDIO transport mode
+        print("Starting STDIO server")
+        app.run()
 
 
 if __name__ == "__main__":

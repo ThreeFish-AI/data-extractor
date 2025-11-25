@@ -253,6 +253,236 @@ pip install --upgrade data-extractor
 - 推荐使用方式二（本地 uv 启动）进行开发，方式三（GitHub 直接安装）用于生产环境
 - 当前最新稳定版本：v0.1.5
 
+## 传输模式配置
+
+Data Extractor 支持三种传输模式，您可以根据使用场景选择最合适的方式：
+
+### 传输模式对比
+
+| 特性 | STDIO (默认) | HTTP (推荐) | SSE (传统) |
+|------|-------------|------------|-----------|
+| **适用场景** | 本地开发、调试 | 生产环境、远程访问 | 遗留系统兼容 |
+| **部署方式** | 子进程通信 | HTTP 服务器 | HTTP 服务器 |
+| **远程访问** | ❌ 不支持 | ✅ 支持 | ✅ 支持 |
+| **并发性能** | 良好 | 优秀 | 良好 |
+| **会话管理** | 客户端管理 | 服务器管理 | 服务器管理 |
+| **推荐度** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ |
+
+### 传输模式配置方式
+
+#### 方式一：STDIO 传输模式（默认）
+
+适用于本地开发和桌面客户端（如 Claude Desktop）。
+
+**配置示例：**
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "command": "uv",
+      "args": ["run", "data-extractor"],
+      "cwd": "/path/to/your/data-extractor"
+    }
+  }
+}
+```
+
+#### 方式二：HTTP 传输模式（生产推荐）
+
+适用于生产环境、远程部署和多客户端访问。
+
+**服务端启动：**
+```bash
+# 通过环境变量启动
+DATA_EXTRACTOR_TRANSPORT_MODE=http \
+DATA_EXTRACTOR_HTTP_HOST=0.0.0.0 \
+DATA_EXTRACTOR_HTTP_PORT=8000 \
+data-extractor
+
+# 或通过 .env 文件配置
+echo "DATA_EXTRACTOR_TRANSPORT_MODE=http" >> .env
+echo "DATA_EXTRACTOR_HTTP_HOST=0.0.0.0" >> .env
+echo "DATA_EXTRACTOR_HTTP_PORT=8000" >> .env
+data-extractor
+```
+
+**客户端配置：**
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "url": "http://localhost:8000/mcp",
+      "transport": "http"
+    }
+  }
+}
+```
+
+**Python 客户端连接：**
+```python
+from fastmcp.client.transports import StreamableHttpTransport
+from fastmcp import Client
+
+# 基本连接
+transport = StreamableHttpTransport(url="http://localhost:8000/mcp")
+client = Client(transport)
+
+async with client:
+    result = await client.call_tool("scrape_webpage", {
+        "url": "https://example.com",
+        "method": "auto"
+    })
+```
+
+#### 方式三：SSE 传输模式（传统兼容）
+
+适用于需要向后兼容的遗留系统。
+
+**服务端启动：**
+```bash
+DATA_EXTRACTOR_TRANSPORT_MODE=sse \
+DATA_EXTRACTOR_HTTP_PORT=8000 \
+data-extractor
+```
+
+**客户端配置：**
+```json
+{
+  "mcpServers": {
+    "data-extractor": {
+      "url": "http://localhost:8000/mcp",
+      "transport": "sse"
+    }
+  }
+}
+```
+
+### HTTP 传输模式详解
+
+#### 1. 环境变量配置
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `DATA_EXTRACTOR_TRANSPORT_MODE` | `stdio` | 传输模式：stdio/http/sse |
+| `DATA_EXTRACTOR_HTTP_HOST` | `localhost` | HTTP 服务器绑定地址 |
+| `DATA_EXTRACTOR_HTTP_PORT` | `8000` | HTTP 端口号 |
+| `DATA_EXTRACTOR_HTTP_PATH` | `/mcp` | HTTP 端点路径 |
+| `DATA_EXTRACTOR_HTTP_CORS_ORIGINS` | `*` | CORS 跨域配置 |
+
+#### 2. 生产部署最佳实践
+
+**使用 Docker 部署：**
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+RUN pip install -e .
+
+EXPOSE 8000
+ENV DATA_EXTRACTOR_TRANSPORT_MODE=http
+ENV DATA_EXTRACTOR_HTTP_HOST=0.0.0.0
+ENV DATA_EXTRACTOR_HTTP_PORT=8000
+ENV DATA_EXTRACTOR_HTTP_CORS_ORIGINS=https://your-client-domain.com
+
+CMD ["data-extractor"]
+```
+
+**使用 systemd 服务：**
+```ini
+[Unit]
+Description=Data Extractor MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/data-extractor
+Environment=DATA_EXTRACTOR_TRANSPORT_MODE=http
+Environment=DATA_EXTRACTOR_HTTP_HOST=127.0.0.1
+Environment=DATA_EXTRACTOR_HTTP_PORT=8000
+Environment=DATA_EXTRACTOR_HTTP_CORS_ORIGINS=https://your-client-domain.com
+ExecStart=/opt/data-extractor/.venv/bin/data-extractor
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Nginx 反向代理配置：**
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location /mcp {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket 支持
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+#### 3. 安全配置建议
+
+**CORS 配置：**
+```bash
+# 限制访问域名
+DATA_EXTRACTOR_HTTP_CORS_ORIGINS=https://app.example.com,https://admin.example.com
+```
+
+**客户端认证：**
+```python
+# 使用认证头连接
+transport = StreamableHttpTransport(
+    url="https://api.example.com/mcp",
+    headers={
+        "Authorization": "Bearer your-jwt-token",
+        "X-API-Key": "your-api-key"
+    }
+)
+```
+
+#### 4. 性能优化技巧
+
+- **连接池**：HTTP 传输模式自动支持连接复用
+- **负载均衡**：可部署多个实例进行负载分配
+- **缓存机制**：启用服务器端缓存提升响应速度
+
+#### 5. 故障排除
+
+**常见问题解决：**
+
+1. **端口被占用**
+   ```bash
+   # 检查端口占用
+   netstat -tlnp | grep 8000
+   # 更换端口
+   DATA_EXTRACTOR_HTTP_PORT=8001 data-extractor
+   ```
+
+2. **CORS 错误**
+   ```bash
+   # 检查 CORS 配置
+   DATA_EXTRACTOR_HTTP_CORS_ORIGINS="http://localhost:3000,https://yourdomain.com"
+   ```
+
+3. **连接超时**
+   ```python
+   # 客户端设置超时
+   transport = StreamableHttpTransport(
+       url="http://localhost:8000/mcp",
+       timeout=30.0
+   )
+   ```
+
 ## MCP 工具详细
 
 ### 📋 返回值规范
