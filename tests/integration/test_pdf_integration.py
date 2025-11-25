@@ -74,6 +74,11 @@ class TestPDFToolsIntegration:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
 
                 # Verify successful execution
@@ -96,6 +101,11 @@ class TestPDFToolsIntegration:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
 
     @pytest.mark.asyncio
@@ -156,6 +166,11 @@ class TestPDFToolsIntegration:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
 
                 # Verify successful batch execution
@@ -198,6 +213,11 @@ class TestPDFToolsIntegration:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 assert result.success is False
 
@@ -215,6 +235,11 @@ class TestPDFToolsIntegration:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 assert result.success is False
 
@@ -245,6 +270,11 @@ class TestPDFToolsIntegration:
                 page_range=[1, 3],  # Pages 1-2 (0-based indexing in implementation)
                 include_metadata=True,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -279,6 +309,11 @@ class TestPDFToolsIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is False
@@ -306,6 +341,11 @@ class TestPDFToolsIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is False
@@ -342,6 +382,11 @@ class TestPDFToolsIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="text",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -370,6 +415,11 @@ class TestPDFToolsIntegration:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -423,6 +473,11 @@ class TestPDFToolsIntegration:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 tasks.append(task)
 
@@ -473,6 +528,11 @@ class TestPDFIntegrationWithRealProcessing:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
 
                 assert result.success is True
@@ -539,6 +599,11 @@ class TestPDFIntegrationWithRealProcessing:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
 
                 assert result.success is True
@@ -597,6 +662,11 @@ class TestPDFIntegrationWithRealProcessing:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -610,6 +680,11 @@ class TestPDFIntegrationWithRealProcessing:
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
     @pytest.mark.asyncio
@@ -647,6 +722,11 @@ class TestPDFIntegrationWithRealProcessing:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 assert result.success is True
 
@@ -683,6 +763,11 @@ class TestPDFIntegrationWithRealProcessing:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 assert result.success is False
 
@@ -700,6 +785,11 @@ class TestPDFIntegrationWithRealProcessing:
                     include_metadata=True,
                     page_range=[5, 2],  # End before start
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 assert result.success is False
 
@@ -717,5 +807,10 @@ class TestPDFIntegrationWithRealProcessing:
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 assert result.success is False

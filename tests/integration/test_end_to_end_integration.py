@@ -496,6 +496,11 @@ Editorial office: +1-555-0123
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
             processing_duration = time.time() - start_time
 
@@ -720,6 +725,11 @@ Editorial office: +1-555-0123
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -902,6 +912,11 @@ Editorial office: +1-555-0123
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
             large_doc_duration = time.time() - start_time
 
@@ -940,6 +955,11 @@ Editorial office: +1-555-0123
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 concurrent_tasks.append(task)
 
@@ -1010,6 +1030,11 @@ Editorial office: +1-555-0123
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
             batch_duration = time.time() - start_time
 
@@ -1262,6 +1287,11 @@ Editorial office: +1-555-0123
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -1326,6 +1356,11 @@ Editorial office: +1-555-0123
                 include_metadata=True,
                 page_range=None,
                 output_format="markdown",
+                extract_images=True,
+                extract_tables=True,
+                extract_formulas=True,
+                embed_images=False,
+                enhanced_options=None,
             )
 
             assert result.success is True
@@ -1376,6 +1411,11 @@ Editorial office: +1-555-0123
                     include_metadata=True,
                     page_range=None,
                     output_format="markdown",
+                    extract_images=True,
+                    extract_tables=True,
+                    extract_formulas=True,
+                    embed_images=False,
+                    enhanced_options=None,
                 )
                 concurrent_integrity_tasks.append(task)
 
