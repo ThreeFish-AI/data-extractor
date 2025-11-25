@@ -24,7 +24,8 @@ def _get_dynamic_version():
                     line = line.strip()
                     if line.startswith('version = "') and line.endswith('"'):
                         return line.split('"')[1]
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError, UnicodeDecodeError):
+        # Ignore file system and parsing errors, return fallback version
         pass
     return "0.0.0"
 

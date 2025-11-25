@@ -268,7 +268,7 @@ class CacheManager:
         key_data = (
             f"{url}:{method}:{json.dumps(config, sort_keys=True) if config else ''}"
         )
-        return hashlib.md5(key_data.encode()).hexdigest()
+        return hashlib.md5(key_data.encode(), usedforsecurity=False).hexdigest()
 
     def get(
         self, url: str, method: str, config: Optional[Dict] = None
