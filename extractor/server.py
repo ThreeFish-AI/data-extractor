@@ -2051,6 +2051,42 @@ async def batch_convert_pdfs_to_markdown(
                 "text"（纯文本，去除所有格式化）""",
         ),
     ],
+    extract_images: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否从PDF中提取图像并保存为本地文件，在Markdown文档中引用",
+        ),
+    ],
+    extract_tables: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否从PDF中提取表格并转换为Markdown表格格式",
+        ),
+    ],
+    extract_formulas: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="是否从PDF中提取数学公式并保持LaTeX格式",
+        ),
+    ],
+    embed_images: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="是否将提取的图像以base64格式嵌入到Markdown文档中（而非引用本地文件）",
+        ),
+    ],
+    enhanced_options: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description="""统一的增强处理选项，应用于所有URL。
+                示例：{"image_size": [800, 600]}""",
+        ),
+    ],
 ) -> BatchPDFResponse:
     """
     Convert multiple PDF documents to Markdown format concurrently.
@@ -2147,6 +2183,11 @@ async def batch_convert_pdfs_to_markdown(
             include_metadata=include_metadata,
             page_range=page_range_tuple,
             output_format=output_format,
+            extract_images=extract_images,
+            extract_tables=extract_tables,
+            extract_formulas=extract_formulas,
+            embed_images=embed_images,
+            enhanced_options=enhanced_options,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)

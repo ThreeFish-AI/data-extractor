@@ -214,6 +214,12 @@ class PDFProcessor:
         include_metadata: bool = True,
         page_range: Optional[tuple] = None,
         output_format: str = "markdown",
+        *,
+        extract_images: bool = True,
+        extract_tables: bool = True,
+        extract_formulas: bool = True,
+        embed_images: bool = False,
+        enhanced_options: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Process multiple PDF files concurrently.
@@ -224,6 +230,11 @@ class PDFProcessor:
             include_metadata: Include metadata for all PDFs
             page_range: Page range for all PDFs (if applicable)
             output_format: Output format for all PDFs
+            extract_images: Extract images from all PDFs
+            extract_tables: Extract tables from all PDFs
+            extract_formulas: Extract formulas from all PDFs
+            embed_images: Embed images as base64 instead of saving as files
+            enhanced_options: Enhanced processing options for all PDFs
 
         Returns:
             Dict containing batch processing results and summary
@@ -241,6 +252,11 @@ class PDFProcessor:
                 include_metadata=include_metadata,
                 page_range=page_range,
                 output_format=output_format,
+                extract_images=extract_images,
+                extract_tables=extract_tables,
+                extract_formulas=extract_formulas,
+                embed_images=embed_images,
+                enhanced_options=enhanced_options,
             )
             for source in pdf_sources
         ]
