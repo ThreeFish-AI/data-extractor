@@ -122,7 +122,7 @@ jobs:
 
       - name: Test installation from wheel
         run: |
-          uv pip install dist/*.whl --system
+          uv pip install dist/*.whl
           uv run python -c "import extractor; print(f'Successfully imported extractor v{extractor.__version__}')" || uv run python -c "import extractor; print('Successfully imported extractor')"
 
       - name: Upload build artifacts
