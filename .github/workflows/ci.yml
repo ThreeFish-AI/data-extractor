@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  cross-platform-tests:
     name: Test Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -39,7 +39,7 @@ jobs:
           # Disable browser tests in CI to avoid complexity
           DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
 
-  lint:
+  code-quality-checks:
     name: Lint and Format Check
     runs-on: ubuntu-latest
 
@@ -66,7 +66,7 @@ jobs:
       - name: Run mypy type checking
         run: uv run mypy extractor/
 
-  security:
+  security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
 
@@ -99,7 +99,7 @@ jobs:
           name: bandit-report
           path: bandit-report.json
 
-  build-test:
+  package-build-validation:
     name: Build Package Test
     runs-on: ubuntu-latest
 
@@ -132,7 +132,7 @@ jobs:
           path: dist/
           retention-days: 7
 
-  coverage:
+  test-coverage-report:
     name: Coverage Report
     runs-on: ubuntu-latest
 
