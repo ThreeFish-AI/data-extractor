@@ -2,27 +2,27 @@
 
 import logging
 import time
-from typing import Dict, Any, List, Optional, Annotated
-from urllib.parse import urlparse
 from datetime import datetime
+from typing import Annotated, Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from .scraper import WebScraper
 from .advanced_features import AntiDetectionScraper, FormHandler
-from .markdown_converter import MarkdownConverter
 from .config import settings
+from .markdown_converter import MarkdownConverter
+from .scraper import WebScraper
 from .utils import (
-    timing_decorator,
-    URLValidator,
-    TextCleaner,
     ConfigValidator,
     ErrorHandler,
-    rate_limiter,
-    retry_manager,
+    TextCleaner,
+    URLValidator,
     cache_manager,
     metrics_collector,
+    rate_limiter,
+    retry_manager,
+    timing_decorator,
 )
 
 logger = logging.getLogger(__name__)
@@ -972,8 +972,8 @@ async def fill_and_submit_form(
                 # Wait for element if specified
                 if wait_for_element:
                     from selenium.webdriver.common.by import By
-                    from selenium.webdriver.support.ui import WebDriverWait
                     from selenium.webdriver.support import expected_conditions as EC
+                    from selenium.webdriver.support.ui import WebDriverWait
 
                     WebDriverWait(driver, settings.browser_timeout).until(
                         EC.presence_of_element_located(
@@ -2258,7 +2258,6 @@ def main() -> None:
             host=settings.http_host,
             port=settings.http_port,
             path=settings.http_path,
-            cors_origins=settings.http_cors_origins,
         )
     elif settings.transport_mode == "sse":
         # Server-Sent Events transport mode (legacy)
@@ -2273,7 +2272,6 @@ def main() -> None:
             host=settings.http_host,
             port=settings.http_port,
             path=settings.http_path,
-            cors_origins=settings.http_cors_origins,
         )
     else:
         # Default STDIO transport mode
