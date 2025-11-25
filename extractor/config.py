@@ -36,6 +36,19 @@ class DataExtractorSettings(BaseSettings):
     server_name: str = Field(default="data-extractor")
     server_version: str = Field(default_factory=_get_dynamic_version)
 
+    # HTTP transport settings
+    transport_mode: str = Field(
+        default="stdio", description="Transport mode: stdio, http, or sse"
+    )
+    http_host: str = Field(
+        default="localhost", description="Host to bind HTTP server to"
+    )
+    http_port: int = Field(default=8000, description="Port for HTTP server")
+    http_path: str = Field(default="/mcp", description="Path for HTTP endpoint")
+    http_cors_origins: Optional[str] = Field(
+        default="*", description="CORS origins for HTTP transport"
+    )
+
     # Data Extractor settings
     concurrent_requests: int = Field(default=16, gt=0)
     download_delay: float = Field(default=1.0, ge=0.0)
@@ -98,6 +111,15 @@ class DataExtractorSettings(BaseSettings):
         if v.upper() not in valid_levels:
             raise ValueError(f"log_level must be one of: {valid_levels}")
         return v.upper()
+
+    @field_validator("transport_mode")
+    @classmethod
+    def validate_transport_mode(cls, v):
+        """Validate transport mode is one of the supported modes."""
+        valid_modes = ["stdio", "http", "sse"]
+        if v.lower() not in valid_modes:
+            raise ValueError(f"transport_mode must be one of: {valid_modes}")
+        return v.lower()
 
     def get_scrapy_settings(self) -> Dict[str, Any]:
         """Get Scrapy-specific settings as a dictionary."""
