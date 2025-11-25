@@ -214,7 +214,6 @@ class PDFProcessor:
         include_metadata: bool = True,
         page_range: Optional[tuple] = None,
         output_format: str = "markdown",
-        *,
         extract_images: bool = True,
         extract_tables: bool = True,
         extract_formulas: bool = True,

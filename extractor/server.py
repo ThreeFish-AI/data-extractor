@@ -2020,73 +2020,64 @@ async def batch_convert_pdfs_to_markdown(
     method: Annotated[
         str,
         Field(
-            default="auto",
             description="""统一的PDF提取方法：
                 "auto"（智能选择最佳引擎）、
                 "pymupdf"（适合复杂排版和图表）、
                 "pypdf"（适合简单纯文本文档）""",
         ),
-    ],
+    ] = "auto",
     include_metadata: Annotated[
         bool,
         Field(
-            default=True,
             description="是否在每个转换结果中包含PDF元数据和处理统计，包括文件名、大小、页数、处理时间等",
         ),
-    ],
+    ] = True,
     page_range: Annotated[
         Optional[List[int]],
         Field(
-            default=None,
             description="""应用于所有PDF的统一页面范围 [start, end]。如未指定则提取全部页面。页码从 0 开始计数。
                 示例：[0, 5] 为所有PDF提取前 5 页""",
         ),
-    ],
+    ] = None,
     output_format: Annotated[
         str,
         Field(
-            default="markdown",
             description="""统一输出格式：
                 "markdown"（保留标题、列表等结构化信息）、
                 "text"（纯文本，去除所有格式化）""",
         ),
-    ],
+    ] = "markdown",
     extract_images: Annotated[
         bool,
         Field(
-            default=True,
             description="是否从PDF中提取图像并保存为本地文件，在Markdown文档中引用",
         ),
-    ],
+    ] = True,
     extract_tables: Annotated[
         bool,
         Field(
-            default=True,
             description="是否从PDF中提取表格并转换为Markdown表格格式",
         ),
-    ],
+    ] = True,
     extract_formulas: Annotated[
         bool,
         Field(
-            default=True,
             description="是否从PDF中提取数学公式并保持LaTeX格式",
         ),
-    ],
+    ] = True,
     embed_images: Annotated[
         bool,
         Field(
-            default=False,
             description="是否将提取的图像以base64格式嵌入到Markdown文档中（而非引用本地文件）",
         ),
-    ],
+    ] = False,
     enhanced_options: Annotated[
         Optional[Dict[str, Any]],
         Field(
-            default=None,
             description="""统一的增强处理选项，应用于所有URL。
                 示例：{"image_size": [800, 600]}""",
         ),
-    ],
+    ] = None,
 ) -> BatchPDFResponse:
     """
     Convert multiple PDF documents to Markdown format concurrently.
