@@ -697,6 +697,8 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-html" },
+    { name = "pytest-json-report" },
     { name = "types-requests" },
 ]
 
@@ -741,6 +743,8 @@ dev = [
     { name = "pre-commit", specifier = ">=3.8.0" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
+    { name = "pytest-html", specifier = ">=4.1.1" },
+    { name = "pytest-json-report", specifier = ">=1.5.0" },
     { name = "types-requests", specifier = ">=2.32.4.20250809" },
 ]
 

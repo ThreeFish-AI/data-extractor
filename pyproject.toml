@@ -153,5 +153,7 @@ dev = [
     "pre-commit>=3.8.0",
     "types-requests>=2.32.4.20250809",
     "bandit>=1.9.2",
+    "pytest-html>=4.1.1",
+    "pytest-json-report>=1.5.0",
 ]
 
