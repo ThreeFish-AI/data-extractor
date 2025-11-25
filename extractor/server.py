@@ -1784,44 +1784,11 @@ async def convert_pdf_to_markdown(
                 "text"（纯文本内容，去除所有格式）""",
         ),
     ],
-    extract_images: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="是否从PDF中提取图像并保存为本地文件，在Markdown文档中引用",
-        ),
-    ],
-    extract_tables: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="是否从PDF中提取表格并转换为Markdown表格格式",
-        ),
-    ],
-    extract_formulas: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="是否从PDF中提取数学公式并保持LaTeX格式",
-        ),
-    ],
-    embed_images: Annotated[
-        bool,
-        Field(
-            default=False,
-            description="是否将提取的图像以base64格式嵌入到Markdown文档中（而非引用本地文件）",
-        ),
-    ],
-    enhanced_options: Annotated[
-        Optional[Dict[str, Any]],
-        Field(
-            default=None,
-            description="""增强处理选项：
-                - image_size: 图像尺寸调整，如 [800, 600]
-                - output_dir: 自定义输出目录路径
-                其他高级配置选项""",
-        ),
-    ],
+    extract_images: bool = True,
+    extract_tables: bool = True,
+    extract_formulas: bool = True,
+    embed_images: bool = False,
+    enhanced_options: Optional[Dict[str, Any]] = None,
 ) -> PDFResponse:
     """
     Convert a PDF document to Markdown format with enhanced content extraction.
@@ -1843,6 +1810,13 @@ async def convert_pdf_to_markdown(
     - Metadata extraction (title, author, etc.)
     - Text cleaning and Markdown formatting
     - Multiple extraction methods for reliability
+
+    Args:
+        extract_images: Whether to extract images from PDF (default: True)
+        extract_tables: Whether to extract tables from PDF (default: True)
+        extract_formulas: Whether to extract mathematical formulas (default: True)
+        embed_images: Whether to embed images as base64 instead of saving as files (default: False)
+        enhanced_options: Additional processing options like image_size, output_dir (default: None)
 
     Returns:
         PDFResponse object containing success status, extracted content, metadata, processing method used,
