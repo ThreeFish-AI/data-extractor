@@ -203,7 +203,8 @@ class PDFProcessor:
             if pdf_path and str(pdf_path).startswith(self.temp_dir):
                 try:
                     os.unlink(pdf_path)
-                except Exception:
+                except (FileNotFoundError, PermissionError, OSError):
+                    # Ignore cleanup errors - file might already be deleted or inaccessible
                     pass
 
     async def batch_process_pdfs(

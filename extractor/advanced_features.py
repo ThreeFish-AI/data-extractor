@@ -168,12 +168,12 @@ class AntiDetectionScraper:
         self.driver = await self._get_undetected_chrome_driver()
 
         # Random delay before navigation
-        await asyncio.sleep(random.uniform(1, 3))
+        await asyncio.sleep(random.uniform(1, 3))  # nosec B311
 
         self.driver.get(url)
 
         # Wait for page load
-        await asyncio.sleep(random.uniform(2, 4))
+        await asyncio.sleep(random.uniform(2, 4))  # nosec B311
 
         # Wait for specific element if specified
         if wait_for_element:
@@ -208,7 +208,7 @@ class AntiDetectionScraper:
         await self._setup_playwright_browser()
 
         # Random delay before navigation
-        await asyncio.sleep(random.uniform(1, 3))
+        await asyncio.sleep(random.uniform(1, 3))  # nosec B311
 
         # Navigate with random timeout
         await self.page.goto(url, timeout=60000, wait_until="domcontentloaded")
@@ -242,11 +242,11 @@ class AntiDetectionScraper:
 
         while current_height < total_height:
             # Scroll down by a random amount
-            scroll_amount = random.randint(200, 600)
+            scroll_amount = random.randint(200, 600)  # nosec B311
             self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
 
             # Random delay between scrolls
-            await asyncio.sleep(random.uniform(0.5, 2.0))
+            await asyncio.sleep(random.uniform(0.5, 2.0))  # nosec B311
 
             current_height += scroll_amount
 
@@ -281,16 +281,16 @@ class AntiDetectionScraper:
             actions = ActionChains(self.driver)
 
             # Move mouse to random positions
-            for _ in range(random.randint(2, 5)):
-                x = random.randint(100, 800)
-                y = random.randint(100, 600)
+            for _ in range(random.randint(2, 5)):  # nosec B311
+                x = random.randint(100, 800)  # nosec B311
+                y = random.randint(100, 600)  # nosec B311
                 actions.move_by_offset(x, y)
-                await asyncio.sleep(random.uniform(0.1, 0.5))
+                await asyncio.sleep(random.uniform(0.1, 0.5))  # nosec B311
 
             actions.perform()
 
             # Random delays
-            await asyncio.sleep(random.uniform(1, 3))
+            await asyncio.sleep(random.uniform(1, 3))  # nosec B311
 
         except Exception as e:
             logger.debug(f"Error simulating human behavior: {str(e)}")
@@ -299,14 +299,14 @@ class AntiDetectionScraper:
         """Simulate human-like behavior using Playwright."""
         try:
             # Random mouse movements
-            for _ in range(random.randint(2, 4)):
-                x = random.randint(100, 800)
-                y = random.randint(100, 600)
+            for _ in range(random.randint(2, 4)):  # nosec B311
+                x = random.randint(100, 800)  # nosec B311
+                y = random.randint(100, 600)  # nosec B311
                 await self.page.mouse.move(x, y)
-                await asyncio.sleep(random.uniform(0.1, 0.5))
+                await asyncio.sleep(random.uniform(0.1, 0.5))  # nosec B311
 
             # Random delays
-            await asyncio.sleep(random.uniform(1, 2))
+            await asyncio.sleep(random.uniform(1, 2))  # nosec B311
 
         except Exception as e:
             logger.debug(f"Error simulating human behavior: {str(e)}")
@@ -699,7 +699,8 @@ class FormHandler:
                     try:
                         await self.driver_or_page.click(selector)
                         break
-                    except Exception:
+                    except Exception:  # nosec B112
+                        # Continue trying next submit button selector
                         continue
                 else:
                     # If no submit button found, press Enter on the form
@@ -710,8 +711,9 @@ class FormHandler:
                 await self.driver_or_page.wait_for_load_state(
                     "networkidle", timeout=10000
                 )
-            except Exception:
-                pass  # Ignore timeout, form might submit without navigation
+            except Exception:  # nosec B110
+                # Ignore timeout or navigation errors - form might submit without page load
+                pass
 
             return {"success": True, "new_url": self.driver_or_page.url}
 

@@ -304,7 +304,8 @@ class MarkdownConverter:
                             if content_length > max_bytes_per_image:
                                 skipped_large += 1
                                 return match.group(0)
-                        except Exception:
+                        except (ValueError, TypeError):
+                            # Invalid Content-Length header, continue processing
                             pass
 
                     content = resp.content

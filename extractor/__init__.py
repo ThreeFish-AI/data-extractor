@@ -21,7 +21,8 @@ def _get_version_from_pyproject():
                     line = line.strip()
                     if line.startswith('version = "') and line.endswith('"'):
                         return line.split('"')[1]
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError, UnicodeDecodeError):
+        # Ignore file system and parsing errors, return fallback version
         pass
 
     # 如果读取失败，使用备用版本号

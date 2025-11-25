@@ -152,5 +152,6 @@ dev = [
     "mypy>=1.10.0",
     "pre-commit>=3.8.0",
     "types-requests>=2.32.4.20250809",
+    "bandit>=1.9.2",
 ]
 
