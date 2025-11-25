@@ -164,7 +164,8 @@ class TestWebScraper:
         else:
             pytest.skip("_get_default_headers method not found")
 
-    def test_method_selection_logic(self, scraper):
+    @pytest.mark.asyncio
+    async def test_method_selection_logic(self, scraper):
         """
         测试自动方法选择逻辑 (auto/simple/scrapy/selenium)
 
