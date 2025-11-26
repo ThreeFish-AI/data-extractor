@@ -6,7 +6,6 @@ from typing import Dict, Any, List, Optional
 from urllib.parse import urljoin
 
 import scrapy
-from scrapy.crawler import CrawlerRunner
 from scrapy.utils.log import configure_logging
 from scrapy.http import Response
 from bs4 import BeautifulSoup
