@@ -131,7 +131,7 @@ class ScrapyWrapper:
 
             # Simple requests fallback
             try:
-                response = requests.get(url, headers={'User-Agent': settings.default_user_agent})
+                response = requests.get(url, headers={'User-Agent': settings.default_user_agent}, timeout=settings.request_timeout)
                 response.raise_for_status()
 
                 soup = BeautifulSoup(response.content, 'html.parser')
