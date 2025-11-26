@@ -928,7 +928,9 @@ Editorial office: +1-555-0123
             assert result.success is True
             assert result.word_count == 15000
             assert result.page_count == 50
-            assert large_doc_duration < 1.5  # Should complete within 1.5 seconds (CI-safe)
+            assert (
+                large_doc_duration < 1.5
+            )  # Should complete within 1.5 seconds (CI-safe)
 
         # Performance Test 2: Concurrent processing benchmark
         concurrent_tasks = []

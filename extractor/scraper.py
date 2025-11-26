@@ -126,22 +126,34 @@ class ScrapyWrapper:
         try:
             # For now, fallback to requests due to reactor compatibility issues
             # In a real implementation, you'd need proper Twisted reactor setup
-            logger.warning("Scrapy method temporarily disabled due to reactor conflicts. Using fallback.")
+            logger.warning(
+                "Scrapy method temporarily disabled due to reactor conflicts. Using fallback."
+            )
 
             # Simple requests fallback
             try:
-                response = requests.get(url, headers={'User-Agent': settings.default_user_agent}, timeout=settings.request_timeout)
+                response = requests.get(
+                    url,
+                    headers={"User-Agent": settings.default_user_agent},
+                    timeout=settings.request_timeout,
+                )
                 response.raise_for_status()
 
-                soup = BeautifulSoup(response.content, 'html.parser')
+                soup = BeautifulSoup(response.content, "html.parser")
 
-                return [{
-                    "url": url,
-                    "status_code": response.status_code,
-                    "title": soup.title.string if soup.title else "",
-                    "meta_description": soup.find("meta", attrs={"name": "description"}).get("content", "") if soup.find("meta", attrs={"name": "description"}) else "",
-                    "content": {"text": soup.get_text()},
-                }]
+                return [
+                    {
+                        "url": url,
+                        "status_code": response.status_code,
+                        "title": soup.title.string if soup.title else "",
+                        "meta_description": soup.find(
+                            "meta", attrs={"name": "description"}
+                        ).get("content", "")
+                        if soup.find("meta", attrs={"name": "description"})
+                        else "",
+                        "content": {"text": soup.get_text()},
+                    }
+                ]
 
             except Exception as req_error:
                 logger.error(f"Requests fallback also failed: {str(req_error)}")
