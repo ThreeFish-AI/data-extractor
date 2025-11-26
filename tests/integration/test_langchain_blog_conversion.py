@@ -49,8 +49,8 @@ async def test_langchain_blog_conversion():
                 include_metadata=True,
             )
 
-            if result.success:
-                markdown = result.markdown_content
+            if result.get("success", False):
+                markdown = result.get("markdown", "")
                 lines = markdown.split("\n")
                 empty_lines = [i for i, line in enumerate(lines) if line.strip() == ""]
 
