@@ -10,12 +10,12 @@ exclude = ["tests*", "reports*", "htmlcov*", "scripts*"]
 [project]
 name = "mcp-data-extractor"
 version = "0.1.6"
-description = "A robust web scraping MCP server based on Scrapy and FastMCP"
+description = "A commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Aurelius", email = "aureliusshu@gmail.com" }]
 license = "MIT"
-keywords = ["mcp", "scraping", "scrapy", "web-crawler"]
+keywords = ["mcp", "web-crawler", "scrapy", "pdf", "markdown"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
