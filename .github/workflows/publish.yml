@@ -115,6 +115,8 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          verbose: true
+          skip-existing: true
 
   pypi-production-publication:
     name: Publish to PyPI
@@ -137,6 +139,8 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
 
   changelog-update:
     name: Update Changelog
