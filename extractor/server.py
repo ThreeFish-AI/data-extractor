@@ -2257,7 +2257,7 @@ def main() -> None:
         binding_path = settings.http_path
 
         # Determine the actual endpoint URL for user-friendly display
-        if binding_host == "0.0.0.0":
+        if binding_host == "0.0.0.0":  # nosec B104
             # For 0.0.0.0 binding, show both localhost and actual binding
             print(f"Starting {transport_type} server on {binding_host}:{binding_port}")
             print(f"Local endpoint: http://localhost:{binding_port}{binding_path}")
