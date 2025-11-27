@@ -4,7 +4,7 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## **v0.1.6 (2025/11/25)** - PDF 增强功能与内容深度提取
+## **v0.1.6 (2025/11/27)** - PDF 增强功能与内容深度提取
 
 - ✨ **Transport 支持**: 新增 StreamableHTTP、SSE 传输模式支持
 - ✨ **PDF 增强处理**: 新增增强版 PDF 处理器，支持图像、表格、数学公式的深度提取
