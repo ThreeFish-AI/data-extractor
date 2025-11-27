@@ -7,26 +7,64 @@ from pydantic_settings import BaseSettings
 
 # 动态从 pyproject.toml 读取版本号
 def _get_dynamic_version():
-    """从 pyproject.toml 动态读取版本号"""
+    """从 pyproject.toml 动态读取版本号，支持多种部署场景"""
     from pathlib import Path
+    import re
 
     try:
+        # 方法1: 尝试从当前文件位置向上查找
         current_file = Path(__file__).resolve()
-        project_root = (
-            current_file.parent.parent
-        )  # config.py -> extractor -> project_root
+        project_root = current_file.parent.parent  # config.py -> extractor -> project_root
         pyproject_path = project_root / "pyproject.toml"
+
+        # 方法2: 如果向上查找失败，尝试从当前工作目录查找
+        if not pyproject_path.exists():
+            cwd_root = Path.cwd()
+            pyproject_path = cwd_root / "pyproject.toml"
+
+        # 方法3: 如果仍然失败，尝试从模块根目录查找
+        if not pyproject_path.exists():
+            import extractor
+            module_path = Path(extractor.__file__).parent
+            project_root = module_path.parent
+            pyproject_path = project_root / "pyproject.toml"
 
         if pyproject_path.exists():
             with open(pyproject_path, "r", encoding="utf-8") as f:
                 content = f.read()
+
+                # 使用正则表达式更精确地匹配版本行
+                version_pattern = r'^version\s*=\s*["\']([^"\']+)["\']'
                 for line in content.splitlines():
                     line = line.strip()
-                    if line.startswith('version = "') and line.endswith('"'):
-                        return line.split('"')[1]
-    except (FileNotFoundError, PermissionError, OSError, UnicodeDecodeError):
+                    match = re.match(version_pattern, line)
+                    if match:
+                        return match.group(1)
+
+                # 备用方法：查找 [project] 段下的 version
+                project_section = False
+                for line in content.splitlines():
+                    line = line.strip()
+                    if line == "[project]":
+                        project_section = True
+                    elif line.startswith("[") and line != "[project]":
+                        project_section = False
+                    elif project_section and line.startswith("version ="):
+                        version_match = re.search(r'["\']([^"\']+)["\']', line)
+                        if version_match:
+                            return version_match.group(1)
+
+    except (FileNotFoundError, PermissionError, OSError, UnicodeDecodeError, ImportError):
         # Ignore file system and parsing errors, return fallback version
         pass
+
+    # 最后的备用方案：尝试从已安装的包中获取版本
+    try:
+        import importlib.metadata
+        return importlib.metadata.version("mcp-data-extractor")
+    except (importlib.metadata.PackageNotFoundError, ImportError):
+        pass
+
     return "0.0.0"
 
 
@@ -39,12 +77,12 @@ class DataExtractorSettings(BaseSettings):
 
     # HTTP transport settings
     transport_mode: str = Field(
-        default="stdio", description="Transport mode: stdio, http, or sse"
+        default="http", description="Transport mode: stdio, http, or sse"
     )
     http_host: str = Field(
         default="localhost", description="Host to bind HTTP server to"
     )
-    http_port: int = Field(default=8000, description="Port for HTTP server")
+    http_port: int = Field(default=8081, description="Port for HTTP server")
     http_path: str = Field(default="/mcp", description="Path for HTTP endpoint")
     http_cors_origins: Optional[str] = Field(
         default="*", description="CORS origins for HTTP transport"
