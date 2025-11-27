@@ -59,6 +59,7 @@ htmlcov/
 tests/reports/*
 coverage.json
 coverage.xml
+bandit-report.json
 
 # Claude Code
 .claude
