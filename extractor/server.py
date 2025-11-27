@@ -2250,34 +2250,31 @@ def main() -> None:
     )
     print(f"Proxy: {'Enabled' if settings.use_proxy else 'Disabled'}")
 
-    if settings.transport_mode == "http":
-        # HTTP transport mode for production deployments
-        print(f"Starting HTTP server on {settings.http_host}:{settings.http_port}")
-        print(
-            f"HTTP endpoint: http://{settings.http_host}:{settings.http_port}{settings.http_path}"
-        )
+    if settings.transport_mode in ["http", "sse"]:
+        transport_type = "HTTP" if settings.transport_mode == "http" else "SSE"
+        binding_host = settings.http_host
+        binding_port = settings.http_port
+        binding_path = settings.http_path
+
+        # Determine the actual endpoint URL for user-friendly display
+        if binding_host == "0.0.0.0":
+            # For 0.0.0.0 binding, show both localhost and actual binding
+            print(f"Starting {transport_type} server on {binding_host}:{binding_port}")
+            print(f"Local endpoint: http://localhost:{binding_port}{binding_path}")
+            print(f"Network endpoint: http://{binding_host}:{binding_port}{binding_path}")
+        else:
+            print(f"Starting {transport_type} server on {binding_host}:{binding_port}")
+            endpoint_url = f"http://{binding_host}:{binding_port}{binding_path}"
+            print(f"{transport_type} endpoint: {endpoint_url}")
+
         print(f"CORS origins: {settings.http_cors_origins}")
 
-        # Run with HTTP transport
+        # Run with appropriate transport
         app.run(
-            transport="http",
-            host=settings.http_host,
-            port=settings.http_port,
-            path=settings.http_path,
-        )
-    elif settings.transport_mode == "sse":
-        # Server-Sent Events transport mode (legacy)
-        print(f"Starting SSE server on {settings.http_host}:{settings.http_port}")
-        print(
-            f"SSE endpoint: http://{settings.http_host}:{settings.http_port}{settings.http_path}"
-        )
-
-        # Run with SSE transport
-        app.run(
-            transport="sse",
-            host=settings.http_host,
-            port=settings.http_port,
-            path=settings.http_path,
+            transport=settings.transport_mode,
+            host=binding_host,
+            port=binding_port,
+            path=binding_path,
         )
     else:
         # Default STDIO transport mode
