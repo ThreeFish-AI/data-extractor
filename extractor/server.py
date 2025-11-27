@@ -2261,7 +2261,9 @@ def main() -> None:
             # For 0.0.0.0 binding, show both localhost and actual binding
             print(f"Starting {transport_type} server on {binding_host}:{binding_port}")
             print(f"Local endpoint: http://localhost:{binding_port}{binding_path}")
-            print(f"Network endpoint: http://{binding_host}:{binding_port}{binding_path}")
+            print(
+                f"Network endpoint: http://{binding_host}:{binding_port}{binding_path}"
+            )
         else:
             print(f"Starting {transport_type} server on {binding_host}:{binding_port}")
             endpoint_url = f"http://{binding_host}:{binding_port}{binding_path}"

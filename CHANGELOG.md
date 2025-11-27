@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## **v0.1.6 (2025/11/27)** - PDF 增强功能与内容深度提取
 
-- ✨ **Transport 支持**: 新增 StreamableHTTP、SSE 传输模式支持
+- ✨ **Transport 支持**: 新增 StreamableHTTP、SSE 传输模式支持，默认使用 StreamableHTTP
 - ✨ **PDF 增强处理**: 新增增强版 PDF 处理器，支持图像、表格、数学公式的深度提取
   - **🖼️ 图像提取**: 从 PDF 中提取图像并保存为本地文件或 base64 嵌入，支持尺寸调整和质量优化
   - **📊 表格转换**: 智能识别 PDF 表格并转换为标准 Markdown 表格格式，保持数据结构完整性

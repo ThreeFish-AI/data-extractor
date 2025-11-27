@@ -14,7 +14,9 @@ def _get_dynamic_version():
     try:
         # 方法1: 尝试从当前文件位置向上查找
         current_file = Path(__file__).resolve()
-        project_root = current_file.parent.parent  # config.py -> extractor -> project_root
+        project_root = (
+            current_file.parent.parent
+        )  # config.py -> extractor -> project_root
         pyproject_path = project_root / "pyproject.toml"
 
         # 方法2: 如果向上查找失败，尝试从当前工作目录查找
@@ -25,6 +27,7 @@ def _get_dynamic_version():
         # 方法3: 如果仍然失败，尝试从模块根目录查找
         if not pyproject_path.exists():
             import extractor
+
             module_path = Path(extractor.__file__).parent
             project_root = module_path.parent
             pyproject_path = project_root / "pyproject.toml"
@@ -54,13 +57,20 @@ def _get_dynamic_version():
                         if version_match:
                             return version_match.group(1)
 
-    except (FileNotFoundError, PermissionError, OSError, UnicodeDecodeError, ImportError):
+    except (
+        FileNotFoundError,
+        PermissionError,
+        OSError,
+        UnicodeDecodeError,
+        ImportError,
+    ):
         # Ignore file system and parsing errors, return fallback version
         pass
 
     # 最后的备用方案：尝试从已安装的包中获取版本
     try:
         import importlib.metadata
+
         return importlib.metadata.version("mcp-data-extractor")
     except (importlib.metadata.PackageNotFoundError, ImportError):
         pass
