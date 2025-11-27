@@ -8,7 +8,7 @@ include = ["extractor*"]
 exclude = ["tests*", "reports*", "htmlcov*", "scripts*"]
 
 [project]
-name = "data-extractor"
+name = "mcp-data-extractor"
 version = "0.1.6"
 description = "A robust web scraping MCP server based on Scrapy and FastMCP"
 readme = "README.md"
@@ -61,7 +61,7 @@ dev = [
 ]
 
 [project.scripts]
-data-extractor = "extractor.server:main"
+mcp-data-extractor = "extractor.server:main"
 
 [tool.pytest.ini_options]
 minversion = "8.0"

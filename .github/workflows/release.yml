@@ -80,6 +80,8 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2

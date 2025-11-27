@@ -99,7 +99,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/data-extractor
+      url: https://test.pypi.org/p/mcp-data-extractor
 
     permissions:
       id-token: write
@@ -123,7 +123,7 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
     environment:
       name: pypi
-      url: https://pypi.org/p/data-extractor
+      url: https://pypi.org/p/mcp-data-extractor
 
     permissions:
       id-token: write
@@ -153,7 +153,7 @@ jobs:
         run: |
           echo "## Released $(date +'%Y-%m-%d')" >> temp_changelog.md
           echo "" >> temp_changelog.md
-          echo "Published to PyPI: https://pypi.org/project/data-extractor/${{ github.ref_name }}/" >> temp_changelog.md
+          echo "Published to PyPI: https://pypi.org/project/mcp-data-extractor/${{ github.ref_name }}/" >> temp_changelog.md
           echo "" >> temp_changelog.md
           cat CHANGELOG.md >> temp_changelog.md
           mv temp_changelog.md CHANGELOG.md
