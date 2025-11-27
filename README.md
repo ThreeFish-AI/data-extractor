@@ -1,19 +1,6 @@
----
-id: data-extractor
-sidebar_position: 1
-title: Data Extractor
-description: Readme of Data Extractor
-last_update:
-  author: Aurelius
-  date: 2025-11-24
-tags:
-  - README
-  - Data Extractor
----
+Data Extractor is a commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments.
 
-Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupdf 联合构建的强大、稳定的网页内容、PDF 内容提取 MCP Server，具备转换 Web Page、PDF Document 为 Markdown 的能力，专为商业环境中的长期使用而设计。
-
-## 🛠️ MCP Server 核心工具 (14 个)
+## 🛠️ MCP Server Core Tools (14)
 
 ### Web Page
 
@@ -37,28 +24,28 @@ Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupd
 | **convert_pdf_to_markdown**        | PDF 转 Markdown | `pdf_source`(URL/路径), `method`(auto/pymupdf/pypdf), `page_range`, `output_format` |
 | **batch_convert_pdfs_to_markdown** | 批量 PDF 转换   | `pdf_sources`(列表), `method`, `page_range`, `output_format`, `include_metadata`    |
 
-### 服务管理
+### Service Management
 
 | 工具名称               | 功能描述     | 主要参数                                  |
 | ---------------------- | ------------ | ----------------------------------------- |
 | **get_server_metrics** | 性能指标监控 | 无参数 - 返回请求统计、性能指标、缓存情况 |
 | **clear_cache**        | 缓存管理     | 无参数 - 清空所有缓存数据                 |
 
-## 🎯 快速参考
+## 🎯 Quick Navigation
 
-- [用户指南](docs/6-User-Guide.md)
-- [架构设计](docs/1-Framework.md)
-- [开发指南](docs/2-Development.md)
-- [测试指南](docs/3-Testing.md)
-- [配置系统](docs/4-Configuration.md)
-- [常用指令](docs/5-Commands.md)
-- [版本里程](CHANGELOG.md)
+- [用户指南](https://github.com/ThreeFish-AI/data-extractor/blob/master/docs/6-User-Guide.md)
+- [架构设计](https://github.com/ThreeFish-AI/data-extractor/blob/master/docs/1-Framework.md)
+- [开发指南](https://github.com/ThreeFish-AI/data-extractor/blob/master/docs/2-Development.md)
+- [测试指南](https://github.com/ThreeFish-AI/data-extractor/blob/master/docs/3-Testing.md)
+- [配置系统](https://github.com/ThreeFish-AI/data-extractor/blob/master/docs/4-Configuration.md)
+- [常用指令](https://github.com/ThreeFish-AI/data-extractor/blob/master/docs/5-Commands.md)
+- [版本里程](https://github.com/ThreeFish-AI/data-extractor/blob/master/CHANGELOG.md)
 
-## 🤝 贡献
+## 🤝 Contribution
 
 欢迎提交 [Issue](https://github.com/ThreeFish-AI/data-extractor/issues) 和 [Pull Request](https://github.com/ThreeFish-AI/data-extractor/pulls) 来改进这个项目。
 
-## 📄 许可证
+## 📄 License
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
 
