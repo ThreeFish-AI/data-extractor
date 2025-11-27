@@ -21,7 +21,7 @@ class TestDataExtractorSettings:
 
         # 测试默认值（考虑环境变量覆盖）
         assert config.server_name == "data-extractor"
-        assert config.server_version == "0.1.6"
+        assert config.server_version == "0.1.6.1"
         assert config.enable_javascript is False
         assert config.concurrent_requests == 16
         assert config.request_timeout == 30.0

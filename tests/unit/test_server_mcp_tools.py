@@ -331,7 +331,7 @@ class TestMCPToolsServer:
             }
             mock_cache.stats.return_value = {"cache_hits": 50, "cache_misses": 50}
             mock_settings.server_name = "Test Server"
-            mock_settings.server_version = "0.1.6"
+            mock_settings.server_version = "0.1.6.1"
 
             result = await get_server_metrics()
 
