@@ -3,10 +3,12 @@
 测试所有 14 个 @app.tool() 装饰器的 MCP 工具函数
 """
 
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
 
 import extractor.server as server_module
+
 # BaseModel request classes have been removed - tools now use individual parameters with Annotated Field
 
 # 获取实际的函数，而不是 FunctionTool 包装器
@@ -329,7 +331,7 @@ class TestMCPToolsServer:
             }
             mock_cache.stats.return_value = {"cache_hits": 50, "cache_misses": 50}
             mock_settings.server_name = "Test Server"
-            mock_settings.server_version = "0.1.5"
+            mock_settings.server_version = "0.1.6"
 
             result = await get_server_metrics()
 

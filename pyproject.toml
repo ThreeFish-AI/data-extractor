@@ -9,7 +9,7 @@ exclude = ["tests*", "reports*", "htmlcov*", "scripts*"]
 
 [project]
 name = "data-extractor"
-version = "0.1.5"
+version = "0.1.6"
 description = "A robust web scraping MCP server based on Scrapy and FastMCP"
 readme = "README.md"
 requires-python = ">=3.12"

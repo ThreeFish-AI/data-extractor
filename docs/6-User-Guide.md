@@ -64,7 +64,7 @@ uv run data-extractor
 
 ```bash
 # 直接安装并运行
-uvx --with git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.5 data-extractor
+uvx --with git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.6 data-extractor
 ```
 
 **方法三：使用 pip 安装（WIP）**
@@ -185,7 +185,7 @@ Data Extractor 支持三种传输模式，您可以根据使用场景选择最�
       "args": [
         "run",
         "--with",
-        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.5",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.6",
         "data-extractor"
       ]
     }
@@ -290,7 +290,7 @@ data-extractor
       "args": [
         "run",
         "--with",
-        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.5",
+        "git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.6",
         "data-extractor"
       ],
       "env": {

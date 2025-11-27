@@ -3,9 +3,10 @@
 测试 extractor.config 模块的配置加载、验证和使用
 """
 
-import pytest
 import os
-from unittest.mock import patch, Mock
+from unittest.mock import patch
+
+import pytest
 from pydantic import ValidationError
 
 from extractor.config import DataExtractorSettings, settings
@@ -20,7 +21,7 @@ class TestDataExtractorSettings:
 
         # 测试默认值（考虑环境变量覆盖）
         assert config.server_name == "data-extractor"
-        assert config.server_version == "0.1.5"
+        assert config.server_version == "0.1.6"
         assert config.enable_javascript is False
         assert config.concurrent_requests == 16
         assert config.request_timeout == 30.0
@@ -194,6 +195,7 @@ class TestGlobalSettings:
         """测试环境变量覆盖设置"""
         # 重新导入以获取新的设置
         from importlib import reload
+
         import extractor.config
 
         reload(extractor.config)
