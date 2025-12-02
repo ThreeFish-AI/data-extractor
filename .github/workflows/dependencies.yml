@@ -10,6 +10,9 @@ jobs:
   automated-dependency-update:
     name: Update Dependencies
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +50,7 @@ jobs:
           DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
 
       - name: Create Pull Request
+        id: create_pr
         if: env.has_updates == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
@@ -73,6 +77,30 @@ jobs:
           labels: |
             dependencies
             automated
+          # Fallback configuration for permission issues
+          push-to-fork: false
+
+      - name: Report PR Creation Status
+        if: always() && steps.create_pr.outcome == 'failure'
+        run: |
+          echo "## ⚠️ Pull Request Creation Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Dependency updates were found and tested successfully, but creating a pull request failed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Possible Causes:" >> $GITHUB_STEP_SUMMARY
+          echo "- Insufficient repository permissions for the workflow" >> $GITHUB_STEP_SUMMARY
+          echo "- Missing write permissions for contents and pull requests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Solutions:" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Enable workflow permissions** in repository settings:" >> $GITHUB_STEP_SUMMARY
+          echo "   - Go to Settings > Actions > General > Workflow permissions" >> $GITHUB_STEP_SUMMARY
+          echo "   - Enable 'Read and write permissions'" >> $GITHUB_STEP_SUMMARY
+          echo "   - Allow GitHub Actions to create and approve pull requests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Or use a Personal Access Token**:" >> $GITHUB_STEP_SUMMARY
+          echo "   - Create a PAT with \`repo\` scope" >> $GITHUB_STEP_SUMMARY
+          echo "   - Add it as a repository secret named \`GH_PAT\`" >> $GITHUB_STEP_SUMMARY
+          echo "   - Update the workflow to use secrets.GH_PAT instead of secrets.GITHUB_TOKEN" >> $GITHUB_STEP_SUMMARY
 
   vulnerability-security-audit:
     name: Security Audit
