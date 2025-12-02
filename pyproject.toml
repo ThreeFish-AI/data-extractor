@@ -42,7 +42,7 @@ dependencies = [
     "twisted>=24.7.0",
     "ruff>=0.12.12",
     "markitdown>=0.0.1a2",
-    "pypdf>=5.0.0",
+    "pypdf>=6.4.0",
     "pymupdf>=1.26.4",
     "setuptools>=45.0.0",
 ]
