@@ -44,6 +44,7 @@ dependencies = [
     "markitdown>=0.0.1a2",
     "pypdf>=5.0.0",
     "pymupdf>=1.26.4",
+    "setuptools>=45.0.0",
 ]
 
 [project.optional-dependencies]

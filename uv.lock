@@ -1316,6 +1316,7 @@ dependencies = [
     { name = "ruff" },
     { name = "scrapy" },
     { name = "selenium" },
+    { name = "setuptools" },
     { name = "twisted" },
     { name = "undetected-chromedriver" },
 ]
@@ -1375,6 +1376,7 @@ requires-dist = [
     { name = "ruff", specifier = ">=0.12.12" },
     { name = "scrapy", specifier = ">=2.11.0" },
     { name = "selenium", specifier = ">=4.20.0" },
+    { name = "setuptools", specifier = ">=45.0.0" },
     { name = "twisted", specifier = ">=24.7.0" },
     { name = "undetected-chromedriver", specifier = ">=3.5.0" },
 ]
