@@ -1,5 +1,11 @@
 """Advanced scraping features including anti-detection and form handling."""
 
+# Fix for Python 3.12+ distutils compatibility
+try:
+    import setuptools
+except ImportError:
+    pass
+
 import asyncio
 import random
 from typing import Dict, Any, Optional
