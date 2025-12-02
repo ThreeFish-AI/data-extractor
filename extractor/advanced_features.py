@@ -1,9 +1,10 @@
 """Advanced scraping features including anti-detection and form handling."""
 
 # Fix for Python 3.12+ distutils compatibility
-try:
-    import setuptools
-except ImportError:
+import importlib.util
+
+if importlib.util.find_spec("setuptools") is not None:
+    # setuptools is available, which provides distutils compatibility
     pass
 
 import asyncio
