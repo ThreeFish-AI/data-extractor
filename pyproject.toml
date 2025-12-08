@@ -45,6 +45,8 @@ dependencies = [
     "pypdf>=6.4.0",  # CVE-2025-66019: Monitor for security updates
     "pymupdf>=1.26.4",
     "setuptools>=75.0.0",
+    "mcp>=1.23.0",
+    "urllib3>=2.6.0",
 ]
 
 [project.optional-dependencies]
