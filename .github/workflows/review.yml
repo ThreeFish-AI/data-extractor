@@ -1,0 +1,123 @@
+name: Code Review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_base_url: ${{ secrets.ANTHROPIC_BASE_URL }}
+
+      - name: Run Code Review
+        run: |
+          claude --model opus --agent code-reviewer << 'EOF'
+          You are a senior code reviewer ensuring high standards of code quality and security.
+
+          Please review the changes in this pull request for:
+
+          1. Code Quality:
+             - Code is simple and readable
+             - Functions and variables are well-named
+             - No duplicated code
+             - Proper error handling
+
+          2. Security:
+             - No exposed secrets or API keys
+             - Input validation implemented
+             - Proper authentication/authorization
+
+          3. Maintainability:
+             - Good test coverage
+             - Performance considerations addressed
+             - Documentation is clear
+
+          Please provide your feedback organized by priority:
+          - Critical issues (must fix)
+          - Warnings (should fix)
+          - Suggestions (consider improving)
+
+          Include specific examples of how to fix any issues found.
+          EOF
+
+  push-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get list of changed files since last push
+          git diff --name-only HEAD~1 HEAD > changed_files.txt
+          echo "changed_files=$(cat changed_files.txt | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Setup Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_base_url: ${{ secrets.ANTHROPIC_BASE_URL }}
+
+      - name: Run Code Review on Push
+        if: steps.changed-files.outputs.changed_files != ''
+        run: |
+          claude --model opus --agent code-reviewer << 'EOF'
+          You are a senior code reviewer ensuring high standards of code quality and security.
+
+          Changed files in this push: ${{ steps.changed-files.outputs.changed_files }}
+
+          Please review the recent changes for:
+
+          1. Code Quality:
+             - Code is simple and readable
+             - Functions and variables are well-named
+             - No duplicated code
+             - Proper error handling
+
+          2. Security:
+             - No exposed secrets or API keys
+             - Input validation implemented
+
+          3. Maintainability:
+             - Performance considerations addressed
+
+          Focus on the modified files and provide feedback organized by priority.
+          EOF
+
+      - name: Create Issue for Critical Findings
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Code Review - Critical Issues Detected',
+              body: 'The automated code review detected critical issues in the recent push. Please review the workflow logs and address the identified issues.',
+              labels: ['code-review', 'critical']
+            })
