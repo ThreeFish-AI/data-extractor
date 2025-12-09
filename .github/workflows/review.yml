@@ -13,7 +13,8 @@ permissions:
   issues: write
 
 jobs:
-  code-review:
+  # PR 代码审查：只审查 PR 中变更的文件
+  pr-code-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
 
@@ -32,107 +33,129 @@ jobs:
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
-      - name: Run Code Review
+      - name: Get PR changed files
+        id: pr-changed-files
+        run: |
+          # 获取 PR 中变更的文件列表
+          # 使用 git diff 获取 PR 分支与目标分支的差异
+          PR_BASE=${{ github.event.pull_request.base.ref }}
+          PR_HEAD=${{ github.event.pull_request.head.ref }}
+
+          # 获取变更的文件
+          git diff --name-only origin/$PR_BASE...origin/$PR_HEAD > pr_changed_files.txt
+
+          # 获取每个文件的变更内容
+          echo "pr_files=$(cat pr_changed_files.txt | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+          # 输出文件数量
+          echo "file_count=$(wc -l < pr_changed_files.txt)" >> $GITHUB_OUTPUT
+
+      - name: Run PR Code Review
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
         run: |
-          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer > review.md << 'EOF'
-          You are a senior code reviewer ensuring high standards of code quality and security.
+          echo "Reviewing PR #${{ github.event.pull_request.number }}"
+          echo "Changed files: ${{ steps.pr-changed-files.outputs.pr_files }}"
 
-          Please review the changes in this pull request for:
+          # 对每个变更的文件进行审查
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              echo ""
+              echo "========================================"
+              echo "Reviewing file: $file"
+              echo "========================================"
 
-          1. Code Quality:
-             - Code is simple and readable
-             - Functions and variables are well-named
-             - No duplicated code
-             - Proper error handling
+              # 获取文件的变更差异
+              git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} -- "$file" > "${file}_diff.txt"
 
-          2. Security:
-             - No exposed secrets or API keys
-             - Input validation implemented
-             - Proper authentication/authorization
+              # 运行 Claude Code 审查
+              npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer << EOF
+              请审查这个文件 $file 的变更：
 
-          3. Maintainability:
-             - Good test coverage
-             - Performance considerations addressed
-             - Documentation is clear
+              变更内容：
+              \`\`\`diff
+              $(cat "${file}_diff.txt")
+              \`\`\`
 
-          Please provide your feedback organized by priority:
-          - Critical issues (must fix)
-          - Warnings (should fix)
-          - Suggestions (consider improving)
+              请重点关注：
+              1. 代码质量：可读性、命名规范、重复代码、错误处理
+              2. 安全性：是否有敏感信息泄露、输入验证、认证授权
+              3. 维护性：测试覆盖率、性能考虑、文档清晰度
 
-          Include specific examples of how to fix any issues found.
-          EOF
+              请提供具体的修改建议，如果发现问题，请指出具体的行号和修复方案。
+              EOF
 
-      - name: Comment PR with Review Results
-        if: always() && github.event_name == 'pull_request'
+              echo ""
+            fi
+          done < pr_changed_files.txt > pr_review.md
+
+      - name: Create File-level Review Comments
+        if: always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
+            const { execSync } = require('child_process');
+
+            // 获取 PR 信息
+            const prNumber = context.issue.number;
+            const baseSha = context.payload.pull_request.base.sha;
+            const headSha = context.payload.pull_request.head.sha;
+
+            // 读取审查结果
+            let reviewContent = '';
             try {
-              const reviewContent = fs.readFileSync('review.md', 'utf8');
+              reviewContent = fs.readFileSync('pr_review.md', 'utf8');
+            } catch (error) {
+              console.error('Could not read review file:', error);
+              return;
+            }
 
-              // 如果审查内容为空或只包含空行，则不评论
-              if (!reviewContent.trim()) {
-                console.log('Review content is empty, skipping comment');
-                return;
-              }
+            // 如果没有审查内容，则返回
+            if (!reviewContent.trim()) {
+              console.log('No review content found');
+              return;
+            }
 
-              // 格式化评论内容
-              const commentBody = "## 🤖 Claude Code Review Results\n\n" +
+            // 创建 PR 主体评论
+            const summaryComment = "## 🤖 PR Code Review Results\n\n" +
                                  reviewContent + "\n\n" +
                                  "---\n" +
                                  "*This review was generated by Claude Code using the Opus model.*";
 
-              // 创建或更新评论
-              const { data: comments } = await github.rest.issues.listComments({
-                issue_number: context.issue.number,
+            // 查找是否已有 Claude Code 的评论
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const existingComment = comments.find(comment =>
+              comment.body.includes('🤖 PR Code Review Results') &&
+              comment.user.type === 'Bot'
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                comment_id: existingComment.id,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
+                body: summaryComment
               });
-
-              // 查找是否已有 Claude Code 的评论
-              const existingComment = comments.find(comment =>
-                comment.body.includes('🤖 Claude Code Review Results') &&
-                comment.user.type === 'Bot'
-              );
-
-              if (existingComment) {
-                // 更新现有评论
-                await github.rest.issues.updateComment({
-                  comment_id: existingComment.id,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: commentBody
-                });
-                console.log('Updated existing review comment');
-              } else {
-                // 创建新评论
-                await github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: commentBody
-                });
-                console.log('Created new review comment');
-              }
-            } catch (error) {
-              console.error('Error reading review results:', error);
-              // 如果读取文件失败，创建错误评论
+            } else {
               await github.rest.issues.createComment({
-                issue_number: context.issue.number,
+                issue_number: prNumber,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: '## 🤖 Claude Code Review\n\n❌ Failed to generate review results. Please check the workflow logs for details.'
+                body: summaryComment
               });
             }
 
-  push-review:
+  # Push 代码审查：审查推送到 master 分支的变更
+  push-code-review:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
 
     steps:
       - name: Checkout code
@@ -151,8 +174,13 @@ jobs:
       - name: Get changed files
         id: changed-files
         run: |
-          # Get list of changed files since last push
-          git diff --name-only HEAD~1 HEAD > changed_files.txt
+          # 获取与上次提交相比的变更文件
+          if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only ${{ github.event.before }} ${{ github.sha }} > changed_files.txt
+          else
+            # 首次推送，获取最近的提交
+            git diff --name-only HEAD~1 HEAD > changed_files.txt
+          fi
           echo "changed_files=$(cat changed_files.txt | tr '\n' ' ')" >> $GITHUB_OUTPUT
 
       - name: Run Code Review on Push
@@ -161,28 +189,40 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
         run: |
-          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer > push-review.md << 'EOF'
-          You are a senior code reviewer ensuring high standards of code quality and security.
+          echo "Reviewing push to ${{ github.ref }}"
+          echo "Changed files: ${{ steps.changed-files.outputs.changed_files }}"
 
-          Changed files in this push: ${{ steps.changed-files.outputs.changed_files }}
+          # 对每个变更的文件进行审查
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              echo ""
+              echo "========================================"
+              echo "Reviewing file: $file"
+              echo "========================================"
 
-          Please review the recent changes for:
+              # 获取文件的变更差异
+              git diff ${{ github.event.before }} ${{ github.sha }} -- "$file" > "${file}_diff.txt"
 
-          1. Code Quality:
-             - Code is simple and readable
-             - Functions and variables are well-named
-             - No duplicated code
-             - Proper error handling
+              # 运行 Claude Code 审查
+              npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer << EOF
+              请审查这个文件 $file 的变更：
 
-          2. Security:
-             - No exposed secrets or API keys
-             - Input validation implemented
+              变更内容：
+              \`\`\`diff
+              $(cat "${file}_diff.txt")
+              \`\`\`
 
-          3. Maintainability:
-             - Performance considerations addressed
+              请重点关注：
+              1. 代码质量：可读性、命名规范、重复代码、错误处理
+              2. 安全性：是否有敏感信息泄露、输入验证、认证授权
+              3. 维护性：测试覆盖率、性能考虑、文档清晰度
 
-          Focus on the modified files and provide feedback organized by priority.
-          EOF
+              请提供具体的修改建议，如果发现问题，请指出具体的行号和修复方案。
+              EOF
+
+              echo ""
+            fi
+          done < changed_files.txt > push_review.md
 
       - name: Comment Commit with Review Results
         if: always() && steps.changed-files.outputs.changed_files != ''
@@ -191,88 +231,67 @@ jobs:
           script: |
             const fs = require('fs');
             try {
-              const reviewContent = fs.readFileSync('push-review.md', 'utf8');
+              const reviewContent = fs.readFileSync('push_review.md', 'utf8');
 
-              // 如果审查内容为空或只包含空行，则不评论
               if (!reviewContent.trim()) {
                 console.log('Review content is empty, skipping comment');
                 return;
               }
 
-              // 获取最新的 commit SHA
               const commitSha = context.sha.substring(0, 7);
-
-              // 格式化评论内容
               const commentBody = "## 🤖 Code Review for Push " + commitSha + "\n\n" +
-                                 "Changed files: " + "${{ steps.changed-files.outputs.changed_files }}" + "\n\n" +
                                  reviewContent + "\n\n" +
                                  "---\n" +
                                  "*This review was generated by Claude Code using the Opus model.*";
 
-              // 创建 commit 评论
               await github.rest.repos.createCommitComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 commit_sha: context.sha,
                 body: commentBody
               });
-              console.log('Created commit review comment');
             } catch (error) {
-              console.error('Error reading review results:', error);
-              // 如果读取文件失败，创建错误评论
-              await github.rest.repos.createCommitComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                commit_sha: context.sha,
-                body: '## 🤖 Code Review\n\n❌ Failed to generate review results. Please check the workflow logs for details.'
-              });
+              console.error('Error creating commit comment:', error);
             }
 
       - name: Create Issue for Critical Findings
-        if: failure()
+        if: failure() && steps.changed-files.outputs.changed_files != ''
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
 
-            // 尝试读取审查结果
             let reviewContent = '';
             let changedFiles = '${{ steps.changed-files.outputs.changed_files }}';
 
             try {
-              reviewContent = fs.readFileSync('push-review.md', 'utf8');
+              reviewContent = fs.readFileSync('push_review.md', 'utf8');
             } catch (error) {
               console.error('Could not read review file:', error);
             }
 
-            // 构建 Issue 内容
             let issueBody = '## 🚨 Code Review - Critical Issues Detected\n\n';
             issueBody += 'The automated code review detected critical issues in the recent push.\n\n';
 
-            // 添加变更文件信息
             if (changedFiles) {
               issueBody += '### 📁 Changed Files\n\n';
               issueBody += '```\n' + changedFiles + '\n```\n\n';
             }
 
-            // 添加审查结果
             if (reviewContent.trim()) {
               issueBody += '### 📋 Review Details\n\n';
               issueBody += reviewContent + '\n\n';
             }
 
-            // 添加操作建议
             issueBody += '### 📌 Next Steps\n\n';
             issueBody += '1. Review the critical issues listed above\n';
             issueBody += '2. Address the identified problems\n';
             issueBody += '3. Push the fixes to resolve this issue\n\n';
             issueBody += '[View Workflow Logs](' + context.payload.repository.html_url + '/actions/runs/' + context.runId + ')\n\n';
 
-            // 添加脚注
             issueBody += '---\n';
             issueBody += '*This issue was automatically created by Claude Code using the Opus model.*';
 
-            // 创建 Issue
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
