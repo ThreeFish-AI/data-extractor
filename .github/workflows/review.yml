@@ -233,10 +233,50 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+
+            // 尝试读取审查结果
+            let reviewContent = '';
+            let changedFiles = '${{ steps.changed-files.outputs.changed_files }}';
+
+            try {
+              reviewContent = fs.readFileSync('push-review.md', 'utf8');
+            } catch (error) {
+              console.error('Could not read review file:', error);
+            }
+
+            // 构建 Issue 内容
+            let issueBody = '## 🚨 Code Review - Critical Issues Detected\n\n';
+            issueBody += 'The automated code review detected critical issues in the recent push.\n\n';
+
+            // 添加变更文件信息
+            if (changedFiles) {
+              issueBody += '### 📁 Changed Files\n\n';
+              issueBody += '```\n' + changedFiles + '\n```\n\n';
+            }
+
+            // 添加审查结果
+            if (reviewContent.trim()) {
+              issueBody += '### 📋 Review Details\n\n';
+              issueBody += reviewContent + '\n\n';
+            }
+
+            // 添加操作建议
+            issueBody += '### 📌 Next Steps\n\n';
+            issueBody += '1. Review the critical issues listed above\n';
+            issueBody += '2. Address the identified problems\n';
+            issueBody += '3. Push the fixes to resolve this issue\n\n';
+            issueBody += '[View Workflow Logs](' + context.payload.repository.html_url + '/actions/runs/' + context.runId + ')\n\n';
+
+            // 添加脚注
+            issueBody += '---\n';
+            issueBody += '*This issue was automatically created by Claude Code using the Opus model.*';
+
+            // 创建 Issue
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: 'Code Review - Critical Issues Detected',
-              body: 'The automated code review detected critical issues in the recent push. Please review the workflow logs and address the identified issues.',
+              body: issueBody,
               labels: ['code-review', 'critical']
-            })
+            });
