@@ -10,6 +10,7 @@ permissions:
   contents: read
   pull-requests: write
   checks: write
+  issues: write
 
 jobs:
   code-review:
@@ -36,7 +37,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
         run: |
-          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer --output=review.md << 'EOF'
+          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer > review.md << 'EOF'
           You are a senior code reviewer ensuring high standards of code quality and security.
 
           Please review the changes in this pull request for:
@@ -103,7 +104,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
         run: |
-          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer --output=push-review.md << 'EOF'
+          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer > push-review.md << 'EOF'
           You are a senior code reviewer ensuring high standards of code quality and security.
 
           Changed files in this push: ${{ steps.changed-files.outputs.changed_files }}
