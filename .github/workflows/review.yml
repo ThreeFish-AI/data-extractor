@@ -27,7 +27,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          anthropic_base_url: ${{ secrets.ANTHROPIC_BASE_URL }}
+        env:
+          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
 
       - name: Run Code Review
         run: |
@@ -81,7 +82,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          anthropic_base_url: ${{ secrets.ANTHROPIC_BASE_URL }}
+        env:
+          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
 
       - name: Run Code Review on Push
         if: steps.changed-files.outputs.changed_files != ''
