@@ -61,25 +61,11 @@ jobs:
           # 创建审查结果文件
           > pr_review.md
 
-          # 对每个变更的文件进行审查
-          while IFS= read -r file; do
-            if [ -n "$file" ] && [ -f "$file" ]; then
-              echo ""
-              echo "========================================"
-              echo "Reviewing file: $file"
-              echo "========================================"
+          # 创建审查提示模板文件
+          cat > review_prompt.txt << 'INNEREOF'
+              请审查这个文件的变更：
 
-              # 获取文件的变更差异
-              git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} -- "$file" > "${file}_diff.txt"
-
-              # 运行 Claude Code 审查
-              npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> pr_review.md << 'EOF'
-              请审查这个文件 $file 的变更：
-
-              变更内容：
-              ```diff
-              $(cat "${file}_diff.txt")
-              ```
+              变更内容请查看传入的 diff 信息。
 
               请重点关注：
               1. 代码质量：可读性、命名规范、重复代码、错误处理
@@ -87,12 +73,35 @@ jobs:
               3. 维护性：测试覆盖率、性能考虑、文档清晰度
 
               请提供具体的修改建议，如果发现问题，请指出具体的行号和修复方案。
+          INNEREOF
 
-              EOF
+          # 对每个变更的文件进行审查
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              echo "" >> pr_review.md
+              echo "========================================" >> pr_review.md
+              echo "Reviewing file: $file" >> pr_review.md
+              echo "========================================" >> pr_review.md
+              echo "" >> pr_review.md
+
+              # 获取文件的变更差异
+              git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} -- "$file" > "${file}_diff.txt"
+
+              # 使用变量传递内容给 Claude Code
+              DIFF_CONTENT=$(cat "${file}_diff.txt")
+
+              # 构建完整的审查请求
+              REVIEW_REQUEST="文件: $file"$'\n\n'"变更内容:"$'\n'"```diff"$'\n'"$DIFF_CONTENT"$'\n'"```"$'\n\n'$(cat review_prompt.txt)
+
+              # 运行 Claude Code 审查
+              echo "$REVIEW_REQUEST" | npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> pr_review.md
 
               echo "" >> pr_review.md
             fi
           done < pr_changed_files.txt
+
+          # 清理临时文件
+          rm -f review_prompt.txt
 
       - name: Create File-level Review Comments
         if: always()
@@ -199,25 +208,11 @@ jobs:
           # 创建审查结果文件
           > push_review.md
 
-          # 对每个变更的文件进行审查
-          while IFS= read -r file; do
-            if [ -n "$file" ] && [ -f "$file" ]; then
-              echo ""
-              echo "========================================"
-              echo "Reviewing file: $file"
-              echo "========================================"
+          # 创建审查提示模板文件
+          cat > review_prompt.txt << 'INNEREOF'
+              请审查这个文件的变更：
 
-              # 获取文件的变更差异
-              git diff ${{ github.event.before }} ${{ github.sha }} -- "$file" > "${file}_diff.txt"
-
-              # 运行 Claude Code 审查
-              npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> push_review.md << 'EOF'
-              请审查这个文件 $file 的变更：
-
-              变更内容：
-              ```diff
-              $(cat "${file}_diff.txt")
-              ```
+              变更内容请查看传入的 diff 信息。
 
               请重点关注：
               1. 代码质量：可读性、命名规范、重复代码、错误处理
@@ -225,12 +220,35 @@ jobs:
               3. 维护性：测试覆盖率、性能考虑、文档清晰度
 
               请提供具体的修改建议，如果发现问题，请指出具体的行号和修复方案。
+          INNEREOF
 
-              EOF
+          # 对每个变更的文件进行审查
+          while IFS= read -r file; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              echo "" >> push_review.md
+              echo "========================================" >> push_review.md
+              echo "Reviewing file: $file" >> push_review.md
+              echo "========================================" >> push_review.md
+              echo "" >> push_review.md
+
+              # 获取文件的变更差异
+              git diff ${{ github.event.before }} ${{ github.sha }} -- "$file" > "${file}_diff.txt"
+
+              # 使用变量传递内容给 Claude Code
+              DIFF_CONTENT=$(cat "${file}_diff.txt")
+
+              # 构建完整的审查请求
+              REVIEW_REQUEST="文件: $file"$'\n\n'"变更内容:"$'\n'"```diff"$'\n'"$DIFF_CONTENT"$'\n'"```"$'\n\n'$(cat review_prompt.txt)
+
+              # 运行 Claude Code 审查
+              echo "$REVIEW_REQUEST" | npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> push_review.md
 
               echo "" >> push_review.md
             fi
           done < changed_files.txt
+
+          # 清理临时文件
+          rm -f review_prompt.txt
 
       - name: Comment Commit with Review Results
         if: always() && steps.changed-files.outputs.changed_files != ''
