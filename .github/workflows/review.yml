@@ -23,16 +23,20 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Claude Code
-        uses: anthropics/claude-code-action@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-        env:
-          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
 
       - name: Run Code Review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
         run: |
-          claude --model opus --agent code-reviewer << 'EOF'
+          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer --output=review.md << 'EOF'
           You are a senior code reviewer ensuring high standards of code quality and security.
 
           Please review the changes in this pull request for:
@@ -61,6 +65,13 @@ jobs:
           Include specific examples of how to fix any issues found.
           EOF
 
+      - name: Upload Review Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-review-results
+          path: review.md
+
   push-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -71,6 +82,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
       - name: Get changed files
         id: changed-files
         run: |
@@ -78,17 +97,13 @@ jobs:
           git diff --name-only HEAD~1 HEAD > changed_files.txt
           echo "changed_files=$(cat changed_files.txt | tr '\n' ' ')" >> $GITHUB_OUTPUT
 
-      - name: Setup Claude Code
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-        env:
-          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
-
       - name: Run Code Review on Push
         if: steps.changed-files.outputs.changed_files != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
         run: |
-          claude --model opus --agent code-reviewer << 'EOF'
+          npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer --output=push-review.md << 'EOF'
           You are a senior code reviewer ensuring high standards of code quality and security.
 
           Changed files in this push: ${{ steps.changed-files.outputs.changed_files }}
@@ -110,6 +125,13 @@ jobs:
 
           Focus on the modified files and provide feedback organized by priority.
           EOF
+
+      - name: Upload Push Review Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: push-review-results
+          path: push-review.md
 
       - name: Create Issue for Critical Findings
         if: failure()
