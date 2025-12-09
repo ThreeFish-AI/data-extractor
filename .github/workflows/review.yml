@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
@@ -53,7 +53,7 @@ jobs:
       - name: Run PR Code Review
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
         run: |
           echo "Reviewing PR #${{ github.event.pull_request.number }}"
           echo "Changed files: ${{ steps.pr-changed-files.outputs.pr_files }}"
@@ -85,16 +85,28 @@ jobs:
               echo "" >> pr_review.md
 
               # 获取文件的变更差异
-              git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} -- "$file" > "${file}_diff.txt"
+              if ! git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} -- "$file" > "${file}_diff.txt" 2>/dev/null; then
+                echo "Failed to get diff for file: $file" >> pr_review.md
+                continue
+              fi
 
-              # 使用变量传递内容给 Claude Code
-              DIFF_CONTENT=$(cat "${file}_diff.txt")
-
-              # 构建完整的审查请求
-              REVIEW_REQUEST="文件: $file"$'\n\n'"变更内容:"$'\n'"```diff"$'\n'"$DIFF_CONTENT"$'\n'"```"$'\n\n'$(cat review_prompt.txt)
+              # 安全地构建审查请求文件
+              {
+                echo "文件: $file"
+                echo ""
+                echo "变更内容:"
+                echo '```diff'
+                cat "${file}_diff.txt"
+                echo '```'
+                echo ""
+                cat review_prompt.txt
+              } > review_request.txt
 
               # 运行 Claude Code 审查
-              echo "$REVIEW_REQUEST" | npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> pr_review.md
+              cat review_request.txt | npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> pr_review.md
+
+              # 清理临时文件
+              rm -f "${file}_diff.txt" review_request.txt
 
               echo "" >> pr_review.md
             fi
@@ -179,7 +191,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
@@ -200,7 +212,7 @@ jobs:
         if: steps.changed-files.outputs.changed_files != ''
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic"
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
         run: |
           echo "Reviewing push to ${{ github.ref }}"
           echo "Changed files: ${{ steps.changed-files.outputs.changed_files }}"
@@ -232,16 +244,28 @@ jobs:
               echo "" >> push_review.md
 
               # 获取文件的变更差异
-              git diff ${{ github.event.before }} ${{ github.sha }} -- "$file" > "${file}_diff.txt"
+              if ! git diff ${{ github.event.before }} ${{ github.sha }} -- "$file" > "${file}_diff.txt" 2>/dev/null; then
+                echo "Failed to get diff for file: $file" >> push_review.md
+                continue
+              fi
 
-              # 使用变量传递内容给 Claude Code
-              DIFF_CONTENT=$(cat "${file}_diff.txt")
-
-              # 构建完整的审查请求
-              REVIEW_REQUEST="文件: $file"$'\n\n'"变更内容:"$'\n'"```diff"$'\n'"$DIFF_CONTENT"$'\n'"```"$'\n\n'$(cat review_prompt.txt)
+              # 安全地构建审查请求文件
+              {
+                echo "文件: $file"
+                echo ""
+                echo "变更内容:"
+                echo '```diff'
+                cat "${file}_diff.txt"
+                echo '```'
+                echo ""
+                cat review_prompt.txt
+              } > review_request.txt
 
               # 运行 Claude Code 审查
-              echo "$REVIEW_REQUEST" | npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> push_review.md
+              cat review_request.txt | npx @anthropic-ai/claude-code review --model=opus --agent=code-reviewer >> push_review.md
+
+              # 清理临时文件
+              rm -f "${file}_diff.txt" review_request.txt
 
               echo "" >> push_review.md
             fi
