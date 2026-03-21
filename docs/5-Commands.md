@@ -18,7 +18,7 @@ tags:
 # 使用提供的脚本快速设置（推荐方式）
 ./scripts/setup.sh
 
-# 检查 Python 版本要求（需要 3.12+）
+# 检查 Python 版本要求（需要 3.13+）
 python --version
 
 # 验证 uv 包管理器安装状态
@@ -32,7 +32,7 @@ uv --version
 uv sync
 
 # 安装包含开发依赖的完整环境
-uv sync --extra dev
+uv sync --group dev
 
 # 创建环境配置文件
 cp .env.example .env

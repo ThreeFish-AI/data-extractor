@@ -31,7 +31,7 @@ Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupd
 
 ### 系统要求
 
-- **Python**: 3.12+
+- **Python**: 3.13+
 - **操作系统**: Windows, macOS, Linux
 - **浏览器**: Chrome/Chromium (Selenium/Playwright 功能)
 - **内存**: 建议 2GB+
@@ -54,7 +54,7 @@ cd data-extractor
 uv sync
 
 # 4. 安装包括开发依赖（可选）
-uv sync --extra dev
+uv sync --group dev
 
 # 5. 运行服务器
 uv run data-extractor

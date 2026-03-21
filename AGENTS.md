@@ -9,7 +9,7 @@
 
 ## Project Positioning (项目定位)
 
-参考 README.md
+参考 [README.md](../README.md)
 
 ## Engineering Code of Conduct (工程行为准则)
 

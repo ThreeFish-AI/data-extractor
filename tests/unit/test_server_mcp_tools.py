@@ -11,21 +11,21 @@ import extractor.server as server_module
 
 # BaseModel request classes have been removed - tools now use individual parameters with Annotated Field
 
-# 获取实际的函数，而不是 FunctionTool 包装器
-scrape_webpage = server_module.scrape_webpage.fn
-scrape_multiple_webpages = server_module.scrape_multiple_webpages.fn
-extract_links = server_module.extract_links.fn
-get_page_info = server_module.get_page_info.fn
-check_robots_txt = server_module.check_robots_txt.fn
-scrape_with_stealth = server_module.scrape_with_stealth.fn
-fill_and_submit_form = server_module.fill_and_submit_form.fn
-get_server_metrics = server_module.get_server_metrics.fn
-clear_cache = server_module.clear_cache.fn
-extract_structured_data = server_module.extract_structured_data.fn
-convert_webpage_to_markdown = server_module.convert_webpage_to_markdown.fn
-batch_convert_webpages_to_markdown = server_module.batch_convert_webpages_to_markdown.fn
-convert_pdf_to_markdown = server_module.convert_pdf_to_markdown.fn
-batch_convert_pdfs_to_markdown = server_module.batch_convert_pdfs_to_markdown.fn
+# fastmcp >=2.x @app.tool() 装饰器直接返回原函数，无需 .fn 解包
+scrape_webpage = server_module.scrape_webpage
+scrape_multiple_webpages = server_module.scrape_multiple_webpages
+extract_links = server_module.extract_links
+get_page_info = server_module.get_page_info
+check_robots_txt = server_module.check_robots_txt
+scrape_with_stealth = server_module.scrape_with_stealth
+fill_and_submit_form = server_module.fill_and_submit_form
+get_server_metrics = server_module.get_server_metrics
+clear_cache = server_module.clear_cache
+extract_structured_data = server_module.extract_structured_data
+convert_webpage_to_markdown = server_module.convert_webpage_to_markdown
+batch_convert_webpages_to_markdown = server_module.batch_convert_webpages_to_markdown
+convert_pdf_to_markdown = server_module.convert_pdf_to_markdown
+batch_convert_pdfs_to_markdown = server_module.batch_convert_pdfs_to_markdown
 
 
 class TestMCPToolsScraping:

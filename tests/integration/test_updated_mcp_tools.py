@@ -17,8 +17,8 @@ class TestUpdatedMCPToolsIntegration:
     @pytest.mark.asyncio
     async def test_all_14_mcp_tools_registered(self):
         """测试所有14个MCP工具都已注册"""
-        tools = await app.get_tools()
-        tool_names = list(tools.keys())
+        tools = await app.list_tools()
+        tool_names = [t.name for t in tools]
 
         # 当前项目中的14个MCP工具
         expected_tools = [
@@ -51,15 +51,15 @@ class TestUpdatedMCPToolsIntegration:
     @pytest.mark.asyncio
     async def test_tool_schema_completeness(self):
         """测试所有工具的schema完整性"""
-        tools = await app.get_tools()
+        tools = await app.list_tools()
 
-        for tool_name, tool in tools.items():
+        for tool in tools:
+            tool_name = tool.name
             # 验证工具基本结构
             assert hasattr(tool, "name"), f"工具 {tool_name} 缺少 name 属性"
             assert hasattr(tool, "description"), (
                 f"工具 {tool_name} 缺少 description 属性"
             )
-            assert tool.name == tool_name, f"工具名称不匹配: {tool.name} != {tool_name}"
             assert tool.description, f"工具 {tool_name} 的描述不能为空"
 
     @pytest.mark.asyncio
@@ -181,11 +181,9 @@ class TestUpdatedMCPToolsIntegration:
     @pytest.mark.asyncio
     async def test_tool_error_handling(self):
         """测试工具错误处理"""
-        from fastmcp.exceptions import NotFoundError
-
-        # 测试不存在的工具
-        with pytest.raises(NotFoundError, match="Unknown tool: nonexistent_tool"):
-            await app.get_tool("nonexistent_tool")
+        # 在新版 fastmcp 中，get_tool 对于不存在的工具返回 None
+        result = await app.get_tool("nonexistent_tool")
+        assert result is None, "不存在的工具应该返回 None"
 
     @pytest.mark.asyncio
     async def test_app_metadata(self):
@@ -400,8 +398,9 @@ class TestMCPToolsRobustnessAndReliability:
     async def test_tools_handle_invalid_parameters(self):
         """测试工具处理无效参数的能力"""
         # 所有工具都应该存在并有基本的错误处理
-        tools = await app.get_tools()
-        for tool_name, tool in tools.items():
+        tools = await app.list_tools()
+        for tool in tools:
+            tool_name = tool.name
             assert tool is not None, f"工具 {tool_name} 不应该为 None"
             assert hasattr(tool, "name"), f"工具 {tool_name} 应该有 name 属性"
 
@@ -447,7 +446,7 @@ class TestMCPToolsPerformanceAndScalability:
         import time
 
         start_time = time.time()
-        tools = await app.get_tools()
+        tools = await app.list_tools()
         end_time = time.time()
 
         registration_time = end_time - start_time

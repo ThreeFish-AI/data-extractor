@@ -164,7 +164,7 @@ class TestComprehensiveIntegration:
     ):
         """Test the complete markdown conversion pipeline from scraping to formatting."""
         # Get the convert_webpage_to_markdown tool
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Mock the web scraping
@@ -235,7 +235,7 @@ class TestComprehensiveIntegration:
     @pytest.mark.asyncio
     async def test_batch_conversion_with_mixed_results(self):
         """Test batch conversion with a mix of successful and failed results."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         batch_tool = tools["batch_convert_webpages_to_markdown"]
 
         # Create mixed results - some success, some failures
@@ -282,7 +282,7 @@ class TestComprehensiveIntegration:
     @pytest.mark.asyncio
     async def test_error_resilience_and_recovery(self):
         """Test system resilience when various components fail."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test with invalid URL that should cause an error
@@ -314,7 +314,7 @@ class TestComprehensiveIntegration:
     @pytest.mark.asyncio
     async def test_performance_under_load(self):
         """Test system performance under simulated load."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         batch_tool = tools["batch_convert_webpages_to_markdown"]
 
         # Create a large number of mock results
@@ -362,7 +362,7 @@ class TestComprehensiveIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_requests_handling(self):
         """Test handling of multiple concurrent requests."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         convert_tool = tools["convert_webpage_to_markdown"]
 
         mock_result = {
@@ -404,7 +404,7 @@ class TestComprehensiveIntegration:
     @pytest.mark.asyncio
     async def test_data_integrity_throughout_pipeline(self):
         """Test that data integrity is maintained throughout the processing pipeline."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test with content that could be corrupted during processing
@@ -467,7 +467,7 @@ class TestComprehensiveIntegration:
     @pytest.mark.asyncio
     async def test_edge_cases_and_boundary_conditions(self):
         """Test various edge cases and boundary conditions."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test edge cases
@@ -538,7 +538,7 @@ class TestComprehensiveIntegration:
     @pytest.mark.asyncio
     async def test_configuration_flexibility(self):
         """Test that various configuration combinations work correctly."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         convert_tool = tools["convert_webpage_to_markdown"]
 
         sample_result = {
@@ -604,7 +604,7 @@ class TestSystemHealthAndMonitoring:
     @pytest.mark.asyncio
     async def test_metrics_collection_integration(self):
         """Test that metrics are collected properly during operations."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         metrics_tool = tools["get_server_metrics"]
         convert_tool = tools["convert_webpage_to_markdown"]
 
@@ -645,7 +645,7 @@ class TestSystemHealthAndMonitoring:
     @pytest.mark.asyncio
     async def test_cache_integration(self):
         """Test cache functionality integration."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         clear_cache_tool = tools["clear_cache"]
 
         # Clear cache
@@ -657,7 +657,7 @@ class TestSystemHealthAndMonitoring:
     @pytest.mark.asyncio
     async def test_error_logging_and_handling(self):
         """Test that errors are properly logged and handled."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Simulate various error conditions

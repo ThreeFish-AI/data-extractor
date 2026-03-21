@@ -495,7 +495,7 @@ class TestPerformanceAndLoadIntegration:
         initial_memory = process.memory_info().rss
 
         # 执行一系列操作
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
 
         # 访问所有工具
         for tool_name in tools.keys():
@@ -538,7 +538,7 @@ class TestErrorHandlingAndResilience:
     async def test_invalid_input_handling(self):
         """测试无效输入处理"""
         # 所有工具都应该存在并能处理基本的验证
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
 
         critical_tools = [
             "scrape_webpage",
@@ -574,7 +574,7 @@ class TestErrorHandlingAndResilience:
         assert settings.browser_timeout > 0
 
         # 验证工具能够使用这些配置
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         assert len(tools) == 14
 
 
@@ -603,7 +603,7 @@ class TestSecurityAndCompliance:
             # Get the check_robots_txt tool from the FastMCP app
             from extractor.server import check_robots_txt
 
-            result = await check_robots_txt.fn(url="https://example.com")
+            result = await check_robots_txt(url="https://example.com")
 
             assert result.success is True
             assert "robots.txt" in result.robots_txt_url
@@ -628,7 +628,7 @@ class TestSecurityAndCompliance:
     async def test_data_privacy_compliance(self):
         """测试数据隐私合规"""
         # 验证工具不会意外存储敏感信息
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
 
         # 所有工具都应该正确注册且可访问
         for tool_name, tool in tools.items():
@@ -650,7 +650,7 @@ class TestBackwardCompatibilityAndUpgrade:
             "convert_pdf_to_markdown",
         ]
 
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
 
         for tool_name in expected_core_tools:
             assert tool_name in tools, f"核心工具 {tool_name} 缺失，可能破坏向后兼容性"
@@ -671,7 +671,7 @@ class TestBackwardCompatibilityAndUpgrade:
     @pytest.mark.asyncio
     async def test_tool_interface_stability(self):
         """测试工具接口稳定性"""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
 
         # 验证所有工具都有稳定的接口
         for tool_name, tool in tools.items():

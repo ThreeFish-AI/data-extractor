@@ -32,11 +32,10 @@ def build_chrome_options(
     options.add_argument("--window-size=1920,1080")
 
     if stealth:
-        # 反检测专用选项
+        # 反检测专用选项（模拟真实用户浏览器指纹）
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-plugins")
         options.add_argument("--disable-images")
-        options.add_argument("--disable-javascript")
         options.add_argument("--start-maximized")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)

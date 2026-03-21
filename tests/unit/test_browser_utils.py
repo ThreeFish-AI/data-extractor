@@ -1,7 +1,6 @@
 """浏览器配置工具 (browser_utils) 单元测试。"""
 
 import pytest
-from unittest.mock import patch
 
 from extractor.browser_utils import build_chrome_options
 
@@ -38,7 +37,7 @@ class TestBuildChromeOptions:
         assert "--disable-extensions" in args
         assert "--disable-plugins" in args
         assert "--disable-images" in args
-        assert "--disable-javascript" in args
+        assert "--disable-javascript" not in args  # 禁用 JS 与反检测语义矛盾
         assert "--start-maximized" in args
         assert "--disable-blink-features=AutomationControlled" in args
 
