@@ -147,7 +147,7 @@ class TestSeleniumStealth:
         except Exception:
             pass
 
-    @patch("extractor.advanced_features.uc.Chrome")
+    @patch("extractor.anti_detection.uc.Chrome")
     @patch("selenium.webdriver.support.ui.WebDriverWait")
     @patch.object(AntiDetectionScraper, "_scroll_page_selenium")
     @patch.object(AntiDetectionScraper, "_simulate_human_behavior_selenium")
@@ -203,7 +203,7 @@ class TestSeleniumStealth:
         # scroll_page=False，所以不应该调用滚动
         mock_scroll.assert_not_called()
 
-    @patch("extractor.advanced_features.uc.Chrome")
+    @patch("extractor.anti_detection.uc.Chrome")
     @patch("selenium.webdriver.support.ui.WebDriverWait")
     @patch.object(AntiDetectionScraper, "_scroll_page_selenium")
     @patch("asyncio.sleep")
@@ -231,9 +231,9 @@ class TestSeleniumStealth:
 
             mock_scroll.assert_called_once()
 
-    @patch("extractor.advanced_features.uc.Chrome")
-    @patch("extractor.advanced_features.WebDriverWait")
-    @patch("extractor.advanced_features.EC.presence_of_element_located")
+    @patch("extractor.anti_detection.uc.Chrome")
+    @patch("extractor.anti_detection.WebDriverWait")
+    @patch("extractor.anti_detection.EC.presence_of_element_located")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_selenium_wait_for_element(
@@ -260,8 +260,8 @@ class TestSeleniumStealth:
 
             mock_wait_instance.until.assert_called_once()
 
-    @patch("extractor.advanced_features.random.randint")
-    @patch("extractor.advanced_features.random.uniform")
+    @patch("extractor.anti_detection.random.randint")
+    @patch("extractor.anti_detection.random.uniform")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_selenium_page_scrolling(
@@ -291,9 +291,9 @@ class TestSeleniumStealth:
         assert mock_driver.execute_script.call_count >= 2
         mock_sleep.assert_called()
 
-    @patch("extractor.advanced_features.ActionChains")
-    @patch("extractor.advanced_features.random.randint")
-    @patch("extractor.advanced_features.random.uniform")
+    @patch("extractor.anti_detection.ActionChains")
+    @patch("extractor.anti_detection.random.randint")
+    @patch("extractor.anti_detection.random.uniform")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_selenium_human_behavior_simulation(
@@ -407,8 +407,8 @@ class TestPlaywrightStealth:
         assert "scrollBy" in js_code
         assert "Promise" in js_code
 
-    @patch("extractor.advanced_features.random.randint")
-    @patch("extractor.advanced_features.random.uniform")
+    @patch("extractor.anti_detection.random.randint")
+    @patch("extractor.anti_detection.random.uniform")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_playwright_human_behavior_simulation(
@@ -720,7 +720,7 @@ class TestFormHandler:
 class TestSeleniumFormHandling:
     """测试Selenium表单处理"""
 
-    @patch("extractor.advanced_features.Select")
+    @patch("extractor.form_handler.Select")
     @pytest.mark.asyncio
     async def test_selenium_fill_select_field(self, mock_select):
         """测试Selenium填充选择框"""

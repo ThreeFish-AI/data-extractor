@@ -11,13 +11,13 @@ from scrapy.http import Response
 from bs4 import BeautifulSoup
 import requests
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from fake_useragent import UserAgent
 
+from .browser_utils import build_chrome_options
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -173,24 +173,11 @@ class SeleniumScraper:
 
     def _get_driver(self) -> webdriver.Chrome:
         """Get configured Chrome driver."""
-        options = ChromeOptions()
-
-        if settings.browser_headless:
-            options.add_argument("--headless")
-
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
-
-        if settings.use_random_user_agent and self.ua:
-            options.add_argument(f"--user-agent={self.ua.random}")
-        else:
-            options.add_argument(f"--user-agent={settings.default_user_agent}")
-
-        if settings.use_proxy and settings.proxy_url:
-            options.add_argument(f"--proxy-server={settings.proxy_url}")
-
+        user_agent = self.ua.random if (settings.use_random_user_agent and self.ua) else None
+        options = build_chrome_options(
+            headless=settings.browser_headless,
+            user_agent=user_agent,
+        )
         return webdriver.Chrome(options=options)
 
     async def scrape(
