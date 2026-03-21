@@ -69,7 +69,7 @@ class TestRemovedDependencies:
         [
             ("httpx", "项目使用 requests + aiohttp，httpx 未被使用"),
             ("lxml", "BeautifulSoup 全部使用 html.parser"),
-            ("dotenv", "pydantic-settings 原生支持 .env 加载"),
+            ("dotenv", "python-dotenv 为 pydantic-settings 的传递依赖，无需显式声明"),
         ],
     )
     def test_removed_package_not_imported(
