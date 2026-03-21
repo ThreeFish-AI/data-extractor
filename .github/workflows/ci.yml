@@ -5,57 +5,40 @@ on:
     branches: [master, main, develop]
   pull_request:
     branches: [master, main, develop]
+  workflow_call:
   workflow_dispatch:
 
 jobs:
-  cross-platform-tests:
-    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+  test:
+    name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.13"]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup Python with uv
+        uses: ./.github/actions/setup-python-uv
         with:
-          version: "latest"
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --group dev
+          enable-cache: "true"
 
       - name: Run tests
         run: uv run pytest -v --tb=short
         env:
-          # Disable browser tests in CI to avoid complexity
           DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
 
-  code-quality-checks:
-    name: Lint and Format Check
+  lint:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Install dependencies
-        run: uv sync --group dev
+      - name: Setup Python with uv
+        uses: ./.github/actions/setup-python-uv
 
       - name: Run ruff linting
         run: uv run ruff check extractor/
@@ -66,56 +49,46 @@ jobs:
       - name: Run mypy type checking
         run: uv run mypy extractor/
 
-  security-scan:
-    name: Security Scan
+  security:
+    name: Security Audit
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Install bandit
-        run: uv add --dev bandit[toml]
+      - name: Setup Python with uv
+        uses: ./.github/actions/setup-python-uv
 
       - name: Run bandit security scan
         run: |
           uv run bandit -r extractor/ -f json -o bandit-report.json || true
           uv run bandit -r extractor/
 
-      - name: Upload security scan results
+      - name: Run pip-audit vulnerability scan
+        run: |
+          uv run pip-audit --format=json --output=audit-report.json || true
+          uv run pip-audit
+
+      - name: Upload security reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: bandit-report
-          path: bandit-report.json
+          name: security-reports
+          path: |
+            bandit-report.json
+            audit-report.json
 
-  package-build-validation:
-    name: Build Package Test
+  build:
+    name: Build Package
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup Python with uv
+        uses: ./.github/actions/setup-python-uv
         with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Install dependencies
-        run: uv sync
+          install-dev: "false"
 
       - name: Build package
         run: uv build
@@ -132,27 +105,18 @@ jobs:
           path: dist/
           retention-days: 7
 
-  test-coverage-report:
+  coverage:
     name: Coverage Report
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Install dependencies
-        run: uv sync --group dev
+      - name: Setup Python with uv
+        uses: ./.github/actions/setup-python-uv
 
       - name: Run tests with coverage
-        run: |
-          uv run pytest --cov=extractor --cov-report=xml --cov-report=html --cov-report=term
+        run: uv run pytest --cov=extractor --cov-report=xml --cov-report=html --cov-report=term
         env:
           DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
 
