@@ -23,7 +23,7 @@ class TestCrossToolIntegration:
     @pytest_asyncio.fixture
     async def all_tools(self, pdf_processor):
         """Get all MCP tools from the app."""
-        return await app.get_tools()
+        return {t.name: t for t in await app.list_tools()}
 
     @pytest.mark.asyncio
     async def test_webpage_to_pdf_to_markdown_workflow(self, all_tools, pdf_processor):
@@ -588,7 +588,7 @@ class TestRealWorldIntegrationScenarios:
     @pytest_asyncio.fixture
     async def scenario_tools(self):
         """Get tools commonly used together in real scenarios."""
-        tools = await app.get_tools()
+        tools = {t.name: t for t in await app.list_tools()}
         return {
             "scrape_webpage": tools["scrape_webpage"],
             "scrape_multiple_webpages": tools["scrape_multiple_webpages"],

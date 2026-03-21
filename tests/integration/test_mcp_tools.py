@@ -81,8 +81,8 @@ class TestMCPToolsIntegration:
     @pytest.mark.asyncio
     async def test_all_tools_registered(self):
         """Test that all expected MCP tools are registered."""
-        tools = await app.get_tools()
-        tool_names = list(tools.keys())
+        tools = await app.list_tools()
+        tool_names = [t.name for t in tools]
 
         expected_tools = [
             "scrape_webpage",
@@ -125,7 +125,7 @@ class TestMCPToolsIntegration:
     @pytest.mark.asyncio
     async def test_fastmcp_app_properties(self):
         """Test FastMCP app has expected properties."""
-        assert hasattr(app, "get_tools")
+        assert hasattr(app, "list_tools")
         assert hasattr(app, "get_tool")
         assert hasattr(app, "name")
         assert hasattr(app, "version")
@@ -135,20 +135,19 @@ class TestMCPToolsIntegration:
         assert app.version is not None
 
         # Test tools list is not empty
-        tools = await app.get_tools()
+        tools = await app.list_tools()
         assert len(tools) > 0
 
     @pytest.mark.asyncio
     async def test_tool_registration_completeness(self):
         """Test that all tools are properly registered with correct structure."""
-        tools = await app.get_tools()
+        tools = await app.list_tools()
 
-        for tool_name, tool in tools.items():
+        for tool in tools:
             # Each tool should have basic properties
             assert hasattr(tool, "name")
             assert hasattr(tool, "description")
             assert tool.name is not None
-            assert tool.name == tool_name
             # Description should exist and be meaningful if present
             if tool.description:
                 assert len(tool.description) > 0
@@ -217,20 +216,22 @@ class TestMarkdownConversionIntegration:
     @pytest.mark.asyncio
     async def test_markdown_tools_registration(self):
         """Test that the new Markdown conversion tools are properly registered."""
-        tools = await app.get_tools()
+        tools = await app.list_tools()
+        tool_names = [t.name for t in tools]
+        tools_by_name = {t.name: t for t in tools}
 
         # Test that the new Markdown conversion tools are registered
-        assert "convert_webpage_to_markdown" in tools
-        assert "batch_convert_webpages_to_markdown" in tools
+        assert "convert_webpage_to_markdown" in tool_names
+        assert "batch_convert_webpages_to_markdown" in tool_names
 
         # Test convert_webpage_to_markdown tool properties
-        convert_tool = tools["convert_webpage_to_markdown"]
+        convert_tool = tools_by_name["convert_webpage_to_markdown"]
         assert convert_tool.name == "convert_webpage_to_markdown"
         assert "Markdown" in convert_tool.description
         assert "webpage" in convert_tool.description.lower()
 
         # Test batch_convert_webpages_to_markdown tool properties
-        batch_tool = tools["batch_convert_webpages_to_markdown"]
+        batch_tool = tools_by_name["batch_convert_webpages_to_markdown"]
         assert batch_tool.name == "batch_convert_webpages_to_markdown"
         assert "batch" in batch_tool.description.lower()
         assert "Markdown" in batch_tool.description
@@ -238,14 +239,14 @@ class TestMarkdownConversionIntegration:
     @pytest.mark.asyncio
     async def test_markdown_tools_parameters(self):
         """Test that the new tools have correct parameter schemas."""
-        tools = await app.get_tools()
+        tools_by_name = {t.name: t for t in await app.list_tools()}
 
         # Test convert_webpage_to_markdown parameters
-        convert_tool = tools["convert_webpage_to_markdown"]
+        convert_tool = tools_by_name["convert_webpage_to_markdown"]
         assert hasattr(convert_tool, "schema")
 
         # Test batch_convert_webpages_to_markdown parameters
-        batch_tool = tools["batch_convert_webpages_to_markdown"]
+        batch_tool = tools_by_name["batch_convert_webpages_to_markdown"]
         assert hasattr(batch_tool, "schema")
 
 
@@ -255,17 +256,17 @@ class TestMarkdownConversionToolIntegration:
     @pytest.mark.asyncio
     async def test_markdown_conversion_tools_structure(self):
         """Test that Markdown conversion tools have proper structure and can be accessed."""
-        tools = await app.get_tools()
+        tools_by_name = {t.name: t for t in await app.list_tools()}
 
         # Test convert_webpage_to_markdown tool
-        convert_tool = tools["convert_webpage_to_markdown"]
+        convert_tool = tools_by_name["convert_webpage_to_markdown"]
         assert convert_tool is not None
         assert hasattr(convert_tool, "fn") or callable(convert_tool)
         if convert_tool.description:
             assert "Markdown" in convert_tool.description
 
         # Test batch_convert_webpages_to_markdown tool
-        batch_tool = tools["batch_convert_webpages_to_markdown"]
+        batch_tool = tools_by_name["batch_convert_webpages_to_markdown"]
         assert batch_tool is not None
         assert hasattr(batch_tool, "fn") or callable(batch_tool)
         if batch_tool.description:
@@ -274,9 +275,9 @@ class TestMarkdownConversionToolIntegration:
     @pytest.mark.asyncio
     async def test_markdown_tools_parameters_embed_images(self):
         """Ensure new embed_images parameters are exposed."""
-        tools = await app.get_tools()
-        convert_tool = tools["convert_webpage_to_markdown"]
-        batch_tool = tools["batch_convert_webpages_to_markdown"]
+        tools_by_name = {t.name: t for t in await app.list_tools()}
+        convert_tool = tools_by_name["convert_webpage_to_markdown"]
+        batch_tool = tools_by_name["batch_convert_webpages_to_markdown"]
 
         # Tool should accept embed_images and embed_options in parameters
         if hasattr(convert_tool, "parameters"):
@@ -398,27 +399,25 @@ class TestSystemHealthAndDiagnostics:
         assert isinstance(anti_detection_scraper, AntiDetectionScraper)
 
         # Test that all expected tools are available
-        tools = await app.get_tools()
+        tools = await app.list_tools()
         expected_tool_count = 14  # Current total including PDF tools
         assert len(tools) == expected_tool_count
 
         # Test that app has proper structure
-        assert hasattr(app, "get_tools")
+        assert hasattr(app, "list_tools")
         assert hasattr(app, "get_tool")
         assert app.name is not None
 
     @pytest.mark.asyncio
     async def test_tool_parameter_schemas_completeness(self):
         """Test that all tools have complete parameter schemas."""
-        tools = await app.get_tools()
+        tools = await app.list_tools()
 
-        for tool_name, tool in tools.items():
+        for tool in tools:
             # Each tool should have proper structure
             assert hasattr(tool, "name")
             assert hasattr(tool, "description")
 
-            # Basic validation of tool properties
-            assert tool.name == tool_name
             # Description should be meaningful if present
             if tool.description:
                 assert len(tool.description) > 10
@@ -486,28 +485,28 @@ class TestSystemHealthAndDiagnostics:
     @pytest.mark.asyncio
     async def test_pdf_conversion_tools_registration(self):
         """Test that PDF conversion tools are properly registered."""
-        pdf_tools = await app.get_tools()
+        tools_by_name = {t.name: t for t in await app.list_tools()}
 
-        assert "convert_pdf_to_markdown" in pdf_tools
-        assert "batch_convert_pdfs_to_markdown" in pdf_tools
+        assert "convert_pdf_to_markdown" in tools_by_name
+        assert "batch_convert_pdfs_to_markdown" in tools_by_name
 
         # Check tool signatures
-        pdf_tool = pdf_tools["convert_pdf_to_markdown"]
+        pdf_tool = tools_by_name["convert_pdf_to_markdown"]
         assert pdf_tool.name == "convert_pdf_to_markdown"
 
-        batch_pdf_tool = pdf_tools["batch_convert_pdfs_to_markdown"]
+        batch_pdf_tool = tools_by_name["batch_convert_pdfs_to_markdown"]
         assert batch_pdf_tool.name == "batch_convert_pdfs_to_markdown"
 
     @pytest.mark.asyncio
     async def test_pdf_tool_parameter_validation(self):
         """Test PDF tool parameter validation."""
         # Test that PDF tools are accessible through app
-        tools = await app.get_tools()
-        assert "convert_pdf_to_markdown" in tools
+        tools_by_name = {t.name: t for t in await app.list_tools()}
+        assert "convert_pdf_to_markdown" in tools_by_name
 
         # We can't easily test parameter validation through FastMCP interface
         # without complex mocking, so we just verify tool registration
-        pdf_tool = tools["convert_pdf_to_markdown"]
+        pdf_tool = tools_by_name["convert_pdf_to_markdown"]
         assert pdf_tool.name == "convert_pdf_to_markdown"
         assert "PDF" in pdf_tool.description or "pdf" in pdf_tool.description
 
@@ -515,10 +514,10 @@ class TestSystemHealthAndDiagnostics:
     async def test_batch_pdf_tool_parameter_validation(self):
         """Test batch PDF tool parameter validation."""
         # Test batch PDF tool registration
-        tools = await app.get_tools()
-        assert "batch_convert_pdfs_to_markdown" in tools
+        tools_by_name = {t.name: t for t in await app.list_tools()}
+        assert "batch_convert_pdfs_to_markdown" in tools_by_name
 
-        batch_pdf_tool = tools["batch_convert_pdfs_to_markdown"]
+        batch_pdf_tool = tools_by_name["batch_convert_pdfs_to_markdown"]
         assert batch_pdf_tool.name == "batch_convert_pdfs_to_markdown"
         assert (
             "batch" in batch_pdf_tool.description.lower()
@@ -529,16 +528,16 @@ class TestSystemHealthAndDiagnostics:
     async def test_pdf_tools_error_handling(self):
         """Test PDF tools error handling for nonexistent files."""
         # Verify tools exist and have proper structure
-        tools = await app.get_tools()
+        tools_by_name = {t.name: t for t in await app.list_tools()}
 
-        assert "convert_pdf_to_markdown" in tools
-        assert "batch_convert_pdfs_to_markdown" in tools
+        assert "convert_pdf_to_markdown" in tools_by_name
+        assert "batch_convert_pdfs_to_markdown" in tools_by_name
 
         # This would require complex mocking to test actual error handling
         # For now, just verify the tools are properly registered
-        assert tools["convert_pdf_to_markdown"].name == "convert_pdf_to_markdown"
+        assert tools_by_name["convert_pdf_to_markdown"].name == "convert_pdf_to_markdown"
         assert (
-            tools["batch_convert_pdfs_to_markdown"].name
+            tools_by_name["batch_convert_pdfs_to_markdown"].name
             == "batch_convert_pdfs_to_markdown"
         )
 
@@ -546,9 +545,9 @@ class TestSystemHealthAndDiagnostics:
     async def test_pdf_tool_integration_with_mocks(self):
         """Test PDF tools with mocked PDF processing."""
         # Test that PDF tools can be accessed through app interface
-        tools = await app.get_tools()
+        tools_by_name = {t.name: t for t in await app.list_tools()}
 
-        pdf_tool = tools["convert_pdf_to_markdown"]
+        pdf_tool = tools_by_name["convert_pdf_to_markdown"]
         assert pdf_tool is not None
         assert hasattr(pdf_tool, "description")
         assert hasattr(pdf_tool, "parameters")

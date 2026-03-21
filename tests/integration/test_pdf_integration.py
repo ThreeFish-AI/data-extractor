@@ -34,7 +34,7 @@ def pdf_processor():
 @pytest_asyncio.fixture
 async def pdf_test_tools():
     """Get PDF processing tools from the app."""
-    tools = await app.get_tools()
+    tools = {t.name: t for t in await app.list_tools()}
     return {
         "convert": tools["convert_pdf_to_markdown"],
         "batch": tools["batch_convert_pdfs_to_markdown"],

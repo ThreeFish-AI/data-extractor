@@ -24,7 +24,7 @@ class TestEndToEndRealWorldScenarios:
     @pytest_asyncio.fixture
     async def e2e_tools(self):
         """Get all tools for end-to-end testing."""
-        return await app.get_tools()
+        return {t.name: t for t in await app.list_tools()}
 
     @pytest.mark.asyncio
     async def test_complete_document_processing_pipeline(
