@@ -446,7 +446,7 @@ Editorial office: +1-555-0123
         batch_pdf_tool = e2e_tools["batch_convert_pdfs_to_markdown"]
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
             # Simulate realistic batch processing
@@ -717,7 +717,7 @@ Editorial office: +1-555-0123
             }
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor,
                 "batch_process_pdfs",
@@ -905,7 +905,7 @@ Editorial office: +1-555-0123
             return large_pdf_content
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_large_pdf_process
             ),
@@ -949,7 +949,7 @@ Editorial office: +1-555-0123
             }
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_concurrent_pdf_process
             ),
@@ -1023,7 +1023,7 @@ Editorial office: +1-555-0123
             }
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor,
                 "batch_process_pdfs",
@@ -1283,7 +1283,7 @@ Editorial office: +1-555-0123
             return large_consistent_doc
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_consistent_pdf_process
             ),
@@ -1350,7 +1350,7 @@ Editorial office: +1-555-0123
             }
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor,
                 "batch_process_pdfs",
@@ -1405,7 +1405,7 @@ Editorial office: +1-555-0123
             }
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_concurrent_with_markers
             ),

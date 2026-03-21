@@ -168,7 +168,7 @@ class TestComprehensiveIntegration:
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Mock the web scraping
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(
                 return_value=mock_successful_scrape_result
             )
@@ -253,7 +253,7 @@ class TestComprehensiveIntegration:
             },
         ]
 
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mixed_results)
 
             urls = ["https://site1.com", "https://site2.com", "https://site3.com"]
@@ -286,7 +286,7 @@ class TestComprehensiveIntegration:
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test with invalid URL that should cause an error
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             # Mock a scraping failure
             mock_scraper.scrape_url = AsyncMock(
                 side_effect=Exception("Network timeout error")
@@ -331,7 +331,7 @@ class TestComprehensiveIntegration:
                 }
             )
 
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mock_results)
 
             start_time = time.time()
@@ -371,7 +371,7 @@ class TestComprehensiveIntegration:
             "content": {"html": "<html><body><h1>Concurrent</h1></body></html>"},
         }
 
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             # Create multiple concurrent requests
@@ -430,7 +430,7 @@ class TestComprehensiveIntegration:
             "content": {"html": tricky_html},
         }
 
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=tricky_result)
 
             # Prepare request parameters
@@ -510,7 +510,7 @@ class TestComprehensiveIntegration:
                 "content": {"html": edge_case["html"]},
             }
 
-            with patch("extractor.server.web_scraper") as mock_scraper:
+            with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
                 mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
                 result = await convert_tool.fn(
@@ -577,7 +577,7 @@ class TestComprehensiveIntegration:
             },
         ]
 
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=sample_result)
 
             for config in config_combinations:
@@ -615,7 +615,7 @@ class TestSystemHealthAndMonitoring:
             "content": {"html": "<html><body><h1>Test</h1></body></html>"},
         }
 
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             # Perform several operations
@@ -661,7 +661,7 @@ class TestSystemHealthAndMonitoring:
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Simulate various error conditions
-        with patch("extractor.server.web_scraper") as mock_scraper:
+        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
             # Network error simulation
             mock_scraper.scrape_url = AsyncMock(side_effect=Exception("Network error"))
 

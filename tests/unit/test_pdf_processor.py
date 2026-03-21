@@ -175,7 +175,7 @@ class TestPyMuPDFExtraction:
         self.processor.cleanup()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf_processor._import_fitz")
+    @patch("extractor.pdf.processor._import_fitz")
     async def test_pymupdf_extraction_success(self, mock_import_fitz):
         """测试PyMuPDF提取成功"""
         # 模拟fitz模块
@@ -224,7 +224,7 @@ class TestPyMuPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf_processor._import_fitz")
+    @patch("extractor.pdf.processor._import_fitz")
     async def test_pymupdf_with_page_range(self, mock_import_fitz):
         """测试PyMuPDF页面范围提取"""
         # 模拟fitz模块
@@ -272,7 +272,7 @@ class TestPyMuPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf_processor._import_fitz")
+    @patch("extractor.pdf.processor._import_fitz")
     async def test_pymupdf_extraction_error(self, mock_import_fitz):
         """测试PyMuPDF提取错误"""
         # 模拟导入错误
@@ -304,7 +304,7 @@ class TestPyPDFExtraction:
         self.processor.cleanup()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf_processor._import_pypdf")
+    @patch("extractor.pdf.processor._import_pypdf")
     @patch("builtins.open", create=True)
     async def test_pypdf_extraction_success(self, mock_open, mock_import_pypdf):
         """测试pypdf提取成功"""
@@ -352,7 +352,7 @@ class TestPyPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf_processor._import_pypdf")
+    @patch("extractor.pdf.processor._import_pypdf")
     @patch("builtins.open", create=True)
     async def test_pypdf_with_page_range(self, mock_open, mock_import_pypdf):
         """测试pypdf页面范围提取"""
@@ -395,7 +395,7 @@ class TestPyPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf_processor._import_pypdf")
+    @patch("extractor.pdf.processor._import_pypdf")
     async def test_pypdf_extraction_error(self, mock_import_pypdf):
         """测试pypdf提取错误"""
         mock_import_pypdf.side_effect = ImportError("pypdf not available")

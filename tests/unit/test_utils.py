@@ -334,7 +334,7 @@ class TestErrorHandler:
         """Test error handling and logging."""
         error = Exception("Test error")
 
-        with patch("extractor.utils.logger") as mock_logger:
+        with patch("extractor.error_handler.logger") as mock_logger:
             result = ErrorHandler.handle_scraping_error(
                 error, "https://example.com", "simple"
             )
