@@ -84,7 +84,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_scrape.return_value = webpage_result
@@ -210,7 +210,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_multiple_urls") as mock_batch_scrape,
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
             mock_batch_scrape.return_value = batch_scrape_results
@@ -297,7 +297,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_scrape.return_value = scrape_result
@@ -366,7 +366,7 @@ class TestCrossToolIntegration:
 
         # Mock a failed PDF processing
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_pdf.return_value = {
@@ -433,7 +433,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
@@ -515,7 +515,7 @@ class TestCrossToolIntegration:
 
         with (
             patch.object(web_scraper, "scrape_url") as mock_scrape,
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_scrape.return_value = scrape_result
@@ -678,7 +678,7 @@ class TestRealWorldIntegrationScenarios:
         }
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
             mock_batch_pdf.return_value = batch_result
@@ -826,7 +826,7 @@ class TestRealWorldIntegrationScenarios:
         pdf_tool = scenario_tools["convert_pdf_to_markdown"]
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_pdf,
         ):
             mock_pdf.return_value = {
@@ -943,7 +943,7 @@ class TestRealWorldIntegrationScenarios:
         }
 
         with (
-            patch("extractor.server._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
             mock_batch_pdf.return_value = whitepaper_results

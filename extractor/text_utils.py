@@ -1,0 +1,54 @@
+"""Text cleaning and extraction utilities."""
+
+import re
+from typing import List
+
+
+class TextCleaner:
+    """Clean and process extracted text."""
+
+    @staticmethod
+    def clean_text(text: str) -> str:
+        """Clean extracted text."""
+        if not text:
+            return ""
+
+        # Remove extra whitespace
+        text = re.sub(r"\s+", " ", text)
+        # Remove control characters
+        text = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", text)
+        # Strip leading/trailing whitespace
+        text = text.strip()
+
+        return text
+
+    @staticmethod
+    def extract_emails(text: str) -> List[str]:
+        """Extract email addresses from text."""
+        email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
+        return re.findall(email_pattern, text)
+
+    @staticmethod
+    def extract_phone_numbers(text: str) -> List[str]:
+        """Extract phone numbers from text."""
+        # Basic phone number patterns
+        phone_patterns = [
+            r"\b\d{3}-\d{3}-\d{4}\b",  # 123-456-7890
+            r"\b\(\d{3}\)\s*\d{3}-\d{4}\b",  # (123) 456-7890
+            r"\b\d{3}\.\d{3}\.\d{4}\b",  # 123.456.7890
+            r"\b\d{10}\b",  # 1234567890
+        ]
+
+        phone_numbers = []
+        for pattern in phone_patterns:
+            phone_numbers.extend(re.findall(pattern, text))
+
+        return phone_numbers
+
+    @staticmethod
+    def truncate_text(text: str, max_length: int = 1000) -> str:
+        """Truncate text to maximum length."""
+        if len(text) <= max_length:
+            return text
+
+        return text[:max_length] + "..."

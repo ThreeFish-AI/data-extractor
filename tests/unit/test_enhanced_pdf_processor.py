@@ -45,7 +45,7 @@ class TestEnhancedPDFProcessor:
         assert asset_id.startswith("img_1_0_")
         assert len(asset_id) > 10  # Should include timestamp
 
-    @patch("extractor.enhanced_pdf_processor.fitz")
+    @patch("extractor.pdf.enhanced.fitz")
     @pytest.mark.asyncio
     async def test_extract_images_from_pdf_page(self, mock_fitz, processor):
         """Test image extraction from PDF page."""
@@ -311,7 +311,7 @@ class TestEnhancedPDFProcessor:
 
     def test_error_handling_in_image_extraction(self, processor):
         """Test error handling during image extraction."""
-        with patch("extractor.enhanced_pdf_processor.fitz") as mock_fitz:
+        with patch("extractor.pdf.enhanced.fitz") as mock_fitz:
             # Mock fitz to raise an exception
             mock_fitz.open.side_effect = Exception("PDF error")
 
