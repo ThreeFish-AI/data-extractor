@@ -32,7 +32,7 @@ uv --version
 uv sync
 
 # 安装包含开发依赖的完整环境
-uv sync --extra dev
+uv sync --group dev
 
 # 创建环境配置文件
 cp .env.example .env

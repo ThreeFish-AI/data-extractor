@@ -306,7 +306,7 @@ exclude_lines = [
 
 ```bash
 # 安装开发依赖
-uv sync --extra dev
+uv sync --group dev
 
 # 设置测试环境变量
 export DATA_EXTRACTOR_ENABLE_JAVASCRIPT=false
@@ -654,7 +654,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --group dev
 
       - name: Run tests
         run: uv run pytest -v --tb=short --cov=extractor
@@ -690,7 +690,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup Environment
         run: |
-          uv sync --extra dev
+          uv sync --group dev
           echo "DATA_EXTRACTOR_ENABLE_JAVASCRIPT=false" >> $GITHUB_ENV
 
       - name: Run ${{ matrix.test-type }} tests

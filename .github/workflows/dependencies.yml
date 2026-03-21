@@ -44,7 +44,7 @@ jobs:
       - name: Test with updated dependencies
         if: env.has_updates == 'true'
         run: |
-          uv sync --extra dev
+          uv sync --group dev
           uv run pytest -x --tb=short
         env:
           DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
@@ -122,7 +122,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --group dev
 
       - name: Run security audit
         run: |

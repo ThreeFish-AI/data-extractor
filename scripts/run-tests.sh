@@ -41,7 +41,7 @@ check_dependencies() {
     fi
     
     # 安装开发依赖
-    uv sync --extra dev --quiet
+    uv sync --group dev --quiet
     print_status "依赖检查完成"
 }
 

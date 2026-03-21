@@ -49,7 +49,7 @@ cd data-extractor
 uv sync
 
 # 安装开发依赖
-uv sync --extra dev
+uv sync --group dev
 
 # 设置环境变量
 cp .env.example .env

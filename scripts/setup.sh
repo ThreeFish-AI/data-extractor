@@ -32,7 +32,7 @@ echo "📦 Installing dependencies..."
 uv sync
 
 echo "🔧 Installing development dependencies..."
-uv sync --extra dev
+uv sync --group dev
 
 # Copy environment configuration if it doesn't exist
 if [ ! -f .env ]; then

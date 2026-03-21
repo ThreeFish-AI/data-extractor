@@ -54,7 +54,7 @@ cd data-extractor
 uv sync
 
 # 4. 安装包括开发依赖（可选）
-uv sync --extra dev
+uv sync --group dev
 
 # 5. 运行服务器
 uv run data-extractor
