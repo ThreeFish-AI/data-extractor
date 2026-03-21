@@ -173,7 +173,9 @@ class SeleniumScraper:
 
     def _get_driver(self) -> webdriver.Chrome:
         """Get configured Chrome driver."""
-        user_agent = self.ua.random if (settings.use_random_user_agent and self.ua) else None
+        user_agent = (
+            self.ua.random if (settings.use_random_user_agent and self.ua) else None
+        )
         options = build_chrome_options(
             headless=settings.browser_headless,
             user_agent=user_agent,
