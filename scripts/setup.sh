@@ -10,9 +10,9 @@ PYTHON_VERSION=$(python --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
 PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
 
-if [[ $PYTHON_MAJOR -lt 3 ]] || [[ $PYTHON_MAJOR -eq 3 && $PYTHON_MINOR -lt 12 ]]; then
-    echo "❌ Python 3.12+ is required. Current version: $PYTHON_VERSION"
-    echo "   Please upgrade Python or use a virtual environment with Python 3.12+"
+if [[ $PYTHON_MAJOR -lt 3 ]] || [[ $PYTHON_MAJOR -eq 3 && $PYTHON_MINOR -lt 13 ]]; then
+    echo "❌ Python 3.13+ is required. Current version: $PYTHON_VERSION"
+    echo "   Please upgrade Python or use a virtual environment with Python 3.13+"
     exit 1
 fi
 

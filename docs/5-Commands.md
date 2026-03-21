@@ -18,7 +18,7 @@ tags:
 # 使用提供的脚本快速设置（推荐方式）
 ./scripts/setup.sh
 
-# 检查 Python 版本要求（需要 3.12+）
+# 检查 Python 版本要求（需要 3.13+）
 python --version
 
 # 验证 uv 包管理器安装状态

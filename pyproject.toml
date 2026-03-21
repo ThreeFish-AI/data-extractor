@@ -12,7 +12,7 @@ name = "mcp-data-extractor"
 version = "0.1.6.1"
 description = "A commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 authors = [{ name = "Aurelius", email = "aureliusshu@gmail.com" }]
 license = "MIT"
 keywords = ["mcp", "web-crawler", "scrapy", "pdf", "markdown"]
@@ -20,7 +20,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
 
@@ -128,7 +127,7 @@ output = "tests/reports/coverage.xml"
 output = "tests/reports/coverage.json"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
