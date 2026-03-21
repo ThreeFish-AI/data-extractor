@@ -2,6 +2,8 @@ Data Extractor is a commercial-grade MCP Server built on FastMCP, offering robus
 
 ## 🛠️ MCP Server Core Tools (14)
 
+Data Extractor 提供了 14 个专业的 MCP 工具，按功能分为四大类别：
+
 ### Web Page
 
 | 工具名称                               | 功能描述           | 主要参数                                                                                            |
@@ -24,12 +26,36 @@ Data Extractor is a commercial-grade MCP Server built on FastMCP, offering robus
 | **convert_pdf_to_markdown**        | PDF 转 Markdown | `pdf_source`(URL/路径), `method`(auto/pymupdf/pypdf), `page_range`, `output_format` |
 | **batch_convert_pdfs_to_markdown** | 批量 PDF 转换   | `pdf_sources`(列表), `method`, `page_range`, `output_format`, `include_metadata`    |
 
+**PDF 深度提取**
+
+- **图像提取**：从 PDF 页面提取图像元素，支持本地存储或 base64 嵌入
+- **表格识别**：智能识别各种格式表格，转换为标准 Markdown 表格
+- **数学公式提取**：识别 LaTeX 格式数学公式，保持原始格式完整性
+- **结构化输出**：自动生成包含提取资源的结构化 Markdown 文档
+
+**Markdown 高级转换**
+
+- **智能内容提取**：自动识别主要内容区域
+- **高级格式化**：表格对齐、代码语言检测、智能排版
+- **图片嵌入**：支持 data URI 形式嵌入远程图片
+- **批量处理**：并发处理多个 URL 或 PDF 文档
+
 ### Service Management
 
 | 工具名称               | 功能描述     | 主要参数                                  |
 | ---------------------- | ------------ | ----------------------------------------- |
 | **get_server_metrics** | 性能指标监控 | 无参数 - 返回请求统计、性能指标、缓存情况 |
 | **clear_cache**        | 缓存管理     | 无参数 - 清空所有缓存数据                 |
+
+**企业级特性**
+
+- **错误处理**: 完善的错误分类和处理
+- **性能监控**: 详细的请求指标和统计
+- **速率限制**: 防止服务器过载
+- **代理支持**: 支持 HTTP 代理配置
+- **随机 UA**: 防检测的用户代理轮换
+- **智能重试**: 指数退避重试机制
+- **结果缓存**: 内存缓存提升性能
 
 ## 🎯 Quick Navigation
 
