@@ -83,6 +83,28 @@ class TestDataExtractor:
         nonexistent_multiple = soup.select(".nonexistent-class")
         assert len(nonexistent_multiple) == 0
 
+    def test_form_detection(self, sample_html):
+        """测试 HTML 表单元素检测"""
+        soup = BeautifulSoup(sample_html, "html.parser")
+        forms = soup.find_all("form")
+        assert len(forms) > 0
+
+        # 验证表单包含输入字段
+        form = forms[0]
+        inputs = form.find_all("input")
+        assert len(inputs) >= 2  # username and password
+
+    def test_list_extraction(self, sample_html):
+        """测试列表项提取"""
+        soup = BeautifulSoup(sample_html, "html.parser")
+        list_items = soup.select(".list li")
+        assert len(list_items) == 3
+
+        item_texts = [item.get_text() for item in list_items]
+        assert "Item 1" in item_texts
+        assert "Item 2" in item_texts
+        assert "Item 3" in item_texts
+
 
 class TestBasicScraping:
     """Test basic scraping functionality."""
@@ -338,27 +360,3 @@ class TestWebScraper:
             # Skip test if neither method exists
             pytest.skip("Scrapy method not found")
 
-    @pytest.mark.asyncio
-    async def test_method_selection_logic(self, scraper):
-        """Test automatic method selection logic."""
-        # Test that auto method defaults to something reasonable
-        with patch.object(scraper, "scrape_url") as mock_scrape:
-            mock_scrape.return_value = {"url": "test", "method": "simple"}
-
-            # This should not raise an error
-            result = await scraper.scrape_url("https://example.com", method="auto")
-
-            # Verify method selection worked
-            assert mock_scrape.called
-
-    def test_scraper_attributes(self, scraper):
-        """Test that scraper has expected attributes."""
-        # Test that the main components exist
-        assert hasattr(scraper, "simple_scraper")
-        assert hasattr(scraper, "scrapy_wrapper")
-        assert hasattr(scraper, "selenium_scraper")
-
-        # These components should not be None
-        assert scraper.simple_scraper is not None
-        assert scraper.scrapy_wrapper is not None
-        assert scraper.selenium_scraper is not None

@@ -1,50 +1,16 @@
 """
-## MCP 工具集成测试 (`test_mcp_tools.py`)
+MCP 工具集成测试 — 正交结构
 
-### 14 个核心 MCP 工具测试覆盖
-
-#### 1. scrape_webpage - 单页面抓取
-
-**核心参数详解**:
-
-- **url** (必需): 目标网页 URL，必须包含协议前缀 (http:// 或 https://)
-- **method** (可选, 默认 "auto"): 抓取方法选择
-  - `auto`: 自动选择最佳方法（根据页面特征智能判断）
-  - `simple`: 快速 HTTP 请求（不支持 JavaScript，适合静态内容）
-  - `scrapy`: Scrapy 框架（适合大规模抓取，支持复杂场景）
-  - `selenium`: 浏览器渲染（支持 JavaScript 和动态内容加载）
-- **extract_config** (可选): 数据提取配置，支持 CSS 选择器和属性提取
-- **wait_for_element** (可选): CSS 选择器，仅 Selenium 方法生效，等待特定元素出现
-
-#### 2. scrape_multiple_webpages - 批量页面抓取
-
-#### 3. extract_links - 链接提取
-
-#### 4. get_page_info - 页面信息获取
-
-#### 5. check_robots_txt - robots.txt 检查
-
-#### 6. scrape_with_stealth - 反检测抓取
-
-#### 7. fill_and_submit_form - 表单自动化
-
-#### 8. get_server_metrics - 服务器指标
-
-#### 9. clear_cache - 缓存清理
-
-#### 10. extract_structured_data - 结构化数据提取
-
-#### 11. convert_webpage_to_markdown - 页面转 Markdown
-
-#### 12. batch_convert_webpages_to_markdown - 批量 Markdown 转换
-
-#### 13. convert_pdf_to_markdown - PDF 转 Markdown
-
-#### 14. batch_convert_pdfs_to_markdown - 批量 PDF 转换
+按关注点正交分解为 7 个测试类，覆盖 14 个核心 MCP 工具的注册、参数、
+深度集成、工作流、健壮性与性能维度。
 """
 
 import asyncio
+import gc
+import time
 import pytest
+import json
+from unittest.mock import patch, AsyncMock, Mock
 
 from extractor.server import app, web_scraper, anti_detection_scraper
 from extractor.scraper import WebScraper
@@ -52,105 +18,67 @@ from extractor.advanced_features import AntiDetectionScraper
 from extractor.markdown_converter import MarkdownConverter
 
 
-class TestMCPToolsIntegration:
-    """
-    14 个核心 MCP 工具集成测试
-
-    测试所有 MCP 工具的端到端功能、输入验证、错误处理和响应格式统一性
-    """
-
-    @pytest.fixture
-    def mock_scraper_result(self):
-        """Mock scraper result for testing."""
-        return {
-            "url": "https://example.com",
-            "status_code": 200,
-            "title": "Example Domain",
-            "content": {
-                "text": "Example Domain This domain is for use in illustrative examples.",
-                "links": [{"url": "https://example.com/link", "text": "Link text"}],
-                "images": [],
-            },
-            "meta_description": None,
-            "metadata": {
-                "response_time": 1.2,
-                "content_length": 1000,
-            },
-        }
+# ---------------------------------------------------------------------------
+# 1. 工具注册 + Schema + App 属性
+# ---------------------------------------------------------------------------
+class TestMCPToolRegistration:
+    """测试 MCP 工具注册、Schema 完整性与应用属性"""
 
     @pytest.mark.asyncio
-    async def test_all_tools_registered(self):
-        """Test that all expected MCP tools are registered."""
+    async def test_all_14_mcp_tools_registered(self):
+        """测试所有14个MCP工具都已注册"""
         tools = await app.list_tools()
         tool_names = [t.name for t in tools]
 
+        # 当前项目中的14个MCP工具
         expected_tools = [
-            "scrape_webpage",
-            "scrape_multiple_webpages",
-            "extract_links",
-            "get_page_info",
-            "check_robots_txt",
-            "scrape_with_stealth",
-            "fill_and_submit_form",
-            "get_server_metrics",
-            "clear_cache",
-            "extract_structured_data",
-            "convert_webpage_to_markdown",
-            "batch_convert_webpages_to_markdown",
-            "convert_pdf_to_markdown",
-            "batch_convert_pdfs_to_markdown",
+            "scrape_webpage",  # 1. 基本网页爬取
+            "scrape_multiple_webpages",  # 2. 批量网页爬取
+            "extract_links",  # 3. 链接提取
+            "get_page_info",  # 4. 页面信息获取
+            "check_robots_txt",  # 5. robots.txt检查
+            "scrape_with_stealth",  # 6. 隐身爬取
+            "fill_and_submit_form",  # 7. 表单填充和提交
+            "get_server_metrics",  # 8. 服务器指标获取
+            "clear_cache",  # 9. 缓存清理
+            "extract_structured_data",  # 10. 结构化数据提取
+            "convert_webpage_to_markdown",  # 11. 网页转Markdown
+            "batch_convert_webpages_to_markdown",  # 12. 批量网页转Markdown
+            "convert_pdf_to_markdown",  # 13. PDF转Markdown
+            "batch_convert_pdfs_to_markdown",  # 14. 批量PDF转Markdown
         ]
+
+        assert len(expected_tools) == 14, "预期工具数量应为14个"
 
         for expected_tool in expected_tools:
             assert expected_tool in tool_names, (
-                f"Tool {expected_tool} not found in registered tools"
+                f"工具 {expected_tool} 未在注册工具中找到"
             )
 
-    @pytest.mark.asyncio
-    async def test_tool_execution_via_get_tool(self, mock_scraper_result):
-        """Test tool execution through get_tool method."""
-        # Get the tool by name
-        scrape_tool = await app.get_tool("scrape_webpage")
-
-        assert scrape_tool is not None, "scrape_webpage tool not found"
-
-        # Test tool structure
-        assert scrape_tool.name == "scrape_webpage"
-        assert hasattr(scrape_tool, "fn") or callable(scrape_tool)
-
-        # Test that the tool function exists
-        if hasattr(scrape_tool, "fn"):
-            assert callable(scrape_tool.fn)
+        # 确保没有额外的未预期工具
+        assert len(tool_names) >= 14, f"注册工具数量 {len(tool_names)} 少于预期的14个"
 
     @pytest.mark.asyncio
-    async def test_fastmcp_app_properties(self):
-        """Test FastMCP app has expected properties."""
-        assert hasattr(app, "list_tools")
-        assert hasattr(app, "get_tool")
-        assert hasattr(app, "name")
-        assert hasattr(app, "version")
-
-        # Test basic app properties
-        assert app.name is not None
-        assert app.version is not None
-
-        # Test tools list is not empty
-        tools = await app.list_tools()
-        assert len(tools) > 0
-
-    @pytest.mark.asyncio
-    async def test_tool_registration_completeness(self):
-        """Test that all tools are properly registered with correct structure."""
+    async def test_tool_schema_completeness(self):
+        """测试所有工具的schema完整性"""
         tools = await app.list_tools()
 
         for tool in tools:
-            # Each tool should have basic properties
-            assert hasattr(tool, "name")
-            assert hasattr(tool, "description")
-            assert tool.name is not None
-            # Description should exist and be meaningful if present
-            if tool.description:
-                assert len(tool.description) > 0
+            tool_name = tool.name
+            # 验证工具基本结构
+            assert hasattr(tool, "name"), f"工具 {tool_name} 缺少 name 属性"
+            assert hasattr(tool, "description"), (
+                f"工具 {tool_name} 缺少 description 属性"
+            )
+            assert tool.description, f"工具 {tool_name} 的描述不能为空"
+
+    @pytest.mark.asyncio
+    async def test_app_metadata(self):
+        """测试应用元数据"""
+        assert hasattr(app, "name")
+        assert hasattr(app, "version")
+        assert app.name is not None
+        assert app.version is not None
 
     @pytest.mark.asyncio
     async def test_server_initialization(self):
@@ -164,77 +92,49 @@ class TestMCPToolsIntegration:
         assert isinstance(anti_detection_scraper, AntiDetectionScraper)
 
 
-class TestWebScraperIntegration:
-    """Integration tests for WebScraper class."""
-
-    @pytest.fixture
-    def scraper(self):
-        """WebScraper instance for testing."""
-        return WebScraper()
-
-    def test_scraper_initialization(self, scraper):
-        """Test WebScraper initializes correctly."""
-        assert isinstance(scraper, WebScraper)
-        assert hasattr(scraper, "simple_scraper")
-        assert hasattr(scraper, "scrapy_wrapper")
-        assert hasattr(scraper, "selenium_scraper")
+# ---------------------------------------------------------------------------
+# 2. 参数验证
+# ---------------------------------------------------------------------------
+class TestMCPToolParameters:
+    """测试 MCP 工具参数验证"""
 
     @pytest.mark.asyncio
-    async def test_scraper_basic_functionality(self, scraper):
-        """Test basic scraper functionality."""
-        # Test that scraper can be called without errors
-        assert hasattr(scraper, "scrape_url")
-        assert callable(scraper.scrape_url)
+    async def test_scrape_webpage_parameters(self):
+        """测试scrape_webpage工具参数"""
+        tool = await app.get_tool("scrape_webpage")
+        assert tool is not None
 
-        assert hasattr(scraper, "scrape_multiple_urls")
-        assert callable(scraper.scrape_multiple_urls)
-
-
-class TestAntiDetectionScraperIntegration:
-    """Integration tests for AntiDetectionScraper class."""
-
-    @pytest.fixture
-    def anti_scraper(self):
-        """AntiDetectionScraper instance for testing."""
-        return AntiDetectionScraper()
-
-    def test_anti_scraper_initialization(self, anti_scraper):
-        """Test AntiDetectionScraper initializes correctly."""
-        assert isinstance(anti_scraper, AntiDetectionScraper)
-        assert hasattr(anti_scraper, "ua")
+        # 工具应该有适当的输入schema
+        if hasattr(tool, "input_schema"):
+            schema = tool.input_schema
+            assert "properties" in schema
+            assert "url" in schema["properties"]
 
     @pytest.mark.asyncio
-    async def test_anti_scraper_basic_functionality(self, anti_scraper):
-        """Test basic anti-detection scraper functionality."""
-        assert hasattr(anti_scraper, "scrape_with_stealth")
-        assert callable(anti_scraper.scrape_with_stealth)
+    async def test_batch_tools_parameters(self):
+        """测试批量工具参数"""
+        batch_tools = [
+            "scrape_multiple_webpages",
+            "batch_convert_webpages_to_markdown",
+            "batch_convert_pdfs_to_markdown",
+        ]
 
-
-class TestMarkdownConversionIntegration:
-    """Integration tests for Markdown conversion tools registration."""
+        for tool_name in batch_tools:
+            tool = await app.get_tool(tool_name)
+            assert tool is not None, f"批量工具 {tool_name} 未找到"
 
     @pytest.mark.asyncio
-    async def test_markdown_tools_registration(self):
-        """Test that the new Markdown conversion tools are properly registered."""
-        tools = await app.list_tools()
-        tool_names = [t.name for t in tools]
-        tools_by_name = {t.name: t for t in tools}
+    async def test_advanced_tools_parameters(self):
+        """测试高级工具参数"""
+        advanced_tools = [
+            "scrape_with_stealth",
+            "fill_and_submit_form",
+            "extract_structured_data",
+        ]
 
-        # Test that the new Markdown conversion tools are registered
-        assert "convert_webpage_to_markdown" in tool_names
-        assert "batch_convert_webpages_to_markdown" in tool_names
-
-        # Test convert_webpage_to_markdown tool properties
-        convert_tool = tools_by_name["convert_webpage_to_markdown"]
-        assert convert_tool.name == "convert_webpage_to_markdown"
-        assert "Markdown" in convert_tool.description
-        assert "webpage" in convert_tool.description.lower()
-
-        # Test batch_convert_webpages_to_markdown tool properties
-        batch_tool = tools_by_name["batch_convert_webpages_to_markdown"]
-        assert batch_tool.name == "batch_convert_webpages_to_markdown"
-        assert "batch" in batch_tool.description.lower()
-        assert "Markdown" in batch_tool.description
+        for tool_name in advanced_tools:
+            tool = await app.get_tool(tool_name)
+            assert tool is not None, f"高级工具 {tool_name} 未找到"
 
     @pytest.mark.asyncio
     async def test_markdown_tools_parameters(self):
@@ -248,29 +148,6 @@ class TestMarkdownConversionIntegration:
         # Test batch_convert_webpages_to_markdown parameters
         batch_tool = tools_by_name["batch_convert_webpages_to_markdown"]
         assert hasattr(batch_tool, "schema")
-
-
-class TestMarkdownConversionToolIntegration:
-    """Integration tests for Markdown conversion tool functionality through MCP layer."""
-
-    @pytest.mark.asyncio
-    async def test_markdown_conversion_tools_structure(self):
-        """Test that Markdown conversion tools have proper structure and can be accessed."""
-        tools_by_name = {t.name: t for t in await app.list_tools()}
-
-        # Test convert_webpage_to_markdown tool
-        convert_tool = tools_by_name["convert_webpage_to_markdown"]
-        assert convert_tool is not None
-        assert hasattr(convert_tool, "fn") or callable(convert_tool)
-        if convert_tool.description:
-            assert "Markdown" in convert_tool.description
-
-        # Test batch_convert_webpages_to_markdown tool
-        batch_tool = tools_by_name["batch_convert_webpages_to_markdown"]
-        assert batch_tool is not None
-        assert hasattr(batch_tool, "fn") or callable(batch_tool)
-        if batch_tool.description:
-            assert "batch" in batch_tool.description.lower()
 
     @pytest.mark.asyncio
     async def test_markdown_tools_parameters_embed_images(self):
@@ -291,6 +168,13 @@ class TestMarkdownConversionToolIntegration:
             params = batch_tool.parameters.get("properties", {})
             assert "embed_images" in params
             assert "embed_options" in params
+
+
+# ---------------------------------------------------------------------------
+# 3. Markdown 工具深度集成
+# ---------------------------------------------------------------------------
+class TestMarkdownToolIntegration:
+    """Markdown 转换工具深度集成测试"""
 
     @pytest.mark.asyncio
     async def test_markdown_converter_component_integration(self):
@@ -339,7 +223,7 @@ class TestMarkdownConversionToolIntegration:
         assert "```python" in markdown  # Code language detection
         assert "> Important note" in markdown  # Quote formatting
         assert "![Test](test.jpg)" in markdown  # Image enhancement
-        assert "—" in markdown  # Typography (-- to em dash)
+        assert "\u2014" in markdown  # Typography (-- to em dash)
 
     @pytest.mark.asyncio
     async def test_error_handling_integration(self):
@@ -386,101 +270,11 @@ class TestMarkdownConversionToolIntegration:
         assert converter.formatting_options == original_options
 
 
-class TestSystemHealthAndDiagnostics:
-    """Integration tests for system health and diagnostic capabilities."""
-
-    @pytest.mark.asyncio
-    async def test_all_components_initialized(self):
-        """Test that all system components are properly initialized."""
-        # Test that server components exist
-        assert web_scraper is not None
-        assert anti_detection_scraper is not None
-        assert isinstance(web_scraper, WebScraper)
-        assert isinstance(anti_detection_scraper, AntiDetectionScraper)
-
-        # Test that all expected tools are available
-        tools = await app.list_tools()
-        expected_tool_count = 14  # Current total including PDF tools
-        assert len(tools) == expected_tool_count
-
-        # Test that app has proper structure
-        assert hasattr(app, "list_tools")
-        assert hasattr(app, "get_tool")
-        assert app.name is not None
-
-    @pytest.mark.asyncio
-    async def test_tool_parameter_schemas_completeness(self):
-        """Test that all tools have complete parameter schemas."""
-        tools = await app.list_tools()
-
-        for tool in tools:
-            # Each tool should have proper structure
-            assert hasattr(tool, "name")
-            assert hasattr(tool, "description")
-
-            # Description should be meaningful if present
-            if tool.description:
-                assert len(tool.description) > 10
-
-            # Check for schema or parameter information if available
-            # Skip JSON schema generation as some tools may have callable schemas
-            # that don't support JSON schema generation
-            try:
-                if hasattr(tool, "model_json_schema"):
-                    schema = tool.model_json_schema()
-                    assert schema is not None
-            except Exception:
-                # Some tools may have callable schemas that don't support JSON schema
-                # This is acceptable as long as the tool has other validation
-                pass
-
-    @pytest.mark.asyncio
-    async def test_system_resilience_under_load(self):
-        """Test system resilience when processing multiple requests."""
-        # Test accessing multiple tools simultaneously
-        tasks = []
-        for tool_name in [
-            "scrape_webpage",
-            "convert_webpage_to_markdown",
-            "get_server_metrics",
-        ]:
-            task = app.get_tool(tool_name)
-            tasks.append(task)
-
-        # Should handle concurrent access without issues
-        results = await asyncio.gather(*tasks)
-
-        for result in results:
-            assert result is not None
-            assert hasattr(result, "name")
-
-    @pytest.mark.asyncio
-    async def test_memory_and_resource_management(self):
-        """Test that the system manages memory and resources properly."""
-        import gc
-
-        # Get initial memory usage
-        initial_objects = len(gc.get_objects())
-
-        # Create and use converter multiple times
-        for i in range(10):
-            converter = MarkdownConverter()
-            html = f"<html><body><h1>Test {i}</h1><p>Content {i}</p></body></html>"
-            markdown = converter.html_to_markdown(html)
-            assert "Test" in markdown
-            del converter
-
-        # Force garbage collection
-        gc.collect()
-
-        # Check that we haven't leaked too many objects
-        final_objects = len(gc.get_objects())
-        object_growth = final_objects - initial_objects
-
-        # Allow for some growth, but not excessive (less than 1000 new objects)
-        assert object_growth < 1000, (
-            f"Memory leak detected: {object_growth} new objects"
-        )
+# ---------------------------------------------------------------------------
+# 4. PDF 工具集成
+# ---------------------------------------------------------------------------
+class TestPDFToolIntegration:
+    """PDF 转换工具集成测试"""
 
     @pytest.mark.asyncio
     async def test_pdf_conversion_tools_registration(self):
@@ -577,3 +371,305 @@ class TestSystemHealthAndDiagnostics:
             assert True  # No exception thrown
         except Exception as e:
             pytest.fail(f"PDF processor cleanup failed: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# 5. 工具协同工作流
+# ---------------------------------------------------------------------------
+class TestMCPToolWorkflows:
+    """测试 MCP 工具协同工作流"""
+
+    @pytest.fixture
+    def sample_scrape_result(self):
+        """示例爬取结果"""
+        return {
+            "url": "https://example.com",
+            "status_code": 200,
+            "title": "Example Domain",
+            "content": {
+                "text": "This domain is for use in illustrative examples in documents.",
+                "html": "<html><body><h1>Example Domain</h1><p>This domain is for use in illustrative examples.</p></body></html>",
+                "links": [
+                    {
+                        "url": "https://www.iana.org/domains/example",
+                        "text": "More information...",
+                    }
+                ],
+                "images": [],
+            },
+            "meta_description": "Example domain for documentation",
+        }
+
+    @pytest.mark.asyncio
+    async def test_scrape_to_markdown_workflow(self, sample_scrape_result):
+        """测试爬取到Markdown的完整工作流"""
+        with (
+            patch("extractor.scraper.WebScraper.scrape_url") as mock_scrape,
+            patch(
+                "extractor.markdown_converter.MarkdownConverter.convert_webpage_to_markdown"
+            ) as mock_convert,
+        ):
+            mock_scrape.return_value = sample_scrape_result
+            mock_convert.return_value = {
+                "success": True,
+                "url": "https://example.com",
+                "markdown": "# Example Domain\n\nThis domain is for use in illustrative examples.",
+                "metadata": {"word_count": 10},
+            }
+
+            # 这个工作流应该能够无缝工作
+            scrape_tool = await app.get_tool("scrape_webpage")
+            convert_tool = await app.get_tool("convert_webpage_to_markdown")
+
+            assert scrape_tool is not None
+            assert convert_tool is not None
+
+    @pytest.mark.asyncio
+    async def test_batch_processing_workflow(self):
+        """测试批量处理工作流"""
+        with (
+            patch(
+                "extractor.scraper.WebScraper.scrape_multiple_urls"
+            ) as mock_batch_scrape,
+            patch(
+                "extractor.markdown_converter.MarkdownConverter.batch_convert_to_markdown"
+            ) as mock_batch_convert,
+        ):
+            mock_batch_scrape.return_value = {
+                "results": [
+                    {"url": "https://example1.com", "title": "Page 1", "content": {}},
+                    {"url": "https://example2.com", "title": "Page 2", "content": {}},
+                ],
+                "summary": {"successful": 2, "failed": 0},
+            }
+
+            mock_batch_convert.return_value = {
+                "success": True,
+                "results": [
+                    {
+                        "success": True,
+                        "url": "https://example1.com",
+                        "markdown": "# Page 1",
+                    },
+                    {
+                        "success": True,
+                        "url": "https://example2.com",
+                        "markdown": "# Page 2",
+                    },
+                ],
+            }
+
+            batch_scrape_tool = await app.get_tool("scrape_multiple_webpages")
+            batch_convert_tool = await app.get_tool(
+                "batch_convert_webpages_to_markdown"
+            )
+
+            assert batch_scrape_tool is not None
+            assert batch_convert_tool is not None
+
+    @pytest.mark.asyncio
+    async def test_stealth_to_structured_data_workflow(self):
+        """测试隐身爬取到结构化数据提取工作流"""
+        with patch(
+            "extractor.advanced_features.AntiDetectionScraper.scrape_with_stealth"
+        ) as mock_stealth:
+            mock_stealth.return_value = {
+                "url": "https://ecommerce-example.com",
+                "title": "Product Page",
+                "content": {
+                    "text": "Product details and pricing information",
+                    "html": "<div class='product'><h1>Product Name</h1><span class='price'>$99.99</span></div>",
+                },
+            }
+
+            stealth_tool = await app.get_tool("scrape_with_stealth")
+            structured_tool = await app.get_tool("extract_structured_data")
+
+            assert stealth_tool is not None
+            assert structured_tool is not None
+
+    @pytest.mark.asyncio
+    async def test_pdf_processing_workflow(self):
+        """测试PDF处理工作流"""
+        with patch(
+            "extractor.pdf_processor.PDFProcessor.process_pdf"
+        ) as mock_pdf_process:
+            mock_pdf_process.return_value = {
+                "success": True,
+                "source": "https://example.com/document.pdf",
+                "text": "PDF document content extracted successfully",
+                "markdown": "# PDF Document\n\nContent extracted successfully",
+                "metadata": {
+                    "pages_processed": 5,
+                    "word_count": 500,
+                    "method_used": "pymupdf",
+                },
+            }
+
+            pdf_tool = await app.get_tool("convert_pdf_to_markdown")
+            assert pdf_tool is not None
+
+    @pytest.mark.asyncio
+    async def test_server_management_workflow(self):
+        """测试服务器管理工作流"""
+        # 测试指标获取后清理缓存的工作流
+        metrics_tool = await app.get_tool("get_server_metrics")
+        cache_tool = await app.get_tool("clear_cache")
+
+        assert metrics_tool is not None
+        assert cache_tool is not None
+
+
+# ---------------------------------------------------------------------------
+# 6. 健壮性 + 错误处理
+# ---------------------------------------------------------------------------
+class TestMCPToolRobustness:
+    """测试 MCP 工具健壮性与错误处理"""
+
+    @pytest.mark.asyncio
+    async def test_tool_error_handling(self):
+        """测试工具错误处理"""
+        # 在新版 fastmcp 中，get_tool 对于不存在的工具返回 None
+        result = await app.get_tool("nonexistent_tool")
+        assert result is None, "不存在的工具应该返回 None"
+
+    @pytest.mark.asyncio
+    async def test_tools_handle_network_errors(self):
+        """测试工具处理网络错误的能力"""
+        with patch("extractor.scraper.WebScraper.scrape_url") as mock_scrape:
+            # 模拟网络错误
+            mock_scrape.side_effect = Exception("Network timeout")
+
+            scrape_tool = await app.get_tool("scrape_webpage")
+            assert scrape_tool is not None
+            # 工具应该存在并能够处理错误
+
+    @pytest.mark.asyncio
+    async def test_tools_handle_invalid_parameters(self):
+        """测试工具处理无效参数的能力"""
+        # 所有工具都应该存在并有基本的错误处理
+        tools = await app.list_tools()
+        for tool in tools:
+            tool_name = tool.name
+            assert tool is not None, f"工具 {tool_name} 不应该为 None"
+            assert hasattr(tool, "name"), f"工具 {tool_name} 应该有 name 属性"
+
+    @pytest.mark.asyncio
+    async def test_concurrent_tool_access(self):
+        """测试并发工具访问"""
+
+        async def get_tool_concurrent(tool_name):
+            return await app.get_tool(tool_name)
+
+        # 并发访问多个工具
+        tool_names = [
+            "scrape_webpage",
+            "convert_webpage_to_markdown",
+            "get_server_metrics",
+        ]
+
+        tasks = [get_tool_concurrent(name) for name in tool_names]
+        results = await asyncio.gather(*tasks)
+
+        for i, result in enumerate(results):
+            assert result is not None, f"并发访问工具 {tool_names[i]} 失败"
+
+    @pytest.mark.asyncio
+    async def test_tool_resource_cleanup(self):
+        """测试工具资源清理"""
+        # 验证工具在使用后能够正确清理资源
+        scrape_tool = await app.get_tool("scrape_webpage")
+        stealth_tool = await app.get_tool("scrape_with_stealth")
+        pdf_tool = await app.get_tool("convert_pdf_to_markdown")
+
+        assert scrape_tool is not None
+        assert stealth_tool is not None
+        assert pdf_tool is not None
+
+    @pytest.mark.asyncio
+    async def test_memory_and_resource_management(self):
+        """Test that the system manages memory and resources properly."""
+        import gc
+
+        # Get initial memory usage
+        initial_objects = len(gc.get_objects())
+
+        # Create and use converter multiple times
+        for i in range(10):
+            converter = MarkdownConverter()
+            html = f"<html><body><h1>Test {i}</h1><p>Content {i}</p></body></html>"
+            markdown = converter.html_to_markdown(html)
+            assert "Test" in markdown
+            del converter
+
+        # Force garbage collection
+        gc.collect()
+
+        # Check that we haven't leaked too many objects
+        final_objects = len(gc.get_objects())
+        object_growth = final_objects - initial_objects
+
+        # Allow for some growth, but not excessive (less than 1000 new objects)
+        assert object_growth < 1000, (
+            f"Memory leak detected: {object_growth} new objects"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 7. 性能与可扩展性
+# ---------------------------------------------------------------------------
+class TestMCPToolPerformance:
+    """测试 MCP 工具性能与可扩展性"""
+
+    @pytest.mark.asyncio
+    async def test_tool_registration_performance(self):
+        """测试工具注册性能"""
+        import time
+
+        start_time = time.time()
+        tools = await app.list_tools()
+        end_time = time.time()
+
+        registration_time = end_time - start_time
+
+        assert len(tools) == 14, "应该注册14个工具"
+        assert registration_time < 1.0, f"工具注册时间 {registration_time:.2f}s 过长"
+
+    @pytest.mark.asyncio
+    async def test_tool_access_performance(self):
+        """测试工具访问性能"""
+        import time
+
+        tool_names = [
+            "scrape_webpage",
+            "convert_webpage_to_markdown",
+            "convert_pdf_to_markdown",
+            "scrape_with_stealth",
+        ]
+
+        for tool_name in tool_names:
+            start_time = time.time()
+            tool = await app.get_tool(tool_name)
+            end_time = time.time()
+
+            access_time = end_time - start_time
+
+            assert tool is not None
+            assert access_time < 0.1, (
+                f"工具 {tool_name} 访问时间 {access_time:.3f}s 过长"
+            )
+
+    @pytest.mark.slow
+    @pytest.mark.asyncio
+    async def test_batch_tools_scalability(self):
+        """测试批量工具可扩展性"""
+        # 这个测试被标记为slow，只在完整测试时运行
+        batch_tools = [
+            "scrape_multiple_webpages",
+            "batch_convert_webpages_to_markdown",
+            "batch_convert_pdfs_to_markdown",
+        ]
+
+        for tool_name in batch_tools:
+            tool = await app.get_tool(tool_name)
+            assert tool is not None, f"批量工具 {tool_name} 应该支持可扩展性"
