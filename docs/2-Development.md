@@ -462,25 +462,7 @@ class ResourceManager:
 
 ## CI/CD 与版本管理
 
-### 持续集成流程
-
-项目配置了完整的 GitHub Actions 工作流，提供自动化的测试、构建和发布功能：
-
-**自动化流程**:
-
-- ✅ 运行完整测试套件
-- ✅ 构建分发包
-- ✅ 创建 GitHub Release
-- ✅ 发布到 PyPI
-- ✅ 更新文档
-
-### 多平台测试
-
-- **多平台测试**: Ubuntu, Windows, macOS
-- **多版本支持**: Python 3.13
-- **代码质量**: Ruff linting, MyPy type checking
-- **安全扫描**: Bandit security analysis
-- **覆盖率报告**: Codecov integration
+项目配置了完整的 GitHub Actions 自动化流水线（CI、发布、依赖管理、代码审查），详见 [GitHub Actions 工作流](./2.1-Workflows.md)。
 
 ### 版本管理
 
@@ -513,12 +495,6 @@ ls dist/
 python -c "import extractor; print(extractor.__version__)"
 ```
 
-### 自动发布机制
-
-- **标签发布**: 推送 `v*.*.*` 标签自动触发发布
-- **PyPI 发布**: 使用 OIDC trusted publishing，无需 API 密钥
-- **GitHub Releases**: 自动生成 release notes
-- **构建验证**: 发布前完整测试套件验证
 
 ## 调试与故障排除
 
