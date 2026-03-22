@@ -5,7 +5,7 @@ title: Framework
 description: Engineering Architecture Design Framework
 last_update:
   author: Aurelius
-  date: 2025-11-23
+  date: 2026-03-22
 tags:
   - FRAMEWORK
   - Architecture
@@ -15,273 +15,205 @@ tags:
 
 ## 项目概述
 
-Data Extractor 是基于 FastMCP 框架构建的企业级数据提取与转换 MCP Server，采用分层架构设计，集成多种网页抓取技术、PDF 处理引擎和 Markdown 转换工具。
+Data Extractor 是基于 [FastMCP](https://github.com/jlowin/fastmcp) 框架构建的数据提取与转换 MCP Server，提供 14 个 MCP 工具，集成多种网页抓取引擎、PDF 双引擎处理和 Markdown 转换能力。
 
-### 架构设计原则
+### 设计原则
 
-- **分层解耦**：清晰的分层架构，各层职责明确，降低模块间耦合度
-- **可扩展性**：基于插件化设计，支持多种抓取方法和处理引擎
-- **高可用性**：内置重试机制、错误处理和性能监控
-- **企业级特性**：支持速率限制、缓存管理、代理轮换和指标收集
+- **分层解耦**：4 层架构，各层职责正交，降低模块间耦合
+- **延迟加载**：重量级依赖（PyMuPDF 等）按需导入，降低启动开销
+- **可观测性**：内置请求计量、错误分类和执行计时
+- **弹性设计**：指数退避重试、频率限速和内存缓存
 
-### 核心架构层次
-
-<div align="center">
+### 核心架构
 
 ```mermaid
 graph TD
-    A["FastMCP Server Layer<br/><br/>14 MCP Tools via @app.tool<br/><br/>"] --> B["Business Logic Layer<br/><br/>Service Classes & Orchestration<br/><br/>"]
-    B --> C["Data Processing Layer<br/><br/>Scraping, PDF, Markdown Conversion<br/><br/>"]
-    C --> D["Infrastructure Layer<br/><br/>Rate Limiter, Cache, Metrics, Error Handler<br/><br/>"]
-    D --> E["Configuration Layer<br/><br/>Settings, Environment Variables<br/><br/>"]
+    A["MCP 工具层<br/>14 Tools · @app.tool()"] --> B["处理引擎层<br/>Scraping · PDF · Markdown · Form"]
+    B --> C["基础设施层<br/>RateLimiter · Cache · Metrics · ErrorHandler · Retry"]
+    C --> D["配置层<br/>pydantic-settings · 环境变量"]
 
     style A fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
-    style B fill:#7c2d12,stroke:#ea580c,color:#ffffff
-    style C fill:#166534,stroke:#22c55e,color:#ffffff
-    style D fill:#134e4a,stroke:#14b8a6,color:#ffffff
-    style E fill:#581c87,stroke:#9333ea,color:#ffffff
+    style B fill:#166534,stroke:#22c55e,color:#ffffff
+    style C fill:#134e4a,stroke:#14b8a6,color:#ffffff
+    style D fill:#581c87,stroke:#9333ea,color:#ffffff
 ```
 
-</div>
+## MCP 工具层
 
-## 核心模块设计
+### 模块化注册架构
 
-### FastMCP 服务器层
+工具层采用领域拆分的模块化设计，所有工具注册于 [`extractor/tools/`](../extractor/tools/) 子包：
 
-**设计模式**：微服务架构 + 装饰器模式
+- **[`_registry.py`](../extractor/tools/_registry.py)**：中心枢纽，持有 FastMCP `app` 实例、共享服务单例（`web_scraper`、`anti_detection_scraper`、`markdown_converter`）、`_get_pdf_processor()` 延迟加载工厂和公共辅助函数
+- **领域模块**：各模块导入 `app` 并通过 `@app.tool()` 装饰器注册工具
 
-**核心职责**：
+```mermaid
+graph LR
+    subgraph "extractor/tools/"
+        R["_registry.py<br/>app · singletons · helpers"]
+        S["scraping.py · 6"] & M["markdown.py · 2"] & P["pdf.py · 2"]
+        F["form.py · 1"] & U["utility.py · 1"] & SV["service.py · 2"]
+    end
+    R --- S
+    R --- M
+    R --- P
+    R --- F
+    R --- U
+    R --- SV
 
-- 提供 14 个 MCP 工具接口，使用 `@app.tool()` 装饰器注册
-- 统一的请求验证和响应格式化
-- 错误处理和指标收集集成
-- 异步任务协调和生命周期管理
-
-**关键设计特性**：
-
-```python
-# FastMCP 服务器基础配置
-app = FastMCP(settings.server_name, version=settings.server_version)
-
-# 延迟初始化 PDF 处理器避免启动时加载 PyMuPDF
-def _get_pdf_processor(enable_enhanced_features: bool = True):
-    from .pdf_processor import PDFProcessor
-    return PDFProcessor(enable_enhanced_features=enable_enhanced_features)
+    style R fill:#7c2d12,stroke:#ea580c,color:#ffffff
+    style S fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style M fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style P fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style F fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style U fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style SV fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
 ```
+
+### 工具清单（14 个）
+
+| 模块 | 工具 | 功能 |
+|------|------|------|
+| `scraping.py` | `scrape_webpage` | 单页抓取 |
+| | `scrape_multiple_webpages` | 批量并发抓取 |
+| | `scrape_with_stealth` | 反检测隐身抓取 |
+| | `extract_links` | 链接提取与分类 |
+| | `get_page_info` | 页面元数据获取 |
+| | `extract_structured_data` | 结构化数据提取 |
+| `markdown.py` | `convert_webpage_to_markdown` | 网页转 Markdown |
+| | `batch_convert_webpages_to_markdown` | 批量网页转换 |
+| `pdf.py` | `convert_pdf_to_markdown` | PDF 转 Markdown |
+| | `batch_convert_pdfs_to_markdown` | 批量 PDF 转换 |
+| `form.py` | `fill_and_submit_form` | 表单自动填写与提交 |
+| `utility.py` | `check_robots_txt` | robots.txt 合规检查 |
+| `service.py` | `get_server_metrics` | 运行指标查询 |
+| | `clear_cache` | 缓存清理 |
+
+### 响应模型层
+
+[`extractor/schemas.py`](../extractor/schemas.py) 定义 13 个 Pydantic 响应模型（`ScrapeResponse`、`BatchScrapeResponse`、`LinkItem`、`LinksResponse`、`PageInfoResponse`、`RobotsResponse`、`StructuredDataResponse`、`MarkdownResponse`、`BatchMarkdownResponse`、`PDFResponse`、`BatchPDFResponse`、`MetricsResponse`、`CacheOperationResponse`），构成工具层的 API 契约。
+
+### 传输模式
+
+[`server.py`](../extractor/server.py) 入口函数 `main()` 支持 **STDIO**（默认）、**HTTP**（可配置 host/port/path/CORS）和 **SSE** 三种传输模式。
+
+## 处理引擎层
 
 ### 网页抓取引擎
 
-**设计模式**：策略模式 + 工厂模式
+[`extractor/scraper.py`](../extractor/scraper.py) 中的 `WebScraper` 作为门面类，持有三个后端实例并通过 `if/elif` 方法分发进行路由：
 
-**多策略抓取架构**：
+| 后端 | 类 | 技术栈 | 状态 |
+|------|------|--------|------|
+| Simple HTTP | `SimpleScraper` | requests + BeautifulSoup | 可用 |
+| Selenium | `SeleniumScraper` | Chrome WebDriver + headless | 可用 |
+| Scrapy | `ScrapyWrapper` | Twisted reactor | **已禁用**（reactor 冲突，回退至 requests） |
 
-- **Simple HTTP**：适用于简单静态页面
-- **Scrapy Framework**：适用于复杂页面结构
-- **Selenium/Playwright**：适用于 JavaScript 渲染页面
-- **AntiDetectionScraper**：适用于反检测需求场景
+**自动选择逻辑**（`method="auto"` 时）：若 `settings.enable_javascript` 或 `wait_for_element` 为真则选 Selenium，否则选 Simple。
 
-**策略选择逻辑**：
+### 反检测抓取引擎
 
-- 基于 JavaScript 检测和反爬虫保护需求
-- 考虑性能要求和资源消耗
-- 支持手动方法覆盖
+[`extractor/anti_detection.py`](../extractor/anti_detection.py) 中的 `AntiDetectionScraper` 提供两种隐身后端：
+
+- **Selenium 隐身**：基于 `undetected-chromedriver`，覆盖 `navigator.webdriver` 属性、伪装插件/语言信息
+- **Playwright 隐身**：注入 stealth 脚本，规避 Canvas/WebGL 指纹检测
+
+**行为模拟**：随机延迟（1-3 秒）、鼠标轨迹模拟、页面滚动模拟。支持单个代理配置（`settings.proxy_url`）。
 
 ### PDF 处理引擎
 
-**设计模式**：适配器模式 + 延迟加载
+[`extractor/pdf/`](../extractor/pdf/) 子包采用双引擎架构：
 
-**双引擎架构**：
-
-- **PyMuPDF Engine**：增强功能支持，适合复杂布局
-- **PyPDF Engine**：基础文本提取，适合简单文档
-- **自动检测**：根据文档特性选择最佳引擎
-
-**增强功能特性**：
-
-- 图像提取并嵌入到 Markdown
-- 智能表格识别和转换
-- 数学公式 LaTeX 格式保持
-- 结构化输出包含元数据
+- **[`PDFProcessor`](../extractor/pdf/processor.py)**：主处理器，优先使用 PyMuPDF（fitz），失败时回退到 pypdf。支持 URL 下载、页范围选择、元数据提取
+- **[`EnhancedPDFProcessor`](../extractor/pdf/enhanced.py)**：增强处理器，提取图像（保存文件 + base64）、识别表格（管道符/制表符/空格分隔模式匹配）、检测 LaTeX 数学公式
 
 ### Markdown 转换器
 
-**设计模式**：适配器模式 + 策略模式
+[`extractor/markdown_converter.py`](../extractor/markdown_converter.py) 中的 `MarkdownConverter` 包装 Microsoft [MarkItDown](https://github.com/microsoft/markitdown) 库，附加预处理和后处理流水线：
 
-**Microsoft MarkItDown 集成**：
+- **预处理**：移除导航栏/广告/脚本、解析相对 URL、提取主要内容区域
+- **后处理**：表格对齐、代码块语言检测、排版优化、图片 data URI 嵌入
+- **批量处理**：通过 `asyncio.gather()` 并发转换
 
-- 智能内容提取和主要区域识别
-- 图片嵌入支持 data URI 格式
-- 格式优化（表格对齐、代码检测）
-- 批量文档并发处理
+### 表单处理器
 
-### 配置管理系统
-
-**设计模式**：设置模式 + 环境变量映射
-
-**动态配置架构**：
-
-```python
-class DataExtractorSettings(BaseSettings):
-    # 使用 DATA_EXTRACTOR_ 前缀自动环境变量映射
-    concurrent_requests: int = Field(default=16, gt=0)
-    rate_limit_requests_per_minute: int = Field(default=60, ge=1)
-```
-
-**配置层级**：
-
-- **默认配置**：代码中定义的默认值
-- **环境变量**：`DATA_EXTRACTOR_` 前缀的环境变量
-- **运行时配置**：通过参数传递的动态配置
-
-### 企业级工具集
-
-**核心工具组件**：
-
-| 工具类             | 功能特性     | 设计模式   |
-| ------------------ | ------------ | ---------- |
-| `RateLimiter`      | 请求频率控制 | 令牌桶算法 |
-| `RetryManager`     | 智能重试机制 | 指数退避   |
-| `CacheManager`     | TTL 缓存管理 | LRU 淘汰   |
-| `MetricsCollector` | 性能指标收集 | 观察者模式 |
-| `ErrorHandler`     | 分层错误处理 | 策略模式   |
-
-## 数据流与处理架构
+[`extractor/form_handler.py`](../extractor/form_handler.py) 中的 `FormHandler` 支持 Selenium 和 Playwright 双后端（通过 `hasattr(driver_or_page, "fill")` 检测），处理文本输入、下拉选择、复选框/单选框、文件上传和表单提交。
 
 ### 请求处理流程
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant M as MCP Server
-    participant S as Service Layer
-    participant P as Processing Engine
+    participant C as MCP Client
+    participant T as MCP Tool
+    participant E as Processing Engine
     participant I as Infrastructure
 
-    C->>M: MCP Tool Request
-    M->>M: Parameter Validation
-    M->>S: Service Call
-    S->>I: Rate Limiter Check
-    I->>S: Rate Limit Pass
-    S->>P: Processing Request
-    P->>I: Metrics Collection
-    P->>I: Cache Check
-    I->>P: Cache Miss/Hit
-    P->>S: Processing Result
-    S->>I: Error Handling
-    S->>M: Service Response
-    M->>C: MCP Tool Response
+    C->>T: Tool Request
+    T->>T: 参数校验 (schemas)
+    T->>I: 频率限速 (部分工具)
+    T->>E: 引擎调用
+    E->>E: 执行处理
+    E-->>I: 指标记录
+    T->>C: 类型化响应 (Pydantic)
 ```
 
-### 错误处理架构
+## 基础设施层
 
-**分层错误处理策略**：
+### 核心组件
 
-1. **网络层错误**：连接超时、DNS 解析失败
-2. **协议层错误**：HTTP 状态码、响应格式错误
-3. **业务层错误**：数据提取失败、转换异常
-4. **系统层错误**：资源不足、依赖服务不可用
+| 组件 | 文件 | 实现方式 |
+|------|------|---------|
+| `RateLimiter` | [`rate_limiter.py`](../extractor/rate_limiter.py) | 时间间隔限速器：记录上次请求时间，间隔不足时 `asyncio.sleep` |
+| `RetryManager` | [`retry.py`](../extractor/retry.py) | 指数退避重试：`base_delay × backoff_factor^attempt`（全局配置：max=3, factor=2.0） |
+| `CacheManager` | [`cache.py`](../extractor/cache.py) | 内存 TTL 缓存：MD5 键、可配置过期时间，FIFO 淘汰策略（按时间戳淘汰最旧条目） |
+| `MetricsCollector` | [`metrics.py`](../extractor/metrics.py) | 计数器/累加器：统计总请求数、成功/失败数、累计耗时、方法使用分布、错误分类 |
+| `ErrorHandler` | [`error_handler.py`](../extractor/error_handler.py) | 字符串匹配分类器：按关键字匹配为 timeout/connection/not_found/forbidden/anti_bot/unknown |
+| `timing_decorator` | [`timing.py`](../extractor/timing.py) | 函数执行计时装饰器，同时支持 sync 和 async 函数 |
 
-**错误分类与重试策略**：
-
-```python
-ERROR_CATEGORIES = {
-    'timeout': {'max_retries': 3, 'backoff_factor': 2},
-    'connection': {'max_retries': 2, 'backoff_factor': 1.5},
-    'rate_limit': {'max_retries': 5, 'backoff_factor': 3},
-    'server_error': {'max_retries': 4, 'backoff_factor': 2}
-}
-```
-
-## 性能与可扩展性
-
-### 异步架构设计
-
-- **事件驱动**：基于 asyncio 的事件循环
-- **并发控制**：可配置的并发请求数量
-- **资源池化**：浏览器实例和连接池管理
-- **流式处理**：大批量数据的分块处理
-
-### 多级缓存策略
+### 缓存流程
 
 ```mermaid
 graph TD
-    A[Request] --> B{Memory Cache}
-    B -->|Hit| C[Return Cached Result]
-    B -->|Miss| D{Disk Cache}
-    D -->|Hit| E[Update Memory Cache]
-    D -->|Miss| F[Process Request]
-    F --> G[Update Both Caches]
+    A["Request"] --> B{"Memory Cache<br/>TTL 检查"}
+    B -->|"Hit 且未过期"| C["Return Cached"]
+    B -->|"Miss 或已过期"| D["Process Request"]
+    D --> E["写入缓存"]
     E --> C
-    G --> C
 
     style A fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
     style B fill:#7c2d12,stroke:#ea580c,color:#ffffff
     style C fill:#166534,stroke:#22c55e,color:#ffffff
     style D fill:#134e4a,stroke:#14b8a6,color:#ffffff
     style E fill:#581c87,stroke:#9333ea,color:#ffffff
-    style F fill:#7c2d12,stroke:#ea580c,color:#ffffff
-    style G fill:#166534,stroke:#22c55e,color:#ffffff
 ```
 
-### 性能监控系统
+### 错误处理
 
-**关键性能指标 (KPIs)**：
+`ErrorHandler` 通过字符串匹配将异常分类为网络层（timeout/connection）、协议层（not_found/forbidden）、反爬层（anti_bot）和未知错误。`RetryManager` 对所有可重试错误应用统一的指数退避策略（3 次重试，退避因子 2.0）。
 
-- **吞吐量**：每秒处理的请求数 (RPS)
-- **延迟**：P50, P95, P99 响应时间
-- **成功率**：请求成功率分布
-- **资源利用率**：CPU、内存、网络使用率
+## 配置系统
 
-## 安全性与反检测
+[`extractor/config.py`](../extractor/config.py) 基于 `pydantic-settings` 的 `BaseSettings` 实现：
 
-### 反检测技术栈
+`DataExtractorSettings` 使用 `DATA_EXTRACTOR_` 前缀自动映射环境变量，支持 `.env` 文件，实例冻结（immutable）。配置层级（优先级递增）：代码默认值 → `.env` 文件 → 环境变量。
 
-- **浏览器隐身**：undetected-chromedriver, Playwright
-- **行为模拟**：随机延迟、鼠标轨迹、键盘输入
-- **指纹规避**：User-Agent 轮换、Canvas 指纹处理
-- **代理支持**：HTTP/HTTPS/SOCKS 代理轮换
+**主要配置组**：服务器、传输（STDIO/HTTP/SSE + host/port/path/CORS）、抓取、限速/重试/缓存、浏览器、User-Agent、代理、日志。详细配置项参见 [配置系统文档](./4-Configuration.md)。
 
-### 数据安全措施
+## 辅助模块与兼容性
 
-- **凭据管理**：环境变量存储，避免硬编码
-- **数据清理**：自动清理临时文件和缓存
-- **日志脱敏**：敏感信息不记录到日志
-- **传输加密**：HTTPS 强制，证书验证
+### 工具类
 
-## 扩展规划与优化
+| 模块 | 类/函数 | 功能 |
+|------|---------|------|
+| [`url_utils.py`](../extractor/url_utils.py) | `URLValidator` | URL 校验、规范化、域名提取 |
+| [`text_utils.py`](../extractor/text_utils.py) | `TextCleaner` | 文本清理、邮箱/电话提取、截断 |
+| [`config_validator.py`](../extractor/config_validator.py) | `ConfigValidator` | 提取配置字典校验 |
+| [`browser_utils.py`](../extractor/browser_utils.py) | `build_chrome_options()` | 共享 Chrome 选项构建器 |
 
-### 未来扩展方向
+### 向后兼容垫片
 
-**水平扩展**：
-
-- 分布式抓取：多节点协同抓取
-- 消息队列：Redis/RabbitMQ 任务队列
-- 负载均衡：Nginx/HAProxy 请求分发
-- 数据库集成：PostgreSQL/MongoDB 结果存储
-
-**功能增强**：
-
-- AI 集成：大语言模型内容理解
-- 多媒体处理：图片、音频、视频内容提取
-- 实时流处理：WebSocket 实时数据推送
-- 可视化界面：Web UI 和监控仪表板
-
-### 技术债务优化
-
-**当前限制**：
-
-- 浏览器资源消耗：Selenium 实例内存占用较高
-- JavaScript 执行效率：动态内容抓取性能瓶颈
-- PDF 处理速度：大文件处理时间较长
-- 并发控制精度：细粒度限流需要改进
-
-**优化计划**：
-
-- 浏览器池化：预创建和复用浏览器实例
-- 智能缓存：基于内容相似度的缓存策略
-- 流式处理：大文件的分块并行处理
-- 算法优化：选择器匹配和数据提取算法改进
+以下模块仅作为重导出垫片（shim），保持旧版 import 路径可用：[`utils.py`](../extractor/utils.py)（聚合导出各工具类）、[`pdf_processor.py`](../extractor/pdf_processor.py)（→ `pdf.processor`）、[`enhanced_pdf_processor.py`](../extractor/enhanced_pdf_processor.py)（→ `pdf.enhanced`）、[`advanced_features.py`](../extractor/advanced_features.py)（→ `anti_detection` + `form_handler`）。
 
 ---
 
-本架构文档将随着项目的发展持续更新，确保技术选型与设计决策的时效性和准确性。
+本架构文档与代码库保持同步，如发现偏差请以源码为准并及时更新本文档。
