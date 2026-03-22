@@ -27,11 +27,8 @@ fi
 
 echo "✅ uv found"
 
-# Sync dependencies
-echo "📦 Installing dependencies..."
-uv sync
-
-echo "🔧 Installing development dependencies..."
+# Sync dependencies (--group dev includes base dependencies)
+echo "📦 Installing dependencies (including dev group)..."
 uv sync --group dev
 
 # Copy environment configuration if it doesn't exist

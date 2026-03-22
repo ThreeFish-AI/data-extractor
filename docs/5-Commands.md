@@ -189,8 +189,8 @@ uv pip show <package-name>
 ### 版本控制管理
 
 ```bash
-# 更新项目版本号到所有相关文件
-./scripts/update_version.py
+# 版本号在 pyproject.toml 中维护，运行时由 extractor/__init__.py 动态读取
+# 更新版本号：直接编辑 pyproject.toml 中的 version 字段
 
 # 查看当前项目版本号
 uv run python -c "from extractor import __version__; print(__version__)"
