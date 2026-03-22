@@ -418,6 +418,17 @@ class TestUtilityFunctions:
         assert result["data"] == "result"
         assert "duration_ms" in result
 
+    def test_timing_decorator_sync(self):
+        """测试同步函数的计时装饰器功能"""
+
+        @timing_decorator
+        def test_function():
+            time.sleep(0.01)
+            return "result"
+
+        result = test_function()
+        assert result == "result"
+
     def test_global_instances(self):
         """Test global utility instances are properly initialized."""
         assert rate_limiter is not None
