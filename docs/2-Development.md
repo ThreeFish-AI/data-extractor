@@ -77,8 +77,7 @@ data-extractor/
 │   └── reports/               # 测试报告
 ├── scripts/                   # 开发脚本
 │   ├── setup.sh              # 环境设置
-│   ├── run-tests.sh           # 测试执行
-│   └── update_version.py      # 版本更新
+│   └── run-tests.sh           # 测试执行
 ├── docs/                      # 文档
 ├── examples/                  # 示例代码
 ├── .github/workflows/         # CI/CD 配置
