@@ -10,8 +10,8 @@ from ..form_handler import FormHandler
 from ..rate_limiter import rate_limiter
 from ..schemas import ScrapeResponse
 from ..url_utils import URLValidator
-from ._registry import app, ToolTimer
 from ..validation_trace import trace_event
+from ._registry import app, ToolTimer
 
 logger = logging.getLogger(__name__)
 

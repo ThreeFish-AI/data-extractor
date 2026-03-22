@@ -6,11 +6,9 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from pydantic import Field
 
-from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ..timing import timing_decorator
-from ._registry import app, create_pdf_processor, ToolTimer, validate_page_range
 from ..validation_trace import trace_event
 from ._registry import app, create_pdf_processor, ToolTimer, validate_page_range
 
@@ -200,6 +198,7 @@ async def convert_pdf_to_markdown(
             )
 
     except Exception as e:
+        trace_event("convert_pdf_to_markdown", "conversion_failed", error=str(e))
         return PDFResponse(
             success=False, pdf_source=pdf_source, method=method,
             output_format=output_format,

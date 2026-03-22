@@ -7,12 +7,11 @@ from urllib.parse import urlparse
 
 from pydantic import Field
 
-from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
 from ..timing import timing_decorator
-from ._registry import app, markdown_converter, ToolTimer, web_scraper
 from ..validation_trace import trace_event
+from ._registry import app, markdown_converter, ToolTimer, web_scraper
 
 logger = logging.getLogger(__name__)
 
