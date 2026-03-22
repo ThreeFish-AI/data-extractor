@@ -69,6 +69,12 @@ class TestWorkflowActionVersions:
         content = _read_workflow("dependencies.yml")
         assert "peter-evans/create-pull-request@v8" in content
 
+    def test_codecov_v5_uses_plural_files_input(self):
+        content = _read_workflow("ci.yml")
+        assert "codecov/codecov-action@v5" in content
+        assert "files: ./coverage.xml" in content
+        assert "file: ./coverage.xml" not in content
+
 
 class TestDependenciesWorkflowLocalization:
     """依赖更新 PR 模板本地化验证。"""
