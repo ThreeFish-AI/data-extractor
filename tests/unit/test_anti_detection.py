@@ -156,8 +156,8 @@ class TestImportCompatibility:
 
         assert AntiDetectionScraper is not None
 
-    def test_import_from_advanced_features_shim(self):
-        """通过 advanced_features 垫片导入。"""
-        from extractor.advanced_features import AntiDetectionScraper
+    def test_import_from_anti_detection_module(self):
+        """直接从 anti_detection 模块导入。"""
+        from extractor.anti_detection import AntiDetectionScraper
 
         assert AntiDetectionScraper is not None

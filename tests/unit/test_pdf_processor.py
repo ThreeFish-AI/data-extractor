@@ -58,7 +58,7 @@ from pathlib import Path
 import tempfile
 import os
 
-from extractor.pdf_processor import PDFProcessor
+from extractor.pdf.processor import PDFProcessor
 
 
 class TestPDFProcessor:

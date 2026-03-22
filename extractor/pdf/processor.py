@@ -477,7 +477,7 @@ class PDFProcessor:
         """Convert extracted text to Markdown format using MarkItDown."""
         try:
             # Try to use the new MarkdownConverter for better formatting
-            from ..markdown_converter import MarkdownConverter
+            from ..markdown.converter import MarkdownConverter
 
             converter = MarkdownConverter()
 

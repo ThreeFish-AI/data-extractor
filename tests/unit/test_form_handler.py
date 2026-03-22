@@ -227,8 +227,8 @@ class TestImportCompatibility:
 
         assert FormHandler is not None
 
-    def test_import_from_advanced_features_shim(self):
-        """通过 advanced_features 垫片导入。"""
-        from extractor.advanced_features import FormHandler
+    def test_import_from_form_handler_module(self):
+        """直接从 form_handler 模块导入。"""
+        from extractor.form_handler import FormHandler
 
         assert FormHandler is not None

@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from urllib.parse import urlparse
 
 from fastmcp import FastMCP
@@ -10,7 +10,7 @@ from fastmcp import FastMCP
 from ..anti_detection import AntiDetectionScraper
 from ..config import settings
 from ..error_handler import ErrorHandler
-from ..markdown_converter import MarkdownConverter
+from ..markdown.converter import MarkdownConverter
 from ..metrics import metrics_collector
 from ..scraper import WebScraper
 
@@ -30,7 +30,7 @@ anti_detection_scraper = AntiDetectionScraper()
 markdown_converter = MarkdownConverter()
 
 
-def _get_pdf_processor(
+def create_pdf_processor(
     enable_enhanced_features: bool = True, output_dir: Optional[str] = None
 ):
     """获取 PDF 处理器实例，延迟导入以避免启动警告"""
@@ -83,3 +83,47 @@ def record_error(e: Exception, url: str, method: str, duration_ms: int) -> str:
 def elapsed_ms(start_time: float) -> int:
     """Calculate elapsed milliseconds from start_time."""
     return int((time.time() - start_time) * 1000)
+
+
+class ToolTimer:
+    """Unified timing and metrics helper for MCP tool execution.
+
+    Encapsulates start_time tracking, elapsed calculation, and metrics recording
+    to eliminate repeated boilerplate across tool modules.
+
+    Usage::
+
+        timer = ToolTimer(url, f"stealth_{method}")
+        try:
+            result = await do_work()
+            if result.get("success"):
+                return Response(success=True, duration_ms=timer.record_success())
+            else:
+                return Response(success=False, error=timer.record_failure(Exception(result["error"])))
+        except Exception as e:
+            return Response(success=False, error=timer.record_failure(e))
+    """
+
+    __slots__ = ("url", "method", "_start", "duration_ms")
+
+    def __init__(self, url: str, method: str) -> None:
+        self.url = url
+        self.method = method
+        self._start = time.time()
+        self.duration_ms = 0
+
+    def elapsed(self) -> int:
+        """Compute and cache elapsed milliseconds."""
+        self.duration_ms = elapsed_ms(self._start)
+        return self.duration_ms
+
+    def record_success(self) -> int:
+        """Record success metrics. Returns duration_ms."""
+        self.elapsed()
+        metrics_collector.record_request(self.url, True, self.duration_ms, self.method)
+        return self.duration_ms
+
+    def record_failure(self, error: Exception) -> str:
+        """Record failure metrics. Returns user-facing error message."""
+        self.elapsed()
+        return record_error(error, self.url, self.method, self.duration_ms)

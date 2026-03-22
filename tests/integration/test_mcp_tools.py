@@ -14,8 +14,8 @@ from unittest.mock import patch, AsyncMock, Mock
 
 from extractor.server import app, web_scraper, anti_detection_scraper
 from extractor.scraper import WebScraper
-from extractor.advanced_features import AntiDetectionScraper
-from extractor.markdown_converter import MarkdownConverter
+from extractor.anti_detection import AntiDetectionScraper
+from extractor.markdown.converter import MarkdownConverter
 
 
 # ---------------------------------------------------------------------------
@@ -357,9 +357,9 @@ class TestPDFToolIntegration:
     async def test_pdf_tools_resource_cleanup(self):
         """Test that PDF tools properly clean up resources."""
         # Verify that PDF processor has cleanup capabilities
-        from extractor.server import _get_pdf_processor
+        from extractor.server import create_pdf_processor
 
-        pdf_processor = _get_pdf_processor()
+        pdf_processor = create_pdf_processor()
 
         # Check that the processor has cleanup method
         assert hasattr(pdf_processor, "cleanup")
@@ -406,7 +406,7 @@ class TestMCPToolWorkflows:
         with (
             patch("extractor.scraper.WebScraper.scrape_url") as mock_scrape,
             patch(
-                "extractor.markdown_converter.MarkdownConverter.convert_webpage_to_markdown"
+                "extractor.markdown.converter.MarkdownConverter.convert_webpage_to_markdown"
             ) as mock_convert,
         ):
             mock_scrape.return_value = sample_scrape_result
@@ -432,7 +432,7 @@ class TestMCPToolWorkflows:
                 "extractor.scraper.WebScraper.scrape_multiple_urls"
             ) as mock_batch_scrape,
             patch(
-                "extractor.markdown_converter.MarkdownConverter.batch_convert_to_markdown"
+                "extractor.markdown.converter.MarkdownConverter.batch_convert_to_markdown"
             ) as mock_batch_convert,
         ):
             mock_batch_scrape.return_value = {
@@ -471,7 +471,7 @@ class TestMCPToolWorkflows:
     async def test_stealth_to_structured_data_workflow(self):
         """测试隐身爬取到结构化数据提取工作流"""
         with patch(
-            "extractor.advanced_features.AntiDetectionScraper.scrape_with_stealth"
+            "extractor.anti_detection.AntiDetectionScraper.scrape_with_stealth"
         ) as mock_stealth:
             mock_stealth.return_value = {
                 "url": "https://ecommerce-example.com",
@@ -492,7 +492,7 @@ class TestMCPToolWorkflows:
     async def test_pdf_processing_workflow(self):
         """测试PDF处理工作流"""
         with patch(
-            "extractor.pdf_processor.PDFProcessor.process_pdf"
+            "extractor.pdf.processor.PDFProcessor.process_pdf"
         ) as mock_pdf_process:
             mock_pdf_process.return_value = {
                 "success": True,

@@ -27,21 +27,15 @@ import asyncio
 import time
 from unittest.mock import patch, AsyncMock
 
-from extractor.utils import (
-    RateLimiter,
-    RetryManager,
-    CacheManager,
-    MetricsCollector,
-    ErrorHandler,
-    URLValidator,
-    TextCleaner,
-    ConfigValidator,
-    timing_decorator,
-    rate_limiter,
-    retry_manager,
-    cache_manager,
-    metrics_collector,
-)
+from extractor.rate_limiter import RateLimiter, rate_limiter
+from extractor.retry import RetryManager, retry_manager
+from extractor.cache import CacheManager, cache_manager
+from extractor.metrics import MetricsCollector, metrics_collector
+from extractor.error_handler import ErrorHandler
+from extractor.url_utils import URLValidator
+from extractor.text_utils import TextCleaner
+from extractor.config import ConfigValidator
+from extractor.timing import timing_decorator
 
 
 class TestRateLimiter:
