@@ -6,6 +6,7 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from pydantic import Field
 
+from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ..timing import timing_decorator

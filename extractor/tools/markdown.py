@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from pydantic import Field
 
+from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
 from ..timing import timing_decorator
