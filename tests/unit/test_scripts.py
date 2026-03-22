@@ -5,8 +5,8 @@
 
 import os
 import re
-import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,32 +14,10 @@ import pytest
 # 项目根目录
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+WINDOWS_SKIP_REASON = "Windows runner 不原生执行 .sh 脚本，相关测试仅在类 Unix 环境运行"
 
 
-def _bash_is_usable() -> bool:
-    """检测当前环境是否具备可执行 bash。"""
-    bash_path = shutil.which("bash")
-    if bash_path is None:
-        return False
-
-    result = subprocess.run(
-        [bash_path, "--version"],
-        capture_output=True,
-        text=True,
-    )
-    combined_output = f"{result.stdout}\n{result.stderr}"
-    return (
-        result.returncode == 0
-        and "Windows Subsystem for Linux has no installed distributions" not in combined_output
-    )
-
-
-pytestmark = pytest.mark.skipif(
-    not _bash_is_usable(),
-    reason="当前环境缺少可用的 bash，无法执行 shell 脚本测试",
-)
-
-
+@pytest.mark.skipif(sys.platform == "win32", reason=WINDOWS_SKIP_REASON)
 class TestRunTestsScript:
     """run-tests.sh 测试。"""
 
@@ -118,6 +96,7 @@ class TestRunTestsScript:
         assert result.returncode != 0
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason=WINDOWS_SKIP_REASON)
 class TestSetupScript:
     """setup.sh 测试。"""
 
