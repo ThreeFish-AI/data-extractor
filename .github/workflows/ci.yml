@@ -18,7 +18,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python with uv
         uses: ./.github/actions/setup-python-uv
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python with uv
         uses: ./.github/actions/setup-python-uv
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python with uv
         uses: ./.github/actions/setup-python-uv
@@ -70,7 +70,7 @@ jobs:
           uv run pip-audit
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: security-reports
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python with uv
         uses: ./.github/actions/setup-python-uv
@@ -99,7 +99,7 @@ jobs:
           uv run python -c "import extractor; print(f'Successfully imported extractor v{extractor.__version__}')" || uv run python -c "import extractor; print('Successfully imported extractor')"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-test
           path: dist/
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python with uv
         uses: ./.github/actions/setup-python-uv
@@ -121,7 +121,7 @@ jobs:
           DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: |
@@ -129,9 +129,9 @@ jobs:
             htmlcov/
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false

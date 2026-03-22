@@ -299,9 +299,7 @@ def markdown_to_text(markdown_content: str) -> str:
         text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)  # Headers
         text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)  # Blockquotes
         text = re.sub(r"^\s*[-*+]\s+", "", text, flags=re.MULTILINE)  # Lists
-        text = re.sub(
-            r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE
-        )  # Numbered lists
+        text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE)  # Numbered lists
 
         return text.strip()
     except Exception as e:

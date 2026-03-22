@@ -46,9 +46,7 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
 
         # Remove elements with specific classes/ids commonly used for ads/navigation
         unwanted_patterns = [
-            re.compile(
-                r".*(ad|advertisement|sidebar|nav|menu|footer|header).*", re.I
-            )
+            re.compile(r".*(ad|advertisement|sidebar|nav|menu|footer|header).*", re.I)
         ]
 
         for pattern in unwanted_patterns:
@@ -70,9 +68,7 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
             # Convert relative image sources
             for img in soup.find_all("img", src=True):
                 src = img.get("src", "")
-                if isinstance(src, str) and not src.startswith(
-                    ("http://", "https://")
-                ):
+                if isinstance(src, str) and not src.startswith(("http://", "https://")):
                     img["src"] = urljoin(base_url, src)
 
         return str(soup)
@@ -163,9 +159,7 @@ def fallback_html_conversion(html_content: str) -> str:
         return f"Conversion failed: {str(e)}"
 
 
-def build_html_from_text(
-    text_content: str, title: str, content_data: Dict
-) -> str:
+def build_html_from_text(text_content: str, title: str, content_data: Dict) -> str:
     """Build basic HTML structure from text content."""
     try:
         html_parts = ["<html><head>"]

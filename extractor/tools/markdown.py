@@ -111,13 +111,18 @@ async def convert_webpage_to_markdown(
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return MarkdownResponse(
-                success=False, url=url, method=method,
-                error="Invalid URL format", conversion_time=0,
+                success=False,
+                url=url,
+                method=method,
+                error="Invalid URL format",
+                conversion_time=0,
             )
 
         if method not in ["auto", "simple", "scrapy", "selenium"]:
             return MarkdownResponse(
-                success=False, url=url, method=method,
+                success=False,
+                url=url,
+                method=method,
                 error="Method must be one of: auto, simple, scrapy, selenium",
                 conversion_time=0,
             )
@@ -137,7 +142,9 @@ async def convert_webpage_to_markdown(
 
         # Scrape the webpage first
         scrape_result = await web_scraper.scrape_url(
-            url=url, method=method, extract_config=None,
+            url=url,
+            method=method,
+            extract_config=None,
             wait_for_element=wait_for_element,
         )
         trace_event(
@@ -148,7 +155,9 @@ async def convert_webpage_to_markdown(
 
         if "error" in scrape_result:
             return MarkdownResponse(
-                success=False, url=url, method=method,
+                success=False,
+                url=url,
+                method=method,
                 error=scrape_result["error"],
                 conversion_time=timer.elapsed() / 1000.0,
             )
@@ -172,7 +181,9 @@ async def convert_webpage_to_markdown(
 
         if conversion_result.get("success"):
             return MarkdownResponse(
-                success=True, url=url, method=method_key,
+                success=True,
+                url=url,
+                method=method_key,
                 markdown_content=conversion_result.get(
                     "markdown_content", conversion_result.get("markdown", "")
                 ),
@@ -183,9 +194,13 @@ async def convert_webpage_to_markdown(
             )
         else:
             return MarkdownResponse(
-                success=False, url=url, method=method_key,
+                success=False,
+                url=url,
+                method=method_key,
                 error=timer.record_failure(
-                    Exception(conversion_result.get("error", "Markdown conversion failed"))
+                    Exception(
+                        conversion_result.get("error", "Markdown conversion failed")
+                    )
                 ),
                 conversion_time=timer.duration_ms,
             )
@@ -193,7 +208,9 @@ async def convert_webpage_to_markdown(
     except Exception as e:
         trace_event("convert_webpage_to_markdown", "conversion_failed", error=str(e))
         return MarkdownResponse(
-            success=False, url=url, method=method_key,
+            success=False,
+            url=url,
+            method=method_key,
             error=timer.record_failure(e),
             conversion_time=timer.duration_ms,
         )
@@ -279,22 +296,34 @@ async def batch_convert_webpages_to_markdown(
         # Validate inputs
         if not urls:
             return BatchMarkdownResponse(
-                success=False, total_urls=0, successful_count=0,
-                failed_count=0, results=[], total_conversion_time=0,
+                success=False,
+                total_urls=0,
+                successful_count=0,
+                failed_count=0,
+                results=[],
+                total_conversion_time=0,
             )
 
         for url in urls:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 return BatchMarkdownResponse(
-                    success=False, total_urls=0, successful_count=0,
-                    failed_count=0, results=[], total_conversion_time=0,
+                    success=False,
+                    total_urls=0,
+                    successful_count=0,
+                    failed_count=0,
+                    results=[],
+                    total_conversion_time=0,
                 )
 
         if method not in ["auto", "simple", "scrapy", "selenium"]:
             return BatchMarkdownResponse(
-                success=False, total_urls=0, successful_count=0,
-                failed_count=0, results=[], total_conversion_time=0,
+                success=False,
+                total_urls=0,
+                successful_count=0,
+                failed_count=0,
+                results=[],
+                total_conversion_time=0,
             )
 
         start_time = time.time()
@@ -328,7 +357,10 @@ async def batch_convert_webpages_to_markdown(
             )
             success = result.get("success", False)
             metrics_collector.record_request(
-                url, success, duration_ms // len(urls), f"batch_markdown_{method}",
+                url,
+                success,
+                duration_ms // len(urls),
+                f"batch_markdown_{method}",
             )
 
         # Convert the conversion results to MarkdownResponse objects
@@ -364,7 +396,9 @@ async def batch_convert_webpages_to_markdown(
         )
 
     except Exception as e:
-        duration_ms = int((time.time() - start_time) * 1000) if "start_time" in dir() else 0
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in dir() else 0
+        )
         logger.error(f"Error in batch Markdown conversion: {str(e)}")
         return BatchMarkdownResponse(
             success=False,

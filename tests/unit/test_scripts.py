@@ -6,6 +6,7 @@
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,8 +14,10 @@ import pytest
 # 项目根目录
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+WINDOWS_SKIP_REASON = "Windows runner 不原生执行 .sh 脚本，相关测试仅在类 Unix 环境运行"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason=WINDOWS_SKIP_REASON)
 class TestRunTestsScript:
     """run-tests.sh 测试。"""
 
@@ -93,6 +96,7 @@ class TestRunTestsScript:
         assert result.returncode != 0
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason=WINDOWS_SKIP_REASON)
 class TestSetupScript:
     """setup.sh 测试。"""
 

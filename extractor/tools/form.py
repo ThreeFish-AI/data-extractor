@@ -82,12 +82,17 @@ async def fill_and_submit_form(
         # Validate inputs
         if not URLValidator.is_valid_url(url):
             return ScrapeResponse(
-                success=False, url=url, method=method, error="Invalid URL format",
+                success=False,
+                url=url,
+                method=method,
+                error="Invalid URL format",
             )
 
         if method not in ["selenium", "playwright"]:
             return ScrapeResponse(
-                success=False, url=url, method=method,
+                success=False,
+                url=url,
+                method=method,
                 error="Method must be one of: selenium, playwright",
             )
 
@@ -198,7 +203,9 @@ async def fill_and_submit_form(
         if result.get("success"):
             timer.record_success()
             return ScrapeResponse(
-                success=True, url=url, method=method_key,
+                success=True,
+                url=url,
+                method=method_key,
                 data={
                     "form_results": result,
                     "final_url": final_url,
@@ -208,13 +215,19 @@ async def fill_and_submit_form(
             )
         else:
             return ScrapeResponse(
-                success=False, url=url, method=method_key,
-                error=timer.record_failure(Exception(result.get("error", "Form interaction failed"))),
+                success=False,
+                url=url,
+                method=method_key,
+                error=timer.record_failure(
+                    Exception(result.get("error", "Form interaction failed"))
+                ),
             )
 
     except Exception as e:
         trace_event("fill_and_submit_form", "interaction_failed", error=str(e))
         return ScrapeResponse(
-            success=False, url=url, method=method_key,
+            success=False,
+            url=url,
+            method=method_key,
             error=timer.record_failure(e),
         )

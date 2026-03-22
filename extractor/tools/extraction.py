@@ -74,13 +74,18 @@ async def extract_links(
 
         # Scrape the page to get links
         scrape_result = await web_scraper.scrape_url(
-            url=url, method="simple",
+            url=url,
+            method="simple",
         )
 
         if "error" in scrape_result:
             return LinksResponse(
-                success=False, url=url, total_links=0, links=[],
-                internal_links_count=0, external_links_count=0,
+                success=False,
+                url=url,
+                total_links=0,
+                links=[],
+                internal_links_count=0,
+                external_links_count=0,
                 error=scrape_result["error"],
             )
 
@@ -118,16 +123,24 @@ async def extract_links(
         external_count = len(filtered_links) - internal_count
 
         return LinksResponse(
-            success=True, url=url, total_links=len(filtered_links),
+            success=True,
+            url=url,
+            total_links=len(filtered_links),
             links=filtered_links,
-            internal_links_count=internal_count, external_links_count=external_count,
+            internal_links_count=internal_count,
+            external_links_count=external_count,
         )
 
     except Exception as e:
         logger.error(f"Error extracting links from {url}: {str(e)}")
         return LinksResponse(
-            success=False, url=url, total_links=0, links=[],
-            internal_links_count=0, external_links_count=0, error=str(e),
+            success=False,
+            url=url,
+            total_links=0,
+            links=[],
+            internal_links_count=0,
+            external_links_count=0,
+            error=str(e),
         )
 
 
@@ -244,8 +257,12 @@ async def extract_structured_data(
 
         if "error" in scrape_result:
             return StructuredDataResponse(
-                success=False, url=normalized_url, data_type=data_type,
-                extracted_data={}, data_count=0, error=scrape_result["error"],
+                success=False,
+                url=normalized_url,
+                data_type=data_type,
+                extracted_data={},
+                data_count=0,
+                error=scrape_result["error"],
             )
 
         content = scrape_result.get("content", {})
@@ -264,8 +281,14 @@ async def extract_structured_data(
         # Extract social media links
         if data_type in ["all", "social"]:
             social_domains = [
-                "facebook.com", "twitter.com", "instagram.com", "linkedin.com",
-                "youtube.com", "tiktok.com", "pinterest.com", "snapchat.com",
+                "facebook.com",
+                "twitter.com",
+                "instagram.com",
+                "linkedin.com",
+                "youtube.com",
+                "tiktok.com",
+                "pinterest.com",
+                "snapchat.com",
             ]
 
             social_links = []
@@ -275,11 +298,13 @@ async def extract_structured_data(
 
                 for social_domain in social_domains:
                     if social_domain in domain:
-                        social_links.append({
-                            "platform": social_domain.split(".")[0],
-                            "url": link_url,
-                            "text": link.get("text", ""),
-                        })
+                        social_links.append(
+                            {
+                                "platform": social_domain.split(".")[0],
+                                "url": link_url,
+                                "text": link.get("text", ""),
+                            }
+                        )
                         break
 
             extracted_data["social_media"] = social_links
@@ -295,7 +320,9 @@ async def extract_structured_data(
             }
 
         return StructuredDataResponse(
-            success=True, url=normalized_url, data_type=data_type,
+            success=True,
+            url=normalized_url,
+            data_type=data_type,
             extracted_data=extracted_data,
             data_count=sum(
                 len(v) if isinstance(v, (list, dict)) else 1
@@ -306,6 +333,10 @@ async def extract_structured_data(
     except Exception as e:
         logger.error(f"Error extracting structured data from {url}: {str(e)}")
         return StructuredDataResponse(
-            success=False, url=url, data_type=data_type,
-            extracted_data={}, data_count=0, error=str(e),
+            success=False,
+            url=url,
+            data_type=data_type,
+            extracted_data={},
+            data_count=0,
+            error=str(e),
         )

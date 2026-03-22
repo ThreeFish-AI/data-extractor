@@ -171,9 +171,7 @@ class MarkdownConverter:
         return self._formatter._apply_typography_fixes(md)
 
     @staticmethod
-    def _embed_images_in_markdown(
-        markdown_content: str, **kwargs
-    ) -> dict:
+    def _embed_images_in_markdown(markdown_content: str, **kwargs) -> dict:
         return embed_images_in_markdown(markdown_content, **kwargs)
 
     def convert_pdf_to_markdown(

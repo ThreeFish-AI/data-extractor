@@ -100,7 +100,9 @@ async def convert_pdf_to_markdown(
         # Validate inputs
         if method not in ["auto", "pymupdf", "pypdf"]:
             return PDFResponse(
-                success=False, pdf_source=pdf_source, method=method,
+                success=False,
+                pdf_source=pdf_source,
+                method=method,
                 output_format=output_format,
                 error="Method must be one of: auto, pymupdf, pypdf",
                 conversion_time=0,
@@ -108,7 +110,9 @@ async def convert_pdf_to_markdown(
 
         if output_format not in ["markdown", "text"]:
             return PDFResponse(
-                success=False, pdf_source=pdf_source, method=method,
+                success=False,
+                pdf_source=pdf_source,
+                method=method,
                 output_format=output_format,
                 error="Output format must be one of: markdown, text",
                 conversion_time=0,
@@ -118,8 +122,11 @@ async def convert_pdf_to_markdown(
         page_range_tuple, page_range_error = validate_page_range(page_range)
         if page_range_error:
             return PDFResponse(
-                success=False, pdf_source=pdf_source, method=method,
-                output_format=output_format, error=page_range_error,
+                success=False,
+                pdf_source=pdf_source,
+                method=method,
+                output_format=output_format,
+                error=page_range_error,
                 conversion_time=0,
             )
 
@@ -177,7 +184,9 @@ async def convert_pdf_to_markdown(
 
         if result.get("success"):
             return PDFResponse(
-                success=True, pdf_source=pdf_source, method=method,
+                success=True,
+                pdf_source=pdf_source,
+                method=method,
                 output_format=output_format,
                 content=result.get("content", result.get("markdown", "")),
                 metadata=result.get("metadata", {}),
@@ -190,7 +199,9 @@ async def convert_pdf_to_markdown(
             )
         else:
             return PDFResponse(
-                success=False, pdf_source=pdf_source, method=method,
+                success=False,
+                pdf_source=pdf_source,
+                method=method,
                 output_format=output_format,
                 error=timer.record_failure(
                     Exception(result.get("error", "PDF conversion failed"))
@@ -201,7 +212,9 @@ async def convert_pdf_to_markdown(
     except Exception as e:
         trace_event("convert_pdf_to_markdown", "conversion_failed", error=str(e))
         return PDFResponse(
-            success=False, pdf_source=pdf_source, method=method,
+            success=False,
+            pdf_source=pdf_source,
+            method=method,
             output_format=output_format,
             error=timer.record_failure(e),
             conversion_time=timer.duration_ms / 1000.0,
@@ -307,28 +320,44 @@ async def batch_convert_pdfs_to_markdown(
         # Validate inputs
         if not pdf_sources:
             return BatchPDFResponse(
-                success=False, total_pdfs=0, successful_count=0,
-                failed_count=0, results=[], total_conversion_time=0,
+                success=False,
+                total_pdfs=0,
+                successful_count=0,
+                failed_count=0,
+                results=[],
+                total_conversion_time=0,
             )
 
         if method not in ["auto", "pymupdf", "pypdf"]:
             return BatchPDFResponse(
-                success=False, total_pdfs=len(pdf_sources), successful_count=0,
-                failed_count=len(pdf_sources), results=[], total_conversion_time=0,
+                success=False,
+                total_pdfs=len(pdf_sources),
+                successful_count=0,
+                failed_count=len(pdf_sources),
+                results=[],
+                total_conversion_time=0,
             )
 
         if output_format not in ["markdown", "text"]:
             return BatchPDFResponse(
-                success=False, total_pdfs=len(pdf_sources), successful_count=0,
-                failed_count=len(pdf_sources), results=[], total_conversion_time=0,
+                success=False,
+                total_pdfs=len(pdf_sources),
+                successful_count=0,
+                failed_count=len(pdf_sources),
+                results=[],
+                total_conversion_time=0,
             )
 
         # Validate page range using shared helper
         page_range_tuple, page_range_error = validate_page_range(page_range)
         if page_range_error:
             return BatchPDFResponse(
-                success=False, total_pdfs=len(pdf_sources), successful_count=0,
-                failed_count=len(pdf_sources), results=[], total_conversion_time=0,
+                success=False,
+                total_pdfs=len(pdf_sources),
+                successful_count=0,
+                failed_count=len(pdf_sources),
+                results=[],
+                total_conversion_time=0,
             )
 
         start_time = time.time()
@@ -362,7 +391,9 @@ async def batch_convert_pdfs_to_markdown(
             )
             success = pdf_result.get("success", False)
             metrics_collector.record_request(
-                pdf_source, success, duration_ms // len(pdf_sources),
+                pdf_source,
+                success,
+                duration_ms // len(pdf_sources),
                 f"batch_pdf_{method}",
             )
 
@@ -404,13 +435,17 @@ async def batch_convert_pdfs_to_markdown(
         )
 
     except Exception as e:
-        duration_ms = int((time.time() - start_time) * 1000) if "start_time" in dir() else 0
+        duration_ms = (
+            int((time.time() - start_time) * 1000) if "start_time" in dir() else 0
+        )
         logger.error(f"Error in batch PDF conversion: {str(e)}")
         return BatchPDFResponse(
             success=False,
             total_pdfs=len(pdf_sources) if pdf_sources else 0,
             successful_count=0,
             failed_count=len(pdf_sources) if pdf_sources else 0,
-            results=[], total_pages=0, total_word_count=0,
+            results=[],
+            total_pages=0,
+            total_word_count=0,
             total_conversion_time=duration_ms / 1000.0,
         )
