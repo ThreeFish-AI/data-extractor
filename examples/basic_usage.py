@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 """
-Basic usage examples for the Data Extractor MCP Server.
+Data Extractor MCP 服务器基础用法示例。
 
-This script demonstrates how to use various scraping tools programmatically.
-Note: This is for demonstration purposes. In real usage, the MCP server
-would be called through MCP client tools like Claude Desktop.
+本脚本演示如何以编程方式使用各种抓取工具。
+注意：仅供演示使用。实际使用中，MCP 服务器将通过 MCP 客户端（如 Claude Desktop）调用。
 """
 
 import asyncio
 import json
-from typing import Dict, Any
+from typing import Any
 
 
-# Mock MCP client calls - replace with actual MCP client in production
-async def mock_mcp_call(tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Mock MCP tool call - replace with actual MCP client."""
+# ---------------------------------------------------------------------------
+# Mock MCP 客户端调用 —— 生产环境中替换为真实 MCP 客户端
+# ---------------------------------------------------------------------------
+async def mock_mcp_call(tool_name: str, params: dict[str, Any]) -> dict[str, Any]:
+    """模拟 MCP 工具调用，返回 Mock 响应。"""
     print(f"Mock call to {tool_name} with params: {json.dumps(params, indent=2)}")
-
-    # This would normally be handled by the MCP client
-    # Return mock successful response
     return {
         "success": True,
         "data": {"message": f"Mock response from {tool_name}"},
@@ -26,186 +24,131 @@ async def mock_mcp_call(tool_name: str, params: Dict[str, Any]) -> Dict[str, Any
     }
 
 
-async def example_basic_scraping():
-    """Example: Basic webpage scraping."""
-    print("=== Basic Webpage Scraping ===")
-
-    params = {"url": "https://httpbin.org/html", "method": "simple"}
-
-    result = await mock_mcp_call("scrape_webpage", params)
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_advanced_extraction():
-    """Example: Advanced data extraction with configuration."""
-    print("=== Advanced Data Extraction ===")
-
-    params = {
-        "url": "https://example.com",
-        "method": "auto",
-        "extract_config": {
-            "title": "h1",
-            "paragraphs": {"selector": "p", "multiple": True, "attr": "text"},
-            "links": {"selector": "a", "multiple": True, "attr": "href"},
-            "meta_description": {
-                "selector": "meta[name='description']",
-                "attr": "content",
-                "multiple": False,
+# ---------------------------------------------------------------------------
+# 示例定义：(标题, 工具名, 参数字典)
+# ---------------------------------------------------------------------------
+EXAMPLES: list[tuple[str, str, dict[str, Any]]] = [
+    (
+        "Basic Webpage Scraping",
+        "scrape_webpage",
+        {"url": "https://httpbin.org/html", "method": "simple"},
+    ),
+    (
+        "Advanced Data Extraction",
+        "scrape_webpage",
+        {
+            "url": "https://example.com",
+            "method": "auto",
+            "extract_config": {
+                "title": "h1",
+                "paragraphs": {"selector": "p", "multiple": True, "attr": "text"},
+                "links": {"selector": "a", "multiple": True, "attr": "href"},
+                "meta_description": {
+                    "selector": "meta[name='description']",
+                    "attr": "content",
+                    "multiple": False,
+                },
             },
         },
-    }
-
-    result = await mock_mcp_call("scrape_webpage", params)
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_multiple_urls():
-    """Example: Scraping multiple URLs concurrently."""
-    print("=== Multiple URL Scraping ===")
-
-    params = {
-        "urls": [
-            "https://httpbin.org/html",
-            "https://httpbin.org/json",
-            "https://httpbin.org/xml",
-        ],
-        "method": "simple",
-        "extract_config": {"title": "title", "headings": "h1, h2, h3"},
-    }
-
-    result = await mock_mcp_call("scrape_multiple_webpages", params)
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_stealth_scraping():
-    """Example: Stealth scraping for protected websites."""
-    print("=== Stealth Scraping ===")
-
-    params = {
-        "url": "https://example.com",
-        "method": "selenium",
-        "scroll_page": True,
-        "wait_for_element": "body",
-        "extract_config": {"content": {"selector": "body", "attr": "text"}},
-    }
-
-    result = await mock_mcp_call("scrape_with_stealth", params)
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_form_interaction():
-    """Example: Form filling and submission."""
-    print("=== Form Interaction ===")
-
-    params = {
-        "url": "https://httpbin.org/forms/post",
-        "form_data": {
-            "input[name='custname']": "John Doe",
-            "input[name='custtel']": "1234567890",
-            "input[name='custemail']": "john@example.com",
-            "select[name='size']": "large",
+    ),
+    (
+        "Multiple URL Scraping",
+        "scrape_multiple_webpages",
+        {
+            "urls": [
+                "https://httpbin.org/html",
+                "https://httpbin.org/json",
+                "https://httpbin.org/xml",
+            ],
+            "method": "simple",
+            "extract_config": {"title": "title", "headings": "h1, h2, h3"},
         },
-        "submit": False,  # Don't actually submit for demo
-        "method": "selenium",
-    }
+    ),
+    (
+        "Stealth Scraping",
+        "scrape_with_stealth",
+        {
+            "url": "https://example.com",
+            "method": "selenium",
+            "scroll_page": True,
+            "wait_for_element": "body",
+            "extract_config": {"content": {"selector": "body", "attr": "text"}},
+        },
+    ),
+    (
+        "Form Interaction",
+        "fill_and_submit_form",
+        {
+            "url": "https://httpbin.org/forms/post",
+            "form_data": {
+                "input[name='custname']": "John Doe",
+                "input[name='custtel']": "1234567890",
+                "input[name='custemail']": "john@example.com",
+                "select[name='size']": "large",
+            },
+            "submit": False,
+            "method": "selenium",
+        },
+    ),
+    (
+        "Link Extraction",
+        "extract_links",
+        {
+            "url": "https://example.com",
+            "internal_only": False,
+            "filter_domains": None,
+            "exclude_domains": ["spam.com", "ads.com"],
+        },
+    ),
+    (
+        "Structured Data Extraction",
+        "extract_structured_data",
+        {"url": "https://example.com/contact", "data_type": "all"},
+    ),
+    (
+        "Page Information",
+        "get_page_info",
+        {"url": "https://example.com"},
+    ),
+    (
+        "Robots.txt Check",
+        "check_robots_txt",
+        {"url": "https://example.com"},
+    ),
+    (
+        "Server Metrics",
+        "get_server_metrics",
+        {},
+    ),
+]
 
-    result = await mock_mcp_call("fill_and_submit_form", params)
+
+# ---------------------------------------------------------------------------
+# 运行器
+# ---------------------------------------------------------------------------
+async def _run_example(title: str, tool_name: str, params: dict[str, Any]) -> None:
+    """执行单个示例：打印标题、调用 mock、打印结果。"""
+    print(f"=== {title} ===")
+    result = await mock_mcp_call(tool_name, params)
     print(f"Result: {json.dumps(result, indent=2)}")
     print()
 
 
-async def example_link_extraction():
-    """Example: Extracting links from a webpage."""
-    print("=== Link Extraction ===")
-
-    params = {
-        "url": "https://example.com",
-        "internal_only": False,
-        "filter_domains": None,
-        "exclude_domains": ["spam.com", "ads.com"],
-    }
-
-    result = await mock_mcp_call("extract_links", params)
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_structured_data_extraction():
-    """Example: Extracting structured data."""
-    print("=== Structured Data Extraction ===")
-
-    params = {
-        "url": "https://example.com/contact",
-        "data_type": "all",  # Extract all types of structured data
-    }
-
-    result = await mock_mcp_call("extract_structured_data", params)
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_page_info():
-    """Example: Getting basic page information."""
-    print("=== Page Information ===")
-
-    result = await mock_mcp_call("get_page_info", {"url": "https://example.com"})
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_robots_check():
-    """Example: Checking robots.txt."""
-    print("=== Robots.txt Check ===")
-
-    result = await mock_mcp_call("check_robots_txt", {"url": "https://example.com"})
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def example_server_metrics():
-    """Example: Getting server metrics."""
-    print("=== Server Metrics ===")
-
-    result = await mock_mcp_call("get_server_metrics", {})
-    print(f"Result: {json.dumps(result, indent=2)}")
-    print()
-
-
-async def main():
-    """Run all examples."""
-    print("🚀 Data Extractor MCP Server Usage Examples")
+async def main() -> None:
+    """顺序运行所有示例。"""
+    print("Data Extractor MCP Server Usage Examples")
     print("=" * 50)
     print()
 
-    examples = [
-        example_basic_scraping,
-        example_advanced_extraction,
-        example_multiple_urls,
-        example_stealth_scraping,
-        example_form_interaction,
-        example_link_extraction,
-        example_structured_data_extraction,
-        example_page_info,
-        example_robots_check,
-        example_server_metrics,
-    ]
-
-    for example in examples:
+    for title, tool_name, params in EXAMPLES:
         try:
-            await example()
+            await _run_example(title, tool_name, params)
         except Exception as e:
-            print(f"Error in {example.__name__}: {e}")
-
-        # Wait between examples
+            print(f"Error in '{title}': {e}")
         await asyncio.sleep(1)
 
-    print("✅ All examples completed!")
+    print("All examples completed!")
 
 
 if __name__ == "__main__":
-    # Run the examples
     asyncio.run(main())
