@@ -130,14 +130,14 @@ data-extractor/
 - run / trace / artifact / verdict 落盘
 - `/viewer` 人工复盘界面
 
-其核心入口位于 [`packages/mcp_hub/mcp_hub/hub_server.py`](../packages/mcp_hub/mcp_hub/hub_server.py)，通过 `app.mount(extractor_app, namespace="extractor")` 复用现有 `data-extractor` 服务能力，体现 **Composition over Construction** 的复用原则。
+其源码位于 [`packages/mcp_hub/src/mcp_hub/`](../packages/mcp_hub/src/mcp_hub/)，模块入口位于 [`packages/mcp_hub/src/mcp_hub/__main__.py`](../packages/mcp_hub/src/mcp_hub/__main__.py)。其内部通过 `app.mount(extractor_app, namespace="extractor")` 复用现有 `data-extractor` 服务能力，体现 **Composition over Construction** 的复用原则。
 
 ### 运行 MCP Hub
 
 在仓库根目录执行：
 
 ```bash
-uv run python -m mcp_hub.hub_server
+uv run --project packages/mcp_hub python -m mcp_hub
 ```
 
 默认行为：
@@ -148,7 +148,7 @@ uv run python -m mcp_hub.hub_server
 
 ### MCP Hub 测试边界
 
-`mcp_hub` 当前测试位于 [`tests/unit/test_mcp_hub.py`](../tests/unit/test_mcp_hub.py)，聚焦：
+`mcp_hub` 当前测试位于 [`packages/mcp_hub/tests/test_mcp_hub.py`](../packages/mcp_hub/tests/test_mcp_hub.py)，聚焦：
 
 - 场景列表可发现性
 - 单工具验证的 run / trace / artifact 持久化

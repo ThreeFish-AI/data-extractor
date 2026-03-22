@@ -1283,7 +1283,7 @@ async def batch_scraping_example():
 启动方式：
 
 ```bash
-uv run python -m mcp_hub.hub_server
+uv run --project packages/mcp_hub python -m mcp_hub
 ```
 
 默认访问入口：
