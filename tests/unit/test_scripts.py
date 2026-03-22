@@ -5,6 +5,7 @@
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -13,6 +14,30 @@ import pytest
 # 项目根目录
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+
+
+def _bash_is_usable() -> bool:
+    """检测当前环境是否具备可执行 bash。"""
+    bash_path = shutil.which("bash")
+    if bash_path is None:
+        return False
+
+    result = subprocess.run(
+        [bash_path, "--version"],
+        capture_output=True,
+        text=True,
+    )
+    combined_output = f"{result.stdout}\n{result.stderr}"
+    return (
+        result.returncode == 0
+        and "Windows Subsystem for Linux has no installed distributions" not in combined_output
+    )
+
+
+pytestmark = pytest.mark.skipif(
+    not _bash_is_usable(),
+    reason="当前环境缺少可用的 bash，无法执行 shell 脚本测试",
+)
 
 
 class TestRunTestsScript:
