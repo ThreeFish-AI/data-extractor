@@ -2,16 +2,15 @@
 id: user-guide
 sidebar_position: 6
 title: User Guide
-description: 本文档为 Data Extractor MCP Server 的完整用户使用指南，涵盖了 MCP Server 的所有用法、配置、部署、架构设计以及 API 使用方法。
+description: Data Extractor MCP Server 终端用户使用指南，涵盖 MCP Server 部署配置、14 个 MCP 工具参考、API 编程接口及高级使用场景。
 last_update:
   author: Aurelius
-  date: 2025-11-25
+  date: 2026-03-22
 tags:
   - User Guide
   - MCP Server
+  - MCP Tools
   - API Usage
-  - Configuration
-  - Authentication
 ---
 
 ## 概述
@@ -29,115 +28,15 @@ Data Extractor 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、pymupd
 
 ## 快速开始
 
-### 系统要求
+### 安装
 
-- **Python**: 3.13+
-- **操作系统**: Windows, macOS, Linux
-- **浏览器**: Chrome/Chromium (Selenium/Playwright 功能)
-- **内存**: 建议 2GB+
-- **网络**: 稳定的互联网连接
-
-### 安装启动
-
-**方法一：从源码安装**
+推荐使用 `uvx` 从 GitHub 直接安装：
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/ThreeFish-AI/data-extractor.git
-cd data-extractor
-
-# 2. 快速设置（推荐）
-./scripts/setup.sh
-
-# 3. 或手动安装
-# 使用 uv 安装依赖
-uv sync
-
-# 4. 安装包括开发依赖（可选）
-uv sync --group dev
-
-# 5. 运行服务器
-uv run data-extractor
-```
-
-**方法二：从 GitHub 直接安装（推荐生产环境）**
-
-```bash
-# 直接安装并运行
 uvx --with git+https://github.com/ThreeFish-AI/data-extractor.git@v0.1.6 data-extractor
 ```
 
-**方法三：使用 pip 安装（WIP）**
-
-```bash
-# 从 PyPI 安装（如果已发布）
-pip install data-extractor
-```
-
-**方法四：使用命令**
-
-```bash
-# 使用命令行
-data-extractor
-
-# 使用 uv 运行（推荐）
-uv run data-extractor
-
-# 或者使用Python
-python -m extractor.server
-
-# 使用 uv 运行 Python 模块
-uv run python -m extractor.server
-
-# 查看当前版本
-data-extractor --version
-
-# 查看帮助信息
-data-extractor --help
-```
-
-### 配置环境
-
-创建 `.env` 文件来自定义配置：
-
-```bash
-# 服务器基础配置
-DATA_EXTRACTOR_SERVER_NAME=data-extractor
-DATA_EXTRACTOR_CONCURRENT_REQUESTS=16
-DATA_EXTRACTOR_DOWNLOAD_DELAY=1.0
-DATA_EXTRACTOR_RANDOMIZE_DOWNLOAD_DELAY=true
-
-# 浏览器和JavaScript配置
-DATA_EXTRACTOR_ENABLE_JAVASCRIPT=false
-DATA_EXTRACTOR_BROWSER_HEADLESS=true
-DATA_EXTRACTOR_BROWSER_TIMEOUT=30
-DATA_EXTRACTOR_BROWSER_WINDOW_SIZE=1920x1080
-
-# 反检测和代理配置
-DATA_EXTRACTOR_USE_RANDOM_USER_AGENT=true
-DATA_EXTRACTOR_USE_PROXY=false
-DATA_EXTRACTOR_PROXY_URL=
-
-# 重试和超时配置
-DATA_EXTRACTOR_MAX_RETRIES=3
-DATA_EXTRACTOR_RETRY_DELAY=1.0
-DATA_EXTRACTOR_REQUEST_TIMEOUT=30
-
-# 缓存配置
-DATA_EXTRACTOR_ENABLE_CACHING=true
-DATA_EXTRACTOR_CACHE_TTL_HOURS=24
-DATA_EXTRACTOR_CACHE_MAX_SIZE=1000
-
-# 速率限制
-DATA_EXTRACTOR_RATE_LIMIT_REQUESTS_PER_MINUTE=60
-
-# 日志配置
-DATA_EXTRACTOR_LOG_LEVEL=INFO
-DATA_EXTRACTOR_LOG_REQUESTS=false
-DATA_EXTRACTOR_LOG_RESPONSES=false
-```
-
-### 验证安装
+### 验证
 
 ```bash
 # 检查服务器是否正常运行
@@ -147,16 +46,11 @@ curl http://localhost:3000/health
 curl http://localhost:3000/tools
 ```
 
-### 更新和升级
-
-```bash
-# 从源码更新
-git pull origin main
-uv sync
-
-# 从 PyPI 更新
-pip install --upgrade data-extractor
-```
+> **更多信息**
+>
+> - 系统要求与开发环境搭建 -> [开发指南](./2-Development.md#环境配置)
+> - 环境变量与配置系统详解 -> [配置系统](./4-Configuration.md)
+> - 完整命令速查与版本管理 -> [常用命令](./5-Commands.md)
 
 ## MCP Server 配置
 
@@ -1374,190 +1268,11 @@ async def batch_scraping_example():
         print(f"URL: {result['url']}, 标题: {result.get('title', 'N/A')}")
 ```
 
-## 配置详解
+## 高级使用场景
 
-数据提取配置使用 JSON 格式，支持简单选择器和高级配置两种方式：
+### 1. 电商数据抓取
 
-**简单选择器配置**
-
-```json
-{
-  "title": "h1",
-  "content": ".article-content",
-  "links": "a",
-  "description": "meta[name='description']"
-}
-```
-
-**高级配置格式**
-
-```json
-{
-  "field_name": {
-    "selector": "CSS选择器",
-    "multiple": true, // /false 是否提取多个元素
-    "attr": "text/属性名" // 提取的属性类型
-  }
-}
-```
-
-属性类型说明：
-
-- `text`: 提取元素的文本内容
-- `href`: 提取链接 URL
-- `src`: 提取图片/媒体源
-- `datetime`: 提取时间日期
-- `content`: 提取自定义属性内容
-- `outerHTML`: 提取完整的 HTML 元素
-
-### 抓取方法 (method)
-
-- **auto**: 智能选择最佳方法，基于网站特性自动判断
-- **simple**: 快速 HTTP 请求，不支持 JavaScript，适合静态网页
-- **scrapy**: Scrapy 框架，适合大规模数据抓取和复杂页面
-- **selenium**: 浏览器渲染，支持 JavaScript 和动态内容
-
-### 数据提取配置 (extract_config)
-
-```json
-{
-  "title": "h1",
-  "content": {
-    "selector": ".content p",
-    "multiple": true,
-    "attr": "text"
-  },
-  "links": {
-    "selector": "a",
-    "multiple": true,
-    "attr": "href"
-  }
-}
-```
-
-### 等待元素 (wait_for_element)
-
-- `.content` - 类选择器
-- `#main-article` - ID 选择器
-- `[data-loaded]` - 属性选择器
-- `button[type="submit"]` - 复合选择器
-
-### 表单数据 (form_data)
-
-```json
-{
-  "#username": "用户名",
-  "input[name=\"password\"]": "密码",
-  "select[name=country]": "China",
-  "input[value=male]": "click",
-  "input[name=agree]": true
-}
-```
-
-### 图片嵌入选项 (embed_options)
-
-```json
-{
-  "max_images": 50,
-  "max_bytes_per_image": 2000000,
-  "timeout_seconds": 10
-}
-```
-
-**PDF 处理方法 (method)**
-
-- **auto**: 自动选择最佳提取方法
-- **pymupdf**: PyMuPDF 引擎，适合复杂布局和图表
-- **pypdf**: PyPDF 引擎，适合简单纯文本文档
-
-**页面范围 (page_range)**
-
-- `[0, 10]` - 提取第 0-10 页（页码从 0 开始）
-- `[5, -1]` - 从第 5 页到最后一页
-- `null` - 提取所有页面（默认）
-
-**结构化数据类型 (data_type)**
-
-- **all**: 提取所有类型数据（默认）
-- **contact**: 仅提取联系方式（邮箱、电话、传真）
-- **social**: 仅提取社交媒体链接和账号
-- **content**: 仅提取文章内容和元数据
-- **products**: 仅提取产品和价格信息
-- **addresses**: 仅提取地址相关信息
-
-### 高级功能参数
-
-**格式化选项 (formatting_options)**
-
-```json
-{
-  "format_tables": true,
-  "detect_code_language": true,
-  "format_quotes": true,
-  "enhance_images": true,
-  "optimize_links": true,
-  "format_lists": true
-}
-```
-
-**增强 PDF 处理选项 (enhanced_options)**
-
-用于 PDF 内容深度提取的高级配置选项：
-
-```json
-{
-  "output_dir": "./extracted_assets", // 输出目录路径
-  "image_size": [800, 600], // 图像尺寸调整 [width, height]
-  "image_format": "png", // 图像格式 (png, jpg)
-  "image_quality": 90 // 图像质量 (1-100，仅适用于JPEG)
-}
-```
-
-**PDF 增强提取参数**
-
-- **extract_images**: 是否从 PDF 中提取图像并保存为本地文件 (默认: true)
-
-  - 支持 PNG/JPG 格式输出
-  - 可选择本地文件引用或 base64 嵌入
-  - 自动调整图像尺寸和优化质量
-
-- **extract_tables**: 是否从 PDF 中提取表格并转换为 Markdown 表格格式 (默认: true)
-
-  - 智能识别各种格式的表格（管道符分隔、制表符分隔、空格分隔）
-  - 自动保留表格的行列关系和内容完整性
-  - 转换为标准 Markdown 表格格式
-
-- **extract_formulas**: 是否从 PDF 中提取数学公式并保持 LaTeX 格式 (默认: true)
-
-  - 识别多种 LaTeX 格式的数学公式
-  - 支持内联公式 (`$...$` 或 `\(...\)` 格式)
-  - 支持块级公式 (`$$...$$` 或 `\[...\]` 格式)
-
-- **embed_images**: 是否将提取的图像以 base64 格式嵌入到 Markdown 文档中 (默认: false)
-  - true: 图像直接嵌入文档，便于分享
-  - false: 图像保存为本地文件，减少文档大小
-
-**隐身抓取参数**
-
-- **scroll_page**: 滚动页面加载动态内容
-- **method**: selenium(推荐) 或 playwright
-- **wait_for_element**: 建议设置以提高成功率
-
-**域名过滤示例**
-
-```json
-{
-  "filter_domains": ["example.com", "blog.example.com"],
-  "exclude_domains": ["ads.com", "tracker.net"],
-  "internal_only": false
-}
-```
-
-### 预设配置模板
-
-项目提供了 10 种常用网站类型的预设配置：
-
-**1. 电商网站配置**
+**推荐提取配置模板**：
 
 ```json
 {
@@ -1584,110 +1299,7 @@ async def batch_scraping_example():
 }
 ```
 
-**2. 新闻文章配置**
-
-```json
-{
-  "headline": {
-    "selector": "h1, .headline, .article-title",
-    "attr": "text",
-    "multiple": false
-  },
-  "author": {
-    "selector": ".author, .byline, [rel='author']",
-    "attr": "text",
-    "multiple": false
-  },
-  "article_body": {
-    "selector": ".article-body p, .content p",
-    "attr": "text",
-    "multiple": true
-  }
-}
-```
-
-**3. 社交媒体配置**
-
-```json
-{
-  "username": {
-    "selector": ".username, .handle, .profile-username",
-    "attr": "text",
-    "multiple": false
-  },
-  "display_name": {
-    "selector": ".display-name, .profile-name, h1",
-    "attr": "text",
-    "multiple": false
-  },
-  "bio": {
-    "selector": ".bio, .description, .profile-description",
-    "attr": "text",
-    "multiple": false
-  }
-}
-```
-
-## 使用技巧
-
-### 1. 智能方法选择
-
-Data Extractor 支持自动选择最适合的抓取方法：
-
-```json
-{
-  "url": "https://example.com",
-  "method": "auto"
-}
-```
-
-**选择逻辑**：
-
-- 首先尝试 `simple` 方法（最快）
-- 如果检测到 JavaScript 需求，升级到 `selenium`
-- 如果遇到反爬措施，使用 `stealth` 模式
-
-### 2. 并发处理优化
-
-批量处理时合理设置并发数量：
-
-```json
-{
-  "urls": ["url1", "url2", "url3"],
-  "concurrent_limit": 5,
-  "delay_between_requests": 1.0
-}
-```
-
-### 3. 错误处理策略
-
-实现完整的错误处理和重试机制：
-
-```json
-{
-  "url": "https://example.com",
-  "max_retries": 3,
-  "retry_delay": 2.0,
-  "timeout": 30.0,
-  "fallback_methods": ["simple", "scrapy", "selenium"]
-}
-```
-
-### 4. 缓存策略
-
-合理使用缓存提升性能：
-
-```json
-{
-  "cache_enabled": true,
-  "cache_ttl": 3600,
-  "cache_key_pattern": "{url}_{method}_{config_hash}"
-}
-```
-
-## 高级使用场景
-
-### 1. 电商数据抓取
+**完整流程示例**：
 
 ```python
 async def ecommerce_scraping():
@@ -1735,6 +1347,30 @@ async def ecommerce_scraping():
 ```
 
 ### 2. 新闻监控系统
+
+**推荐提取配置模板**：
+
+```json
+{
+  "headline": {
+    "selector": "h1, .headline, .article-title",
+    "attr": "text",
+    "multiple": false
+  },
+  "author": {
+    "selector": ".author, .byline, [rel='author']",
+    "attr": "text",
+    "multiple": false
+  },
+  "article_body": {
+    "selector": ".article-body p, .content p",
+    "attr": "text",
+    "multiple": true
+  }
+}
+```
+
+**完整流程示例**：
 
 ```python
 async def news_monitoring_system():
@@ -1915,21 +1551,7 @@ DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true
 }
 ```
 
-### 4. 内存不足
-
-**问题**：处理大量数据时内存不足
-
-**解决方案**：
-
-```bash
-# 减少并发数量
-DATA_EXTRACTOR_CONCURRENT_REQUESTS=3
-
-# 启用缓存清理
-DATA_EXTRACTOR_ENABLE_CACHING=false
-```
-
-### 5. 端口被占用
+### 4. 端口被占用
 
 ```bash
 # 检查端口占用
@@ -1938,87 +1560,29 @@ netstat -tlnp | grep 8000
 DATA_EXTRACTOR_HTTP_PORT=8001 data-extractor
 ```
 
-### 6. CORS 错误
+### 5. CORS 错误
 
 ```bash
 # 检查 CORS 配置
 DATA_EXTRACTOR_HTTP_CORS_ORIGINS="http://localhost:3000,https://yourdomain.com"
 ```
 
-## 最佳实践
+## 安全与合规
 
-### 1. 选择合适的抓取方法
+使用数据抓取工具时，请遵守以下合规要求：
 
-| 网站类型        | 推荐方法 | 原因                 |
-| --------------- | -------- | -------------------- |
-| 静态网页        | simple   | 速度最快，资源消耗低 |
-| JavaScript 网站 | selenium | 支持动态内容渲染     |
-| 大规模抓取      | scrapy   | 内置并发和管道处理   |
-| 有反爬保护      | stealth  | 避免被检测和封禁     |
+- **遵守 robots.txt**：抓取前使用 `check_robots_txt` 工具检查网站爬虫规则
+- **合理请求频率**：通过环境变量设置适当的请求间隔和并发限制，详见 [配置系统](./4-Configuration.md)
+- **数据隐私保护**：不记录敏感信息（密码、个人信息等），遵守数据保护法规（GDPR、CCPA 等）
+- **身份标识**：使用明确的 User-Agent，避免伪装身份
 
-### 2. 数据提取策略
+## 相关文档
 
-- **从小开始**：先测试简单的选择器
-- **逐步复杂化**：在基础成功后增加复杂配置
-- **错误容忍**：设计容错的数据提取逻辑
-- **性能考虑**：避免过于复杂的 CSS 选择器
-
-### 3. 合规使用
-
-- **尊重 robots.txt**：遵守网站的爬虫规则
-- **合理频率**：设置适当的请求间隔
-- **身份标识**：使用明确的 User-Agent
-- **数据用途**：合法使用抓取的数据
-
-### 4. 监控和维护
-
-- **定期检查**：监控服务器性能和错误率
-- **缓存管理**：定期清理过期缓存
-- **日志分析**：分析请求模式和错误原因
-- **版本更新**：保持软件和依赖的更新
-
-## 安全和合规
-
-### 1. 遵守 robots.txt
-
-在使用任何抓取工具前，先检查网站的爬虫规则：
-
-```json
-{
-  "url": "https://example.com"
-}
-```
-
-### 2. 设置合理的请求频率
-
-```bash
-# 设置请求延迟
-DATA_EXTRACTOR_DOWNLOAD_DELAY=2.0
-
-# 限制并发请求数
-DATA_EXTRACTOR_CONCURRENT_REQUESTS=5
-
-# 设置速率限制
-DATA_EXTRACTOR_RATE_LIMIT_REQUESTS_PER_MINUTE=30
-```
-
-### 3. 使用代理和用户代理轮换
-
-```bash
-# 启用随机用户代理
-DATA_EXTRACTOR_USE_RANDOM_USER_AGENT=true
-
-# 配置代理
-DATA_EXTRACTOR_USE_PROXY=true
-DATA_EXTRACTOR_PROXY_URL=http://proxy-server:8080
-```
-
-### 4. 数据隐私保护
-
-- 不记录敏感信息（密码、个人信息等）
-- 遵守数据保护法规（GDPR、CCPA 等）
-- 合理存储和处理抓取的数据
-
----
-
-通过遵循本用户指南，您可以充分利用 Data Extractor MCP Server 的强大功能，高效地进行网页数据提取和文档转换工作。如有任何问题，请参考故障排除部分或联系技术支持。
+| 文档 | 内容 | 适用读者 |
+|------|------|---------|
+| [架构设计](./1-Framework.md) | 系统架构与设计原则 | 架构师 / 贡献者 |
+| [开发指南](./2-Development.md) | 环境搭建、编码规范、性能优化 | 开发者 |
+| [GitHub Actions 工作流](./2.1-Workflows.md) | CI/CD 流水线 | DevOps / 贡献者 |
+| [测试指南](./3-Testing.md) | 测试体系与执行方法 | 开发者 / QA |
+| [配置系统](./4-Configuration.md) | 环境变量与配置管理 | 运维 / 开发者 |
+| [常用命令](./5-Commands.md) | 命令速查 | 所有用户 |
