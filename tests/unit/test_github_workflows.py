@@ -57,6 +57,7 @@ class TestWorkflowActionVersions:
             assert "actions/github-script@v7" not in content, f"{workflow.name} 仍在使用 github-script v7"
             assert "actions/upload-artifact@v4" not in content, f"{workflow.name} 仍在使用 upload-artifact v4"
             assert "actions/download-artifact@v4" not in content, f"{workflow.name} 仍在使用 download-artifact v4"
+            assert "codecov/codecov-action@v4" not in content, f"{workflow.name} 仍在使用 codecov-action v4"
 
     def test_setup_uv_upgraded_to_v7(self):
         content = (PROJECT_ROOT / ".github" / "actions" / "setup-python-uv" / "action.yml").read_text(
