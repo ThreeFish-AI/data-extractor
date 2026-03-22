@@ -10,6 +10,7 @@ from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ..timing import timing_decorator
+from ..validation_trace import trace_event
 from ._registry import app, create_pdf_processor, ToolTimer, validate_page_range
 
 logger = logging.getLogger(__name__)
@@ -125,9 +126,17 @@ async def convert_pdf_to_markdown(
         logger.info(
             f"Converting PDF to {output_format}: {pdf_source} with method: {method}"
         )
+        trace_event(
+            "convert_pdf_to_markdown",
+            "conversion_started",
+            pdf_source=pdf_source,
+            method=method,
+            output_format=output_format,
+        )
 
         # Apply rate limiting
         await rate_limiter.wait()
+        trace_event("convert_pdf_to_markdown", "rate_limit_wait_completed")
 
         # Determine output directory for enhanced assets
         output_dir = None
@@ -141,6 +150,12 @@ async def convert_pdf_to_markdown(
         pdf_processor = create_pdf_processor(
             enable_enhanced_features=enable_enhanced, output_dir=output_dir
         )
+        trace_event(
+            "convert_pdf_to_markdown",
+            "processor_created",
+            enhanced=enable_enhanced,
+            output_dir=output_dir or "",
+        )
         result = await pdf_processor.process_pdf(
             pdf_source=pdf_source,
             method=method,
@@ -152,6 +167,12 @@ async def convert_pdf_to_markdown(
             extract_formulas=extract_formulas,
             embed_images=embed_images,
             enhanced_options=enhanced_options,
+        )
+        trace_event(
+            "convert_pdf_to_markdown",
+            "processor_completed",
+            success=bool(result.get("success")),
+            word_count=result.get("word_count", 0),
         )
 
         if result.get("success"):
@@ -178,6 +199,7 @@ async def convert_pdf_to_markdown(
             )
 
     except Exception as e:
+        trace_event("convert_pdf_to_markdown", "conversion_failed", error=str(e))
         return PDFResponse(
             success=False, pdf_source=pdf_source, method=method,
             output_format=output_format,

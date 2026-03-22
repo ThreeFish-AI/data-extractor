@@ -10,6 +10,7 @@ from ..form_handler import FormHandler
 from ..rate_limiter import rate_limiter
 from ..schemas import ScrapeResponse
 from ..url_utils import URLValidator
+from ..validation_trace import trace_event
 from ._registry import app, ToolTimer
 
 logger = logging.getLogger(__name__)
@@ -91,9 +92,18 @@ async def fill_and_submit_form(
             )
 
         logger.info(f"Form interaction for: {url}")
+        trace_event(
+            "fill_and_submit_form",
+            "interaction_started",
+            url=url,
+            method=method,
+            submit=submit,
+            field_count=len(form_data),
+        )
 
         # Apply rate limiting
         await rate_limiter.wait()
+        trace_event("fill_and_submit_form", "rate_limit_wait_completed")
 
         # Setup browser based on method
         if method == "selenium":
@@ -133,6 +143,12 @@ async def fill_and_submit_form(
                 # Get final page info
                 final_url = driver.current_url
                 final_title = driver.title
+                trace_event(
+                    "fill_and_submit_form",
+                    "selenium_form_completed",
+                    success=bool(result.get("success")),
+                    final_url=final_url,
+                )
 
             finally:
                 driver.quit()
@@ -168,6 +184,12 @@ async def fill_and_submit_form(
                 # Get final page info
                 final_url = page.url
                 final_title = await page.title()
+                trace_event(
+                    "fill_and_submit_form",
+                    "playwright_form_completed",
+                    success=bool(result.get("success")),
+                    final_url=final_url,
+                )
 
             finally:
                 await browser.close()
@@ -191,6 +213,7 @@ async def fill_and_submit_form(
             )
 
     except Exception as e:
+        trace_event("fill_and_submit_form", "interaction_failed", error=str(e))
         return ScrapeResponse(
             success=False, url=url, method=method_key,
             error=timer.record_failure(e),

@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["mcp_hub*"]
+
+[project]
+name = "mcp-hub"
+version = "0.1.0"
+description = "FastMCP-native validation hub for the data-extractor MCP server."
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [{ name = "Aurelius", email = "aureliusshu@gmail.com" }]
+dependencies = [
+    "mcp-data-extractor",
+]
+
+[project.scripts]
+mcp-hub = "mcp_hub.hub_server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+    "pytest-asyncio>=1.3.0",
+    "pytest-mock>=3.15.0",
+]
+
+[tool.uv.sources]
+mcp-data-extractor = { path = "../..", editable = true }
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+asyncio_mode = "auto"

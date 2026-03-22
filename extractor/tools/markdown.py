@@ -11,6 +11,7 @@ from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
 from ..timing import timing_decorator
+from ..validation_trace import trace_event
 from ._registry import app, markdown_converter, ToolTimer, web_scraper
 
 logger = logging.getLogger(__name__)
@@ -122,14 +123,27 @@ async def convert_webpage_to_markdown(
             )
 
         logger.info(f"Converting webpage to Markdown: {url} with method: {method}")
+        trace_event(
+            "convert_webpage_to_markdown",
+            "conversion_started",
+            url=url,
+            method=method,
+            extract_main_content=extract_main_content,
+        )
 
         # Apply rate limiting
         await rate_limiter.wait()
+        trace_event("convert_webpage_to_markdown", "rate_limit_wait_completed")
 
         # Scrape the webpage first
         scrape_result = await web_scraper.scrape_url(
             url=url, method=method, extract_config=None,
             wait_for_element=wait_for_element,
+        )
+        trace_event(
+            "convert_webpage_to_markdown",
+            "webpage_scraped",
+            has_error="error" in scrape_result,
         )
 
         if "error" in scrape_result:
@@ -147,6 +161,13 @@ async def convert_webpage_to_markdown(
             custom_options=custom_options,
             embed_images=embed_images,
             embed_options=embed_options,
+        )
+        trace_event(
+            "convert_webpage_to_markdown",
+            "markdown_generated",
+            success=bool(conversion_result.get("success")),
+            word_count=conversion_result.get("word_count", 0),
+            images_embedded=conversion_result.get("images_embedded", 0),
         )
 
         if conversion_result.get("success"):
@@ -170,6 +191,7 @@ async def convert_webpage_to_markdown(
             )
 
     except Exception as e:
+        trace_event("convert_webpage_to_markdown", "conversion_failed", error=str(e))
         return MarkdownResponse(
             success=False, url=url, method=method_key,
             error=timer.record_failure(e),

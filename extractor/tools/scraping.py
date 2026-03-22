@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from pydantic import Field
 
 from ..schemas import BatchScrapeResponse, ScrapeResponse
+from ..validation_trace import trace_event
 from ._registry import app, web_scraper
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ async def scrape_webpage(
 
     try:
         logger.info(f"Scraping webpage: {url} with method: {method}")
+        trace_event("scrape_webpage", "input_validated", url=url, method=method)
 
         # Validate extract_config if provided
         parsed_extract_config = None
@@ -82,12 +84,23 @@ async def scrape_webpage(
                     error="extract_config must be a dictionary",
                 )
             parsed_extract_config = extract_config
+            trace_event(
+                "scrape_webpage",
+                "extract_config_received",
+                field_count=len(parsed_extract_config),
+            )
 
         result = await web_scraper.scrape_url(
             url=url,
             method=method,
             extract_config=parsed_extract_config,
             wait_for_element=wait_for_element,
+        )
+        trace_event(
+            "scrape_webpage",
+            "scrape_completed",
+            has_error="error" in result,
+            has_title=bool(result.get("title")),
         )
 
         # Check if the scraper returned an error
@@ -103,6 +116,7 @@ async def scrape_webpage(
 
     except Exception as e:
         logger.error(f"Error scraping webpage {url}: {str(e)}")
+        trace_event("scrape_webpage", "scrape_failed", error=str(e))
         return ScrapeResponse(success=False, url=url, method=method, error=str(e))
 
 
