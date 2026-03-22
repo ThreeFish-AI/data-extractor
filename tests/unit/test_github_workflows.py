@@ -37,6 +37,10 @@ class TestReviewWorkflow:
         content = _read_workflow("review.yml")
         assert "id-token: write" in content
 
+    def test_does_not_reference_secrets_directly_in_if(self):
+        content = _read_workflow("review.yml")
+        assert "if: ${{ secrets." not in content
+
 
 class TestWorkflowActionVersions:
     """关键 action 版本约束。"""

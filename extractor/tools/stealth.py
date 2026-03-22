@@ -80,12 +80,17 @@ async def scrape_with_stealth(
         # Validate inputs
         if not URLValidator.is_valid_url(url):
             return ScrapeResponse(
-                success=False, url=url, method=method, error="Invalid URL format",
+                success=False,
+                url=url,
+                method=method,
+                error="Invalid URL format",
             )
 
         if method not in ["selenium", "playwright"]:
             return ScrapeResponse(
-                success=False, url=url, method=method,
+                success=False,
+                url=url,
+                method=method,
                 error="Method must be one of: selenium, playwright",
             )
 
@@ -104,9 +109,7 @@ async def scrape_with_stealth(
             "wait_for_element": wait_for_element,
             "scroll_page": scroll_page,
         }
-        cached_result = cache_manager.get(
-            normalized_url, method_key, cache_key_data
-        )
+        cached_result = cache_manager.get(normalized_url, method_key, cache_key_data)
         if cached_result:
             logger.info(f"Returning cached result for {normalized_url}")
             cached_result["from_cache"] = True
@@ -134,22 +137,30 @@ async def scrape_with_stealth(
                 )
 
             # Cache successful result
-            cache_manager.set(
-                normalized_url, method_key, result, cache_key_data
-            )
+            cache_manager.set(normalized_url, method_key, result, cache_key_data)
 
             return ScrapeResponse(
-                success=True, url=url, method=method_key,
-                data=result, duration_ms=timer.record_success(), from_cache=False,
+                success=True,
+                url=url,
+                method=method_key,
+                data=result,
+                duration_ms=timer.record_success(),
+                from_cache=False,
             )
         else:
             return ScrapeResponse(
-                success=False, url=url, method=method_key,
-                error=timer.record_failure(Exception(result.get("error", "Unknown error"))),
+                success=False,
+                url=url,
+                method=method_key,
+                error=timer.record_failure(
+                    Exception(result.get("error", "Unknown error"))
+                ),
             )
 
     except Exception as e:
         return ScrapeResponse(
-            success=False, url=url, method=method_key,
+            success=False,
+            url=url,
+            method=method_key,
             error=timer.record_failure(e),
         )
