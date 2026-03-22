@@ -160,7 +160,7 @@ class TestDataValidation:
             return large_consistent_doc
 
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_consistent_pdf_process
             ),
@@ -229,7 +229,7 @@ class TestDataValidation:
             }
 
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor,
                 "batch_process_pdfs",
@@ -288,7 +288,7 @@ class TestDataValidation:
             }
 
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_concurrent_with_markers
             ),

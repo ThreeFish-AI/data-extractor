@@ -52,7 +52,7 @@ class TestPerformance:
             return large_pdf_content
 
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_large_pdf_process
             ),
@@ -98,7 +98,7 @@ class TestPerformance:
             }
 
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor, "process_pdf", side_effect=mock_concurrent_pdf_process
             ),
@@ -173,7 +173,7 @@ class TestPerformance:
             }
 
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor,
                 "batch_process_pdfs",
