@@ -113,7 +113,9 @@ data-extractor/
 │
 ├── packages/
 │   └── mcp_hub/                  # MCP 验证编排控制面
-│       ├── mcp_hub/              # Hub 源码包
+│       ├── src/mcp_hub/          # Hub 源码包（src 布局）
+│       ├── tests/                # Hub 自身测试
+│       ├── pyproject.toml        # Hub 独立 package 配置
 │       └── README.md             # Hub 简介与启动入口
 │
 ├── docs/                         # 项目文档
@@ -160,6 +162,8 @@ uv run --project packages/mcp_hub python -m mcp_hub
 - `data-extractor` 原有 14 个工具契约不变
 - `mcp_hub` 的 run、trace、artifact 数据结构保持兼容
 - `/viewer` 仍能正确展示最近运行与详情页
+
+完整的 URL / PDF 人工验收操作链路请参考 [`6-User-Guide.md`](./6-User-Guide.md) 中的 `MCP Hub 验证控制面` 与后续场景章节，避免在开发指南和用户指南中维护两套并行手册。
 
 ## MCP 工具开发
 

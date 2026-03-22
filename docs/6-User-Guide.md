@@ -1311,6 +1311,8 @@ uv run --project packages/mcp_hub python -m mcp_hub
 - `complex_pdf_conversion`
 - `link_discovery_pipeline`
 
+建议把 `mcp_hub` 视为“验证控制面”而不是“第 15 个业务工具”：业务提取结果仍由原始 MCP Tool 负责，`mcp_hub` 负责把输入、步骤、产物、人工 verdict 收敛成可复盘的验证 run。
+
 ### MCP Hub 验证链路
 
 以下链路是 `mcp_hub` 的标准工作流：
@@ -1338,6 +1340,31 @@ sequenceDiagram
 2. **执行层**：trace 是否展示了合理的步骤与状态
 3. **产物层**：JSON / Markdown / 统计信息是否可读且完整
 4. **验收层**：用 `accepted`、`accepted_with_notes`、`rejected`、`needs_followup` 标记结果
+
+### MCP Hub 标准操作闭环
+
+推荐按以下顺序操作，避免只跑工具不留痕迹：
+
+1. 启动 `mcp_hub`，确认 `http://localhost:8091/mcp` 与 `http://localhost:8091/viewer` 可访问
+2. 调用 `list_validation_scenarios`，确认要验证的是标准场景还是单工具精查
+3. 使用 `run_validation_scenario` 或 `run_single_tool_validation` 创建一次验证运行
+4. 使用 `get_validation_run`、`get_validation_trace`、`get_validation_artifacts` 读取结构化结果
+5. 打开 `/viewer` 进行人工复盘，重点检查步骤状态、trace 与 artifact
+6. 调用 `record_manual_verdict` 写入人工结论与备注
+7. 如需回归对比，使用 `list_validation_runs` 或 `compare_validation_runs` 回看历史运行
+
+推荐先列出场景，再执行验证：
+
+```python
+from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
+
+transport = StreamableHttpTransport(url="http://localhost:8091/mcp")
+client = Client(transport)
+
+async with client:
+    scenarios = await client.call_tool("list_validation_scenarios", {})
+```
 
 ## 高级使用场景
 
@@ -1596,6 +1623,32 @@ async with client:
    - Markdown 是否保留主结构与段落顺序
    - 是否有效过滤导航、广告、侧边栏
 
+建议在结构化接口中同步读取本次 run 的详情、trace 与 artifact：
+
+```python
+async with client:
+    run_detail = await client.call_tool("get_validation_run", {
+        "run_id": run["run_id"]
+    })
+    trace = await client.call_tool("get_validation_trace", {
+        "run_id": run["run_id"]
+    })
+    artifacts = await client.call_tool("get_validation_artifacts", {
+        "run_id": run["run_id"]
+    })
+```
+
+完成人工检查后，建议立即落 verdict，避免后续 run 混淆：
+
+```python
+async with client:
+    verdict = await client.call_tool("record_manual_verdict", {
+        "run_id": run["run_id"],
+        "status": "accepted_with_notes",
+        "notes": "标题与正文提取正确，侧边栏噪音仍有少量残留。"
+    })
+```
+
 如需精查某个工具，可直接调用 `run_single_tool_validation`：
 
 ```python
@@ -1652,6 +1705,32 @@ async with client:
 - 表格/图片/公式提取质量满足预期
 - Markdown 可读性足够，便于后续人工或 Agent 消费
 
+建议同步读取结构化结果，避免只依赖 viewer 页面：
+
+```python
+async with client:
+    run_detail = await client.call_tool("get_validation_run", {
+        "run_id": run["run_id"]
+    })
+    trace = await client.call_tool("get_validation_trace", {
+        "run_id": run["run_id"]
+    })
+    artifacts = await client.call_tool("get_validation_artifacts", {
+        "run_id": run["run_id"]
+    })
+```
+
+完成 PDF 人工检查后，同样建议立即写 verdict：
+
+```python
+async with client:
+    verdict = await client.call_tool("record_manual_verdict", {
+        "run_id": run["run_id"],
+        "status": "needs_followup",
+        "notes": "表格提取正常，但公式保真度需要继续核对。"
+    })
+```
+
 如需直接精查 PDF 工具，可调用：
 
 ```python
@@ -1696,6 +1775,16 @@ async with client:
 - 内部链接与外部链接分类是否正确
 - 联系方式、地址、社交链接等结构化数据是否覆盖预期
 - JSON artifact 是否足够支撑人工复盘
+
+若要对比两次运行，可在同一输入上重复执行后调用：
+
+```python
+async with client:
+    comparison = await client.call_tool("compare_validation_runs", {
+        "run_id": "run_a",
+        "other_run_id": "run_b"
+    })
+```
 
 ## 常见问题
 
