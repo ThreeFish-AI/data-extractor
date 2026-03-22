@@ -44,7 +44,7 @@ graph TD
 
 工具层采用领域拆分的模块化设计，所有工具注册于 [`extractor/tools/`](../extractor/tools/) 子包：
 
-- **[`_registry.py`](../extractor/tools/_registry.py)**：中心枢纽，持有 FastMCP `app` 实例、共享服务单例（`web_scraper`、`anti_detection_scraper`、`markdown_converter`）、`_get_pdf_processor()` 延迟加载工厂和公共辅助函数
+- **[`_registry.py`](../extractor/tools/_registry.py)**：中心枢纽，持有 FastMCP `app` 实例、共享服务单例（`web_scraper`、`anti_detection_scraper`、`markdown_converter`）、`create_pdf_processor()` 延迟加载工厂和公共辅助函数
 - **领域模块**：各模块导入 `app` 并通过 `@app.tool()` 装饰器注册工具
 
 ```mermaid
@@ -129,7 +129,7 @@ graph LR
 
 ### Markdown 转换器
 
-[`extractor/markdown_converter.py`](../extractor/markdown_converter.py) 中的 `MarkdownConverter` 包装 Microsoft [MarkItDown](https://github.com/microsoft/markitdown) 库，附加预处理和后处理流水线：
+[`extractor/markdown/converter.py`](../extractor/markdown/converter.py) 中的 `MarkdownConverter` 包装 Microsoft [MarkItDown](https://github.com/microsoft/markitdown) 库，附加预处理和后处理流水线：
 
 - **预处理**：移除导航栏/广告/脚本、解析相对 URL、提取主要内容区域
 - **后处理**：表格对齐、代码块语言检测、排版优化、图片 data URI 嵌入
@@ -207,12 +207,18 @@ graph TD
 |------|---------|------|
 | [`url_utils.py`](../extractor/url_utils.py) | `URLValidator` | URL 校验、规范化、域名提取 |
 | [`text_utils.py`](../extractor/text_utils.py) | `TextCleaner` | 文本清理、邮箱/电话提取、截断 |
-| [`config_validator.py`](../extractor/config_validator.py) | `ConfigValidator` | 提取配置字典校验 |
+| [`config.py`](../extractor/config.py) | `ConfigValidator` | 提取配置字典校验（已合并至 config 模块） |
 | [`browser_utils.py`](../extractor/browser_utils.py) | `build_chrome_options()` | 共享 Chrome 选项构建器 |
 
-### 向后兼容垫片
+### 导入路径
 
-以下模块仅作为重导出垫片（shim），保持旧版 import 路径可用：[`utils.py`](../extractor/utils.py)（聚合导出各工具类）、[`pdf_processor.py`](../extractor/pdf_processor.py)（→ `pdf.processor`）、[`enhanced_pdf_processor.py`](../extractor/enhanced_pdf_processor.py)（→ `pdf.enhanced`）、[`advanced_features.py`](../extractor/advanced_features.py)（→ `anti_detection` + `form_handler`）。
+各模块均通过其实际所在路径直接导入：
+
+- PDF 处理：`from extractor.pdf.processor import PDFProcessor`
+- 增强 PDF：`from extractor.pdf.enhanced import EnhancedPDFProcessor`
+- Markdown 转换：`from extractor.markdown.converter import MarkdownConverter`
+- 反检测抓取：`from extractor.anti_detection import AntiDetectionScraper`
+- 表单处理：`from extractor.form_handler import FormHandler`
 
 ---
 

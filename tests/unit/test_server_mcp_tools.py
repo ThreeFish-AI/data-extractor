@@ -116,7 +116,7 @@ class TestMCPToolsScraping:
     @pytest.mark.asyncio
     async def test_extract_links_success(self):
         """测试链接提取成功"""
-        with patch("extractor.tools.scraping.web_scraper") as mock_scraper:
+        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {
                 "content": {
                     "links": [
@@ -145,7 +145,7 @@ class TestMCPToolsScraping:
     @pytest.mark.asyncio
     async def test_extract_links_domain_filtering(self):
         """测试域名过滤功能"""
-        with patch("extractor.tools.scraping.web_scraper") as mock_scraper:
+        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {
                 "content": {
                     "links": [
@@ -177,7 +177,7 @@ class TestMCPToolsInformation:
     @pytest.mark.asyncio
     async def test_get_page_info_success(self):
         """测试页面信息获取成功"""
-        with patch("extractor.tools.scraping.web_scraper") as mock_scraper:
+        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {
                 "url": "https://example.com",
                 "status_code": 200,
@@ -229,10 +229,10 @@ class TestMCPToolsAdvanced:
     async def test_scrape_with_stealth_success(self):
         """测试反检测抓取成功"""
         with (
-            patch("extractor.tools.scraping.anti_detection_scraper"),
-            patch("extractor.tools.scraping.rate_limiter") as mock_limiter,
-            patch("extractor.tools.scraping.cache_manager") as mock_cache,
-            patch("extractor.tools.scraping.retry_manager") as mock_retry,
+            patch("extractor.tools.stealth.anti_detection_scraper"),
+            patch("extractor.tools.stealth.rate_limiter") as mock_limiter,
+            patch("extractor.tools.stealth.cache_manager") as mock_cache,
+            patch("extractor.tools.stealth.retry_manager") as mock_retry,
         ):
             mock_limiter.wait = AsyncMock()
             mock_cache.get.return_value = None
@@ -286,8 +286,8 @@ class TestMCPToolsAdvanced:
     async def test_extract_structured_data_success(self):
         """测试结构化数据提取成功"""
         with (
-            patch("extractor.tools.scraping.web_scraper") as mock_scraper,
-            patch("extractor.tools.scraping.rate_limiter") as mock_limiter,
+            patch("extractor.tools.extraction.web_scraper") as mock_scraper,
+            patch("extractor.tools.extraction.rate_limiter") as mock_limiter,
         ):
             mock_limiter.wait = AsyncMock()
             mock_result = {
@@ -448,7 +448,7 @@ class TestMCPToolsPDF:
     async def test_convert_pdf_to_markdown_success(self):
         """测试PDF转Markdown成功"""
         with (
-            patch("extractor.tools.pdf._get_pdf_processor") as mock_get_processor,
+            patch("extractor.tools.pdf.create_pdf_processor") as mock_get_processor,
             patch("extractor.tools.pdf.rate_limiter") as mock_limiter,
         ):
             mock_limiter.wait = AsyncMock()
@@ -501,7 +501,7 @@ class TestMCPToolsPDF:
     async def test_batch_convert_pdfs_to_markdown_success(self):
         """测试批量PDF转换成功"""
         with (
-            patch("extractor.tools.pdf._get_pdf_processor") as mock_get_processor,
+            patch("extractor.tools.pdf.create_pdf_processor") as mock_get_processor,
             patch("extractor.tools.pdf.rate_limiter") as mock_limiter,
         ):
             mock_limiter.wait = AsyncMock()

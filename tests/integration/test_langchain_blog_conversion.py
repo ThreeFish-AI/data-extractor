@@ -4,7 +4,7 @@
 import pytest
 import tempfile
 from extractor.scraper import WebScraper
-from extractor.markdown_converter import MarkdownConverter
+from extractor.markdown.converter import MarkdownConverter
 
 
 @pytest.mark.asyncio

@@ -7,7 +7,7 @@ import os
 from unittest.mock import patch, MagicMock
 
 from extractor.server import app
-from extractor.pdf_processor import PDFProcessor
+from extractor.pdf.processor import PDFProcessor
 
 
 @pytest.fixture
@@ -51,8 +51,8 @@ class TestPDFToolsIntegration:
         """Test actual PDF conversion tool execution with mocked PDF processing."""
         convert_tool = pdf_test_tools["convert"]
 
-        # Mock the PDF processor via _get_pdf_processor
-        with patch("extractor.tools.pdf._get_pdf_processor") as mock_get_processor:
+        # Mock the PDF processor via create_pdf_processor
+        with patch("extractor.tools.pdf.create_pdf_processor") as mock_get_processor:
             mock_get_processor.return_value = pdf_processor
             # Mock the PDF processor's process_pdf method
             with patch.object(pdf_processor, "process_pdf") as mock_process:
@@ -150,7 +150,7 @@ class TestPDFToolsIntegration:
             },
         }
 
-        with patch("extractor.tools.pdf._get_pdf_processor") as mock_get_processor:
+        with patch("extractor.tools.pdf.create_pdf_processor") as mock_get_processor:
             mock_get_processor.return_value = pdf_processor
             with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch:
                 mock_batch.return_value = batch_result
@@ -197,10 +197,10 @@ class TestPDFToolsIntegration:
         batch_tool = pdf_test_tools["batch"]
 
         # Test invalid method parameter - validation happens at tool execution
-        from extractor.pdf_processor import PDFProcessor
+        from extractor.pdf.processor import PDFProcessor
 
         pdf_processor = PDFProcessor()
-        with patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor):
+        with patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor):
             with patch.object(pdf_processor, "process_pdf") as mock_process:
                 mock_process.return_value = {
                     "success": False,
@@ -222,7 +222,7 @@ class TestPDFToolsIntegration:
                 assert result.success is False
 
         # Test empty PDF sources list for batch tool - should be validated by the tool
-        with patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor):
+        with patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor):
             with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch:
                 mock_batch.return_value = {
                     "success": False,
@@ -252,7 +252,7 @@ class TestPDFToolsIntegration:
 
         # Mock PDF processing with page range
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             range_result = {
@@ -294,7 +294,7 @@ class TestPDFToolsIntegration:
 
         # Test file not found error
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             mock_process.return_value = {
@@ -326,7 +326,7 @@ class TestPDFToolsIntegration:
 
         # Test URL download failure
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             mock_process.return_value = {
@@ -364,7 +364,7 @@ class TestPDFToolsIntegration:
 
         # Test text output format
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             text_result = {
@@ -397,7 +397,7 @@ class TestPDFToolsIntegration:
 
         # Test markdown output format (default)
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             markdown_result = {
@@ -450,7 +450,7 @@ class TestPDFToolsIntegration:
         convert_tool = pdf_test_tools["convert"]
 
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             mock_process.return_value = {
@@ -561,7 +561,7 @@ class TestPDFIntegrationWithRealProcessing:
             # Mock the batch processing to handle the mixed scenario
             with (
                 patch(
-                    "extractor.tools.pdf._get_pdf_processor",
+                    "extractor.tools.pdf.create_pdf_processor",
                     return_value=test_pdf_processor,
                 ),
                 patch.object(test_pdf_processor, "batch_process_pdfs") as mock_batch,
@@ -635,7 +635,7 @@ class TestPDFIntegrationWithRealProcessing:
 
         # Mock URL detection and download process
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             # Simulate successful URL download and processing
@@ -702,7 +702,7 @@ class TestPDFIntegrationWithRealProcessing:
 
         # Perform multiple PDF processing operations
         with (
-            patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor),
+            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "process_pdf") as mock_process,
         ):
             mock_process.return_value = {
@@ -747,10 +747,10 @@ class TestPDFIntegrationWithRealProcessing:
         batch_tool = pdf_test_tools["batch"]
 
         # Test invalid method in convert tool - validation happens at execution
-        from extractor.pdf_processor import PDFProcessor
+        from extractor.pdf.processor import PDFProcessor
 
         pdf_processor = PDFProcessor()
-        with patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor):
+        with patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor):
             with patch.object(pdf_processor, "process_pdf") as mock_process:
                 mock_process.return_value = {
                     "success": False,
@@ -772,7 +772,7 @@ class TestPDFIntegrationWithRealProcessing:
                 assert result.success is False
 
         # Test invalid page range format - validation happens at execution
-        with patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor):
+        with patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor):
             with patch.object(pdf_processor, "process_pdf") as mock_process:
                 mock_process.return_value = {
                     "success": False,
@@ -794,7 +794,7 @@ class TestPDFIntegrationWithRealProcessing:
                 assert result.success is False
 
         # Test empty batch list - validation happens at execution
-        with patch("extractor.tools.pdf._get_pdf_processor", return_value=pdf_processor):
+        with patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor):
             with patch.object(pdf_processor, "batch_process_pdfs") as mock_batch:
                 mock_batch.return_value = {
                     "success": False,

@@ -9,14 +9,14 @@ import pytest_asyncio
 
 from extractor.server import (
     app,
-    _get_pdf_processor,
+    create_pdf_processor,
 )
 
 
 @pytest.fixture
 def pdf_processor():
     """创建 PDF 处理器实例用于测试。"""
-    return _get_pdf_processor()
+    return create_pdf_processor()
 
 
 @pytest_asyncio.fixture

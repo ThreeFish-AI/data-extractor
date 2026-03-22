@@ -1,6 +1,6 @@
 """
 单元测试：tools/_registry.py 公共辅助函数
-测试 validate_url, validate_page_range, record_error, elapsed_ms
+测试 validate_url, validate_page_range, record_error, elapsed_ms, ToolTimer
 """
 
 import time
@@ -11,6 +11,7 @@ import pytest
 from extractor.tools._registry import (
     elapsed_ms,
     record_error,
+    ToolTimer,
     validate_page_range,
     validate_url,
 )
@@ -121,3 +122,49 @@ class TestElapsedMs:
         start = time.time() - 0.1  # 100ms ago
         result = elapsed_ms(start)
         assert result >= 90  # Allow some tolerance
+
+
+class TestToolTimer:
+    """测试 ToolTimer 统一计时与指标辅助类"""
+
+    def test_init_stores_url_and_method(self):
+        """初始化保存 url 和 method。"""
+        timer = ToolTimer("https://example.com", "stealth_selenium")
+        assert timer.url == "https://example.com"
+        assert timer.method == "stealth_selenium"
+        assert timer.duration_ms == 0
+
+    def test_elapsed_returns_positive(self):
+        """elapsed() 返回正整数毫秒值。"""
+        timer = ToolTimer("https://example.com", "simple")
+        ms = timer.elapsed()
+        assert isinstance(ms, int)
+        assert ms >= 0
+        assert timer.duration_ms == ms
+
+    def test_record_success_records_metrics(self):
+        """record_success() 记录成功指标并返回 duration_ms。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            timer = ToolTimer("https://example.com", "markdown_auto")
+            ms = timer.record_success()
+            assert isinstance(ms, int)
+            assert ms >= 0
+            mock_metrics.record_request.assert_called_once_with(
+                "https://example.com", True, ms, "markdown_auto"
+            )
+
+    def test_record_failure_records_metrics_and_returns_message(self):
+        """record_failure() 记录失败指标并返回用户友好错误信息。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            timer = ToolTimer("https://example.com", "pdf_pymupdf")
+            error = ValueError("test error")
+            msg = timer.record_failure(error)
+            assert isinstance(msg, str)
+            assert len(msg) > 0
+            mock_metrics.record_request.assert_called_once()
+
+    def test_url_can_be_updated(self):
+        """url 属性可以在创建后更新（如 URL 规范化场景）。"""
+        timer = ToolTimer("https://example.com", "stealth_selenium")
+        timer.url = "https://example.com/"
+        assert timer.url == "https://example.com/"

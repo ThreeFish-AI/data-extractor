@@ -64,17 +64,13 @@ uv run playwright install chromium
 data-extractor/
 ├── extractor/                    # 核心包
 │   ├── server.py                 # MCP 服务器入口（re-export + main()）
-│   ├── config.py                 # 配置系统（DataExtractorSettings）
-│   ├── config_validator.py       # 配置验证
-│   ├── schemas.py                # 响应模型定义（Pydantic BaseModel）
-│   ├── models.py                 # 数据模型
+│   ├── config.py                 # 配置系统 + 配置验证（DataExtractorSettings, ConfigValidator）
+│   ├── schemas.py                # 响应模型 + 数据传输对象（Pydantic BaseModel, ScrapingResult）
 │   │
 │   ├── scraper.py                # 网页抓取引擎（WebScraper）
 │   ├── anti_detection.py         # 反检测隐身抓取（AntiDetectionScraper）
 │   ├── browser_utils.py          # 浏览器工具
 │   ├── form_handler.py           # 表单处理
-│   ├── markdown_converter.py     # Markdown 转换器
-│   ├── advanced_features.py      # 高级功能聚合入口
 │   │
 │   ├── cache.py                  # 缓存管理
 │   ├── rate_limiter.py           # 速率限制
@@ -85,7 +81,6 @@ data-extractor/
 │   │
 │   ├── url_utils.py              # URL 验证工具
 │   ├── text_utils.py             # 文本清理工具
-│   ├── utils.py                  # 通用工具函数
 │   │
 │   ├── pdf_processor.py          # PDF 处理器入口（兼容层）
 │   ├── enhanced_pdf_processor.py # 增强 PDF（兼容层）

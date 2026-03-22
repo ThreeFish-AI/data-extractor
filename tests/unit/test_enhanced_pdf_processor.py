@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-from extractor.enhanced_pdf_processor import (
+from extractor.pdf.enhanced import (
     EnhancedPDFProcessor,
     ExtractedImage,
     ExtractedTable,

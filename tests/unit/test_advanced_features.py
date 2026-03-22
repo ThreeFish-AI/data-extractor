@@ -16,7 +16,8 @@ import pytest
 import asyncio
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 
-from extractor.advanced_features import AntiDetectionScraper, FormHandler
+from extractor.anti_detection import AntiDetectionScraper
+from extractor.form_handler import FormHandler
 
 
 class TestAntiDetectionScraper:

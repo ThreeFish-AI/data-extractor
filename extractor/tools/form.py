@@ -1,18 +1,16 @@
 """Form interaction MCP tools."""
 
 import logging
-import time
 from typing import Annotated, Any, Dict, Optional
 
 from pydantic import Field
 
 from ..config import settings
 from ..form_handler import FormHandler
-from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import ScrapeResponse
 from ..url_utils import URLValidator
-from ._registry import app, elapsed_ms, record_error
+from ._registry import app, ToolTimer
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +75,8 @@ async def fill_and_submit_form(
         ScrapeResponse object containing success status, form interaction results, and optional submission response.
         Supports complex form automation workflows.
     """
-    start_time = time.time()
+    method_key = f"form_{method}"
+    timer = ToolTimer(url, method_key)
     try:
         # Validate inputs
         if not URLValidator.is_valid_url(url):
@@ -174,13 +173,10 @@ async def fill_and_submit_form(
                 await browser.close()
                 await playwright.stop()
 
-        duration_ms = elapsed_ms(start_time)
-
         if result.get("success"):
-            metrics_collector.record_request(url, True, duration_ms, f"form_{method}")
-
+            timer.record_success()
             return ScrapeResponse(
-                success=True, url=url, method=f"form_{method}",
+                success=True, url=url, method=method_key,
                 data={
                     "form_results": result,
                     "final_url": final_url,
@@ -189,17 +185,13 @@ async def fill_and_submit_form(
                 },
             )
         else:
-            error_msg = record_error(
-                Exception(result.get("error", "Form interaction failed")),
-                url, f"form_{method}", duration_ms,
-            )
             return ScrapeResponse(
-                success=False, url=url, method=f"form_{method}", error=error_msg,
+                success=False, url=url, method=method_key,
+                error=timer.record_failure(Exception(result.get("error", "Form interaction failed"))),
             )
 
     except Exception as e:
-        duration_ms = elapsed_ms(start_time) if "start_time" in dir() else 0
-        error_msg = record_error(e, url, f"form_{method}", duration_ms)
         return ScrapeResponse(
-            success=False, url=url, method=f"form_{method}", error=error_msg,
+            success=False, url=url, method=method_key,
+            error=timer.record_failure(e),
         )

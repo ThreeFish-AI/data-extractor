@@ -10,7 +10,7 @@ from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ..timing import timing_decorator
-from ._registry import app, _get_pdf_processor, elapsed_ms, record_error, validate_page_range
+from ._registry import app, create_pdf_processor, ToolTimer, validate_page_range
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,8 @@ async def convert_pdf_to_markdown(
         PDFResponse object containing success status, extracted content, metadata, processing method used,
         enhanced assets summary, and page/word count statistics.
     """
+    method_key = f"pdf_{method}"
+    timer = ToolTimer(pdf_source, method_key)
     try:
         # Validate inputs
         if method not in ["auto", "pymupdf", "pypdf"]:
@@ -120,7 +122,6 @@ async def convert_pdf_to_markdown(
                 conversion_time=0,
             )
 
-        start_time = time.time()
         logger.info(
             f"Converting PDF to {output_format}: {pdf_source} with method: {method}"
         )
@@ -137,7 +138,7 @@ async def convert_pdf_to_markdown(
         enable_enhanced = extract_images or extract_tables or extract_formulas
 
         # Process PDF with enhanced features
-        pdf_processor = _get_pdf_processor(
+        pdf_processor = create_pdf_processor(
             enable_enhanced_features=enable_enhanced, output_dir=output_dir
         )
         result = await pdf_processor.process_pdf(
@@ -153,13 +154,7 @@ async def convert_pdf_to_markdown(
             enhanced_options=enhanced_options,
         )
 
-        duration_ms = elapsed_ms(start_time)
-
         if result.get("success"):
-            metrics_collector.record_request(
-                pdf_source, True, duration_ms, f"pdf_{method}"
-            )
-
             return PDFResponse(
                 success=True, pdf_source=pdf_source, method=method,
                 output_format=output_format,
@@ -169,27 +164,25 @@ async def convert_pdf_to_markdown(
                     "page_count", result.get("pages_processed", result.get("pages", 0))
                 ),
                 word_count=result.get("word_count", 0),
-                conversion_time=duration_ms / 1000.0,
+                conversion_time=timer.record_success() / 1000.0,
                 enhanced_assets=result.get("enhanced_assets"),
             )
         else:
-            error_msg = record_error(
-                Exception(result.get("error", "PDF conversion failed")),
-                pdf_source, f"pdf_{method}", duration_ms,
-            )
             return PDFResponse(
                 success=False, pdf_source=pdf_source, method=method,
-                output_format=output_format, error=error_msg,
-                conversion_time=duration_ms / 1000.0,
+                output_format=output_format,
+                error=timer.record_failure(
+                    Exception(result.get("error", "PDF conversion failed"))
+                ),
+                conversion_time=timer.duration_ms / 1000.0,
             )
 
     except Exception as e:
-        duration_ms = elapsed_ms(start_time) if "start_time" in dir() else 0
-        error_msg = record_error(e, pdf_source, f"pdf_{method}", duration_ms)
         return PDFResponse(
             success=False, pdf_source=pdf_source, method=method,
-            output_format=output_format, error=error_msg,
-            conversion_time=duration_ms / 1000.0,
+            output_format=output_format,
+            error=timer.record_failure(e),
+            conversion_time=timer.duration_ms / 1000.0,
         )
 
 
@@ -322,7 +315,7 @@ async def batch_convert_pdfs_to_markdown(
         )
 
         # Process all PDFs
-        pdf_processor = _get_pdf_processor()
+        pdf_processor = create_pdf_processor()
         result = await pdf_processor.batch_process_pdfs(
             pdf_sources=pdf_sources,
             method=method,
@@ -336,7 +329,7 @@ async def batch_convert_pdfs_to_markdown(
             enhanced_options=enhanced_options,
         )
 
-        duration_ms = elapsed_ms(start_time)
+        duration_ms = int((time.time() - start_time) * 1000)
 
         # Record metrics for each PDF
         for i, pdf_source in enumerate(pdf_sources):
@@ -389,7 +382,7 @@ async def batch_convert_pdfs_to_markdown(
         )
 
     except Exception as e:
-        duration_ms = elapsed_ms(start_time) if "start_time" in dir() else 0
+        duration_ms = int((time.time() - start_time) * 1000) if "start_time" in dir() else 0
         logger.error(f"Error in batch PDF conversion: {str(e)}")
         return BatchPDFResponse(
             success=False,

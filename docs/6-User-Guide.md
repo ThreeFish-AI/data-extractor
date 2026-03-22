@@ -1141,7 +1141,8 @@ _Source: Page 3_
 
 ```python
 from extractor.scraper import WebScraper
-from extractor.advanced_features import AntiDetectionScraper, FormHandler
+from extractor.anti_detection import AntiDetectionScraper
+from extractor.form_handler import FormHandler
 
 # 基础抓取
 scraper = WebScraper()
@@ -1193,10 +1194,10 @@ result = await scraper.scrape_url(url, extract_config=extract_config)
 #### 3. 企业级功能集成
 
 ```python
-from extractor.utils import (
-    rate_limiter, retry_manager, cache_manager,
-    metrics_collector, error_handler
-)
+from extractor.rate_limiter import rate_limiter
+from extractor.retry import retry_manager
+from extractor.cache import cache_manager
+from extractor.metrics import metrics_collector
 
 # 集成完整功能的抓取流程
 async def enterprise_scrape(url: str):

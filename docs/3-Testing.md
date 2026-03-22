@@ -145,7 +145,7 @@ uv run pytest -m "not slow"          # 排除慢速测试
 
 | Fixture | 类型 | 说明 |
 | ------- | ---- | ---- |
-| `pdf_processor` | sync | `_get_pdf_processor()` 真实 PDF 处理器实例 |
+| `pdf_processor` | sync | `create_pdf_processor()` 真实 PDF 处理器实例 |
 | `e2e_tools` | async | MCP 工具名称→工具对象映射字典（`pytest_asyncio.fixture`） |
 
 ### Fixture 约定

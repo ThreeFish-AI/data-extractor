@@ -6,7 +6,8 @@ from unittest.mock import Mock, AsyncMock
 
 from extractor.config import DataExtractorSettings
 from extractor.scraper import WebScraper
-from extractor.advanced_features import AntiDetectionScraper, FormHandler
+from extractor.anti_detection import AntiDetectionScraper
+from extractor.form_handler import FormHandler
 
 
 @pytest.fixture

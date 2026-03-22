@@ -3,15 +3,10 @@
 from .config import settings
 
 # Re-export from tools package for backward compatibility
-from .tools import app, web_scraper, anti_detection_scraper, markdown_converter, _get_pdf_processor  # noqa: F401
-from .tools.scraping import (  # noqa: F401
-    scrape_webpage,
-    scrape_multiple_webpages,
-    scrape_with_stealth,
-    extract_links,
-    get_page_info,
-    extract_structured_data,
-)
+from .tools import app, web_scraper, anti_detection_scraper, markdown_converter, create_pdf_processor  # noqa: F401
+from .tools.scraping import scrape_webpage, scrape_multiple_webpages  # noqa: F401
+from .tools.stealth import scrape_with_stealth  # noqa: F401
+from .tools.extraction import extract_links, get_page_info, extract_structured_data  # noqa: F401
 from .tools.utility import check_robots_txt  # noqa: F401
 from .tools.form import fill_and_submit_form  # noqa: F401
 from .tools.markdown import convert_webpage_to_markdown, batch_convert_webpages_to_markdown  # noqa: F401
