@@ -99,4 +99,3 @@ class RunStore:
         (run_dir / "verdict.json").write_text(
             verdict.model_dump_json(indent=2), encoding="utf-8"
         )
-
