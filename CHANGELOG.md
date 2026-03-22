@@ -4,6 +4,15 @@ All notable changes to the Data Extractor project will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## **v0.1.7 (2026/03/22)** - 梳理清减：正交分解与死代码消除
+
+- **正交分解**: `markdown_converter.py`（1,116 行）拆分为 `extractor/markdown/` 子包，按转换编排、格式化管线、HTML 预处理、图片嵌入四个维度解耦
+- **死代码清理**: 移除 `WebScrapingSpider`、`ScrapyWrapper`（~137 行）及 `_split_text_into_paragraphs` 等三个内部死方法（~125 行）
+- **逻辑去重**: 提取 `scraping_utils.py` 共享函数，消除 `scraper.py` / `anti_detection.py` 中的数据提取重复代码
+- **命名规范化**: `SimpleScraper` → `HttpScraper`（保留向后兼容别名），`content_data` → `page_content`
+- **向后兼容**: 遵循 `pdf_processor.py` 垫片模式，所有现有导入路径和 API 保持不变
+- **量化指标**: 源代码净减少 208 行（6,511 → 6,303，-3.2%），最大单文件从 1,116 行降至 ~310 行
+
 ## **v0.1.6 (2025/11/27)** - PDF 增强功能与内容深度提取
 
 - ✨ **Transport 支持**: 新增 StreamableHTTP、SSE 传输模式支持，默认使用 StreamableHTTP
