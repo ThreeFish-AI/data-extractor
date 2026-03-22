@@ -55,6 +55,14 @@ class TestWorkflowActionVersions:
             content = workflow.read_text(encoding="utf-8")
             assert "actions/setup-node@v4" not in content, f"{workflow.name} 仍在使用 setup-node v4"
             assert "actions/github-script@v7" not in content, f"{workflow.name} 仍在使用 github-script v7"
+            assert "actions/upload-artifact@v4" not in content, f"{workflow.name} 仍在使用 upload-artifact v4"
+            assert "actions/download-artifact@v4" not in content, f"{workflow.name} 仍在使用 download-artifact v4"
+
+    def test_setup_uv_upgraded_to_v7(self):
+        content = (PROJECT_ROOT / ".github" / "actions" / "setup-python-uv" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+        assert "astral-sh/setup-uv@v7" in content
 
     def test_dependencies_workflow_uses_latest_pr_action(self):
         content = _read_workflow("dependencies.yml")

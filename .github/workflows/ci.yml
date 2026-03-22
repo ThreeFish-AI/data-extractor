@@ -70,7 +70,7 @@ jobs:
           uv run pip-audit
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: security-reports
@@ -99,7 +99,7 @@ jobs:
           uv run python -c "import extractor; print(f'Successfully imported extractor v{extractor.__version__}')" || uv run python -c "import extractor; print('Successfully imported extractor')"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-test
           path: dist/
@@ -121,7 +121,7 @@ jobs:
           DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: |
