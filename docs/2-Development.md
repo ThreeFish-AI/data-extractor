@@ -111,10 +111,55 @@ data-extractor/
 │   ├── basic_usage.py            # 基础使用示例
 │   └── extraction_configs.py     # 提取配置示例
 │
+├── packages/
+│   └── mcp_hub/                  # MCP 验证编排控制面
+│       ├── mcp_hub/              # Hub 源码包
+│       └── README.md             # Hub 简介与启动入口
+│
 ├── docs/                         # 项目文档
 ├── .github/workflows/            # CI/CD 配置
 └── pyproject.toml                # 项目配置
 ```
+
+## MCP Hub 子项目
+
+`packages/mcp_hub/` 是面向 `data-extractor` 的 **FastMCP-native 验证编排层**，不替代现有 14 个业务 MCP 工具，而是在其之上提供：
+
+- 单工具验证执行
+- 内置场景验证执行
+- run / trace / artifact / verdict 落盘
+- `/viewer` 人工复盘界面
+
+其核心入口位于 [`packages/mcp_hub/mcp_hub/hub_server.py`](../packages/mcp_hub/mcp_hub/hub_server.py)，通过 `app.mount(extractor_app, namespace="extractor")` 复用现有 `data-extractor` 服务能力，体现 **Composition over Construction** 的复用原则。
+
+### 运行 MCP Hub
+
+在仓库根目录执行：
+
+```bash
+uv run python -m mcp_hub.hub_server
+```
+
+默认行为：
+
+- MCP 端点：`http://localhost:8091/mcp`
+- Viewer 页面：`http://localhost:8091/viewer`
+- 运行产物目录：`.temp/mcp_hub`
+
+### MCP Hub 测试边界
+
+`mcp_hub` 当前测试位于 [`tests/unit/test_mcp_hub.py`](../tests/unit/test_mcp_hub.py)，聚焦：
+
+- 场景列表可发现性
+- 单工具验证的 run / trace / artifact 持久化
+- 人工 verdict 写入
+- trace 查询
+
+建议将 `mcp_hub` 视为**验证控制面**而非核心提取引擎，修改其代码时优先验证：
+
+- `data-extractor` 原有 14 个工具契约不变
+- `mcp_hub` 的 run、trace、artifact 数据结构保持兼容
+- `/viewer` 仍能正确展示最近运行与详情页
 
 ## MCP 工具开发
 
