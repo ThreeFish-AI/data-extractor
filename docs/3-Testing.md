@@ -131,7 +131,6 @@ uv run pytest -m "not slow"          # 排除慢速测试
 
 | Fixture | 作用域 | 说明 |
 | ------- | ------ | ---- |
-| `event_loop` | session | 异步事件循环（`pytest-asyncio` 所需） |
 | `test_config` | function | 安全的 `DataExtractorSettings` 测试实例 |
 | `mock_web_scraper` | function | `WebScraper` Mock（`spec=` 类型约束） |
 | `mock_anti_detection_scraper` | function | `AntiDetectionScraper` Mock |

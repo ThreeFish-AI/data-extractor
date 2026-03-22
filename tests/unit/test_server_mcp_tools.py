@@ -11,7 +11,7 @@ import extractor.server as server_module
 
 # BaseModel request classes have been removed - tools now use individual parameters with Annotated Field
 
-# fastmcp >=2.x @app.tool() 装饰器直接返回原函数，无需 .fn 解包
+# fastmcp >=2.x / >=3.x @app.tool() 装饰器直接返回原函数，无需 .fn 解包
 scrape_webpage = server_module.scrape_webpage
 scrape_multiple_webpages = server_module.scrape_multiple_webpages
 extract_links = server_module.extract_links
