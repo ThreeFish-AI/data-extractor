@@ -5,7 +5,7 @@ title: Configuration
 description: Configuration System Guide
 last_update:
   author: Aurelius
-  date: 2025-11-23
+  date: 2026-03-22
 tags:
   - Configuration
   - Settings
@@ -14,111 +14,128 @@ tags:
 
 ## 配置系统架构
 
-Data Extractor 采用分层配置系统，按优先级从高到低依次为：
+Data Extractor 采用基于 [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) 的分层配置系统，按优先级从高到低：
 
-1. **运行时参数** - 函数调用时直接传递的参数
+1. **运行时参数** - 函数调用时直接传递（详见[用户指南 - 数据提取配置](./6-User-Guide.md)）
 2. **环境变量** - `DATA_EXTRACTOR_` 前缀的环境变量
-3. **环境文件** - `.env` 系列文件配置
-4. **默认配置** - 代码中定义的默认值
-
-## 运行时配置
-
-### 数据提取配置
-
-运行时参数具有最高优先级，支持灵活的 CSS 选择器和属性提取配置：
-
-```python
-# 简单选择器配置
-extract_config = {"title": "h1"}
-
-# 复杂选择器配置
-extract_config = {
-    "products": {
-        "selector": ".product",
-        "multiple": true,
-        "attr": "text"
-    },
-    "images": {
-        "selector": ".product-image img",
-        "multiple": true,
-        "attr": "src"
-    }
-}
-```
-
-**支持的属性类型**：
-
-- `text` - 元素文本内容
-- `href` - 链接地址
-- `src` - 图片或资源地址
-- 自定义属性 - 如 `data-id`、`class` 等
-
-### 实际应用示例
-
-```python
-# MCP 工具调用中的配置使用
-result = await scrape_webpage(
-    url="https://example.com",
-    extract_config={
-        "title": "h1",
-        "content": ".main-content p",
-        "links": {"selector": "a", "multiple": true, "attr": "href"}
-    }
-)
-```
+3. **环境文件** - `.env` 系列文件
+4. **默认配置** - [`DataExtractorSettings`](../extractor/config.py) 中定义的默认值
 
 ## 环境变量配置
 
-### 核心服务配置
+所有环境变量统一使用 `DATA_EXTRACTOR_` 前缀，由 Pydantic 自动完成类型转换与校验。
 
-| 环境变量                     | 默认值           | 说明           |
-| ---------------------------- | ---------------- | -------------- |
-| `DATA_EXTRACTOR_SERVER_NAME` | `data-extractor` | 服务器标识名称 |
+### 服务标识
 
-### 性能优化配置
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_SERVER_NAME` | `str` | `data-extractor` | - | 服务器标识名称 |
+| `DATA_EXTRACTOR_SERVER_VERSION` | `str` | 自动读取 | - | 版本号（从 `pyproject.toml` 自动获取） |
 
-| 环境变量                                        | 默认值 | 说明               |
-| ----------------------------------------------- | ------ | ------------------ |
-| `DATA_EXTRACTOR_CONCURRENT_REQUESTS`            | `16`   | 并发请求处理数量   |
-| `DATA_EXTRACTOR_RATE_LIMIT_REQUESTS_PER_MINUTE` | `60`   | 每分钟请求频率限制 |
-| `DATA_EXTRACTOR_REQUEST_TIMEOUT`                | `30.0` | 请求超时时间（秒） |
-| `DATA_EXTRACTOR_MAX_RETRIES`                    | `3`    | 失败重试最大次数   |
+### 传输层
 
-### 浏览器引擎配置
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_TRANSPORT_MODE` | `str` | `http` | `stdio` / `http` / `sse` | MCP 传输协议模式 |
+| `DATA_EXTRACTOR_HTTP_HOST` | `str` | `localhost` | - | HTTP 服务器绑定主机 |
+| `DATA_EXTRACTOR_HTTP_PORT` | `int` | `8081` | - | HTTP 服务器端口 |
+| `DATA_EXTRACTOR_HTTP_PATH` | `str` | `/mcp` | - | HTTP 端点路径 |
+| `DATA_EXTRACTOR_HTTP_CORS_ORIGINS` | `str?` | `*` | - | CORS 来源白名单（`null` 禁用） |
 
-| 环境变量                           | 默认值  | 说明                     |
-| ---------------------------------- | ------- | ------------------------ |
-| `DATA_EXTRACTOR_ENABLE_JAVASCRIPT` | `false` | 是否启用 JavaScript 执行 |
-| `DATA_EXTRACTOR_BROWSER_HEADLESS`  | `true`  | 是否使用无头浏览器模式   |
-| `DATA_EXTRACTOR_BROWSER_TIMEOUT`   | `30`    | 浏览器操作超时时间       |
+### 抓取引擎
 
-### 反检测机制配置
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_CONCURRENT_REQUESTS` | `int` | `16` | `> 0` | 并发请求数 |
+| `DATA_EXTRACTOR_DOWNLOAD_DELAY` | `float` | `1.0` | `>= 0` | 下载间隔（秒） |
+| `DATA_EXTRACTOR_RANDOMIZE_DOWNLOAD_DELAY` | `bool` | `true` | - | 随机化下载间隔 |
+| `DATA_EXTRACTOR_AUTOTHROTTLE_ENABLED` | `bool` | `true` | - | 启用自动节流 |
+| `DATA_EXTRACTOR_AUTOTHROTTLE_START_DELAY` | `float` | `1.0` | `>= 0` | 自动节流初始延迟（秒） |
+| `DATA_EXTRACTOR_AUTOTHROTTLE_MAX_DELAY` | `float` | `60.0` | `>= 0` | 自动节流最大延迟（秒） |
+| `DATA_EXTRACTOR_AUTOTHROTTLE_TARGET_CONCURRENCY` | `float` | `1.0` | `>= 0` | 自动节流目标并发度 |
 
-| 环境变量                               | 默认值  | 说明                 |
-| -------------------------------------- | ------- | -------------------- |
-| `DATA_EXTRACTOR_USE_RANDOM_USER_AGENT` | `true`  | 是否启用随机用户代理 |
-| `DATA_EXTRACTOR_USE_PROXY`             | `false` | 是否启用代理服务器   |
-| `DATA_EXTRACTOR_PROXY_URL`             | -       | 代理服务器地址 URL   |
+### 速率限制
 
-### 缓存系统配置
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_RATE_LIMIT_REQUESTS_PER_MINUTE` | `int` | `60` | `>= 1` | 每分钟请求频率上限 |
 
-| 环境变量                         | 默认值 | 说明                     |
-| -------------------------------- | ------ | ------------------------ |
-| `DATA_EXTRACTOR_ENABLE_CACHING`  | `true` | 是否启用缓存机制         |
-| `DATA_EXTRACTOR_CACHE_TTL_HOURS` | `24`   | 缓存数据生存时间（小时） |
+### 重试策略
 
-### 日志系统配置
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_MAX_RETRIES` | `int` | `3` | `>= 0` | 失败重试最大次数 |
+| `DATA_EXTRACTOR_RETRY_DELAY` | `float` | `1.0` | `>= 0` | 重试间隔（秒） |
 
-| 环境变量                   | 默认值 | 说明         |
-| -------------------------- | ------ | ------------ |
-| `DATA_EXTRACTOR_LOG_LEVEL` | `INFO` | 日志记录级别 |
+### 缓存系统
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_ENABLE_CACHING` | `bool` | `true` | - | 启用响应缓存 |
+| `DATA_EXTRACTOR_CACHE_TTL_HOURS` | `int` | `24` | `> 0` | 缓存生存时间（小时） |
+| `DATA_EXTRACTOR_CACHE_MAX_SIZE` | `int?` | `null` | - | 缓存最大条目数（`null` 不限） |
+
+### 日志系统
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_LOG_LEVEL` | `str` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL` | 日志记录级别 |
+| `DATA_EXTRACTOR_LOG_REQUESTS` | `bool?` | `null` | - | 记录请求详情 |
+| `DATA_EXTRACTOR_LOG_RESPONSES` | `bool?` | `null` | - | 记录响应详情 |
+
+### 浏览器引擎
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_ENABLE_JAVASCRIPT` | `bool` | `false` | - | 启用 JavaScript 执行 |
+| `DATA_EXTRACTOR_BROWSER_HEADLESS` | `bool` | `true` | - | 无头浏览器模式 |
+| `DATA_EXTRACTOR_BROWSER_TIMEOUT` | `int` | `30` | `>= 0` | 浏览器操作超时（秒） |
+| `DATA_EXTRACTOR_BROWSER_WINDOW_SIZE` | `str` | `1920x1080` | - | 浏览器窗口尺寸 |
+
+### 用户代理
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_USE_RANDOM_USER_AGENT` | `bool` | `true` | - | 启用随机 User-Agent 轮换 |
+| `DATA_EXTRACTOR_DEFAULT_USER_AGENT` | `str` | Chrome 120 UA | - | 默认 User-Agent 字符串 |
+
+### 代理服务
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_USE_PROXY` | `bool` | `false` | - | 启用代理服务器 |
+| `DATA_EXTRACTOR_PROXY_URL` | `str?` | `null` | - | 代理服务器 URL（启用代理时必填） |
+
+### 请求设置
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_REQUEST_TIMEOUT` | `float` | `30.0` | `> 0` | HTTP 请求超时（秒） |
+
+## 配置验证规则
+
+### 字段验证器
+
+系统内置两个 `@field_validator`，在加载时自动规范化输入：
+
+- **`log_level`** — 自动转为大写，仅接受 `DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`
+- **`transport_mode`** — 自动转为小写，仅接受 `stdio`、`http`、`sse`
+
+### 配置不可变性
+
+全局实例 `settings` 通过 `frozen=True` 配置为不可变对象，创建后不可修改，保障运行时配置一致性。
+
+### Scrapy 设置映射
+
+`get_scrapy_settings()` 方法将抓取引擎配置映射为 Scrapy 原生设置字典，供 Scrapy 框架直接消费。
 
 ## 环境配置模板
 
-### 开发环境配置
+### 开发环境
 
 ```bash
 # .env.development
+DATA_EXTRACTOR_TRANSPORT_MODE=stdio
 DATA_EXTRACTOR_LOG_LEVEL=DEBUG
 DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true
 DATA_EXTRACTOR_BROWSER_HEADLESS=false
@@ -126,10 +143,13 @@ DATA_EXTRACTOR_CONCURRENT_REQUESTS=4
 DATA_EXTRACTOR_CACHE_TTL_HOURS=1
 ```
 
-### 生产环境配置
+### 生产环境
 
 ```bash
 # .env.production
+DATA_EXTRACTOR_TRANSPORT_MODE=http
+DATA_EXTRACTOR_HTTP_HOST=0.0.0.0
+DATA_EXTRACTOR_HTTP_PORT=8081
 DATA_EXTRACTOR_LOG_LEVEL=INFO
 DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true
 DATA_EXTRACTOR_BROWSER_HEADLESS=true
@@ -140,49 +160,23 @@ DATA_EXTRACTOR_USE_RANDOM_USER_AGENT=true
 
 ## 配置管理最佳实践
 
-### 文件命名规范
+- `.env` — 本地开发配置（不纳入版本控制，权限 `600`）
+- `.env.example` — 配置模板（纳入版本控制）
+- `.env.development` / `.env.production` — 环境专用配置
+- 启用代理时务必同时配置 `PROXY_URL`，否则启动验证将报错
 
-- `.env` - 本地开发配置（不纳入版本控制）
-- `.env.example` - 配置模板文件（纳入版本控制）
-- `.env.development` - 开发环境专用配置
-- `.env.production` - 生产环境专用配置
-
-### 安全防护措施
+## 故障诊断
 
 ```bash
-# 设置配置文件访问权限
-chmod 600 .env
-
-# 将敏感文件排除出版本控制
-echo ".env" >> .gitignore
-```
-
-### 配置验证机制
-
-```python
-# 系统启动时的关键配置验证
-if settings.use_proxy and not settings.proxy_url:
-    raise ValueError("代理启用状态下必须提供代理服务器地址")
-```
-
-## 故障诊断与排除
-
-### 配置检查命令
-
-```bash
-# 查看所有 Data Extractor 相关环境变量
+# 查看所有 Data Extractor 环境变量
 env | grep DATA_EXTRACTOR_
 
-# 显示当前配置文件内容
+# 检查配置文件
 cat .env
 ```
 
-### 常见问题处理
-
-- **环境变量未生效**：检查变量前缀格式和文件编码
-- **数据类型转换错误**：确认数值和布尔值使用正确的格式
-- **配置验证失败**：查看系统输出的详细错误信息
+**常见问题**：环境变量未生效（检查 `DATA_EXTRACTOR_` 前缀）、类型转换错误（确认数值/布尔值格式）、配置验证失败（查看错误信息中的约束提示）。
 
 ---
 
-更多配置详情请参考项目根目录的 `.env.example` 文件和源码中的配置模块定义。
+更多配置详情请参考 [`.env.example`](../.env.example) 和 [`extractor/config.py`](../extractor/config.py)。
