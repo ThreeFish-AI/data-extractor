@@ -516,7 +516,10 @@ class TestPDFIntegrationWithRealProcessing:
                 mock_doc.metadata = {"title": "Test Document"}
 
                 mock_page = MagicMock()
-                mock_page.get_text.return_value = "Test content"
+                # Return blocks format: (x0, y0, x1, y1, text, block_no, block_type)
+                mock_page.get_text.return_value = [
+                    (0, 0, 500, 30, "Test content\n", 0, 0),
+                ]
                 mock_doc.load_page.return_value = mock_page
 
                 mock_fitz.open.return_value = mock_doc

@@ -177,7 +177,7 @@ class TestPyMuPDFExtraction:
     @pytest.mark.asyncio
     @patch("extractor.pdf.processor._import_fitz")
     async def test_pymupdf_extraction_success(self, mock_import_fitz):
-        """测试PyMuPDF提取成功"""
+        """测试PyMuPDF提取成功（block级提取）"""
         # 模拟fitz模块
         mock_fitz = Mock()
         mock_import_fitz.return_value = mock_fitz
@@ -192,11 +192,16 @@ class TestPyMuPDFExtraction:
         }
         mock_fitz.open.return_value = mock_doc
 
-        # 模拟页面
+        # 模拟页面 - 使用 blocks 格式
+        # (x0, y0, x1, y1, text, block_no, block_type)
         mock_page1 = Mock()
-        mock_page1.get_text.return_value = "Page 1 content"
+        mock_page1.get_text.return_value = [
+            (0, 0, 100, 20, "Page 1 content\n", 0, 0),
+        ]
         mock_page2 = Mock()
-        mock_page2.get_text.return_value = "Page 2 content"
+        mock_page2.get_text.return_value = [
+            (0, 0, 100, 20, "Page 2 content\n", 0, 0),
+        ]
         mock_doc.load_page.side_effect = [mock_page1, mock_page2]
 
         # 创建临时PDF文件
@@ -226,7 +231,7 @@ class TestPyMuPDFExtraction:
     @pytest.mark.asyncio
     @patch("extractor.pdf.processor._import_fitz")
     async def test_pymupdf_with_page_range(self, mock_import_fitz):
-        """测试PyMuPDF页面范围提取"""
+        """测试PyMuPDF页面范围提取（block级）"""
         # 模拟fitz模块
         mock_fitz = Mock()
         mock_import_fitz.return_value = mock_fitz
@@ -237,11 +242,13 @@ class TestPyMuPDFExtraction:
         mock_doc.metadata = {}
         mock_fitz.open.return_value = mock_doc
 
-        # 模拟页面
+        # 模拟页面 - 使用 blocks 格式
         mock_pages = []
         for i in range(5):
             mock_page = Mock()
-            mock_page.get_text.return_value = f"Page {i + 1} content"
+            mock_page.get_text.return_value = [
+                (0, 0, 100, 20, f"Page {i + 1} content\n", 0, 0),
+            ]
             mock_pages.append(mock_page)
 
         # 正确设置 load_page 的模拟行为
