@@ -377,13 +377,26 @@ class PDFProcessor:
                 start_page = max(0, page_range[0])
                 end_page = min(total_pages, page_range[1])
 
-            # Extract text from pages
+            # Extract text from pages using block-level extraction
+            # Each block naturally corresponds to a paragraph/text element
             text_content = []
             for page_num in range(start_page, end_page):
                 page = doc.load_page(page_num)
-                text = page.get_text()
-                if text.strip():  # Only add non-empty pages
-                    text_content.append(f"<!-- Page {page_num + 1} -->\n{text}")
+                blocks = page.get_text("blocks")
+                page_paragraphs = []
+                for block in sorted(blocks, key=lambda b: (b[1], b[0])):
+                    if block[6] == 0:  # text block (not image)
+                        block_text = block[4].strip()
+                        if block_text:
+                            # Merge line breaks within a block into spaces
+                            # (intra-paragraph line wraps from PDF layout)
+                            block_text = re.sub(r"\n+", " ", block_text)
+                            page_paragraphs.append(block_text)
+                if page_paragraphs:
+                    page_text = "\n\n".join(page_paragraphs)
+                    text_content.append(
+                        f"<!-- Page {page_num + 1} -->\n\n{page_text}"
+                    )
 
             full_text = "\n\n".join(text_content)
 
@@ -436,13 +449,16 @@ class PDFProcessor:
                     start_page = max(0, page_range[0])
                     end_page = min(total_pages, page_range[1])
 
-                # Extract text from pages
+                # Extract text from pages with paragraph normalization
                 text_content = []
                 for page_num in range(start_page, end_page):
                     page = reader.pages[page_num]
                     text = page.extract_text()
                     if text.strip():  # Only add non-empty pages
-                        text_content.append(f"<!-- Page {page_num + 1} -->\n{text}")
+                        text = self._normalize_paragraphs(text)
+                        text_content.append(
+                            f"<!-- Page {page_num + 1} -->\n\n{text}"
+                        )
 
                 full_text = "\n\n".join(text_content)
 
@@ -481,8 +497,25 @@ class PDFProcessor:
 
             converter = MarkdownConverter()
 
-            # Create a simple HTML structure from the text for better conversion
-            html_content = f"<html><body><div>{text}</div></body></html>"
+            # Split text into paragraphs and wrap each in <p> tags
+            # so MarkItDown can properly convert paragraph structure
+            paragraphs = text.split("\n\n")
+            html_parts = []
+            for p in paragraphs:
+                p = p.strip()
+                if not p:
+                    continue
+                if p.startswith("<!--"):
+                    # Preserve page comments as-is
+                    html_parts.append(p)
+                else:
+                    # Merge intra-paragraph line breaks into spaces
+                    p_clean = p.replace("\n", " ")
+                    html_parts.append(f"<p>{p_clean}</p>")
+
+            html_content = (
+                f"<html><body><div>{''.join(html_parts)}</div></body></html>"
+            )
 
             # Use MarkItDown through the converter
             result = converter.html_to_markdown(html_content)
@@ -505,30 +538,40 @@ class PDFProcessor:
             return self._simple_markdown_conversion(text)
 
     def _simple_markdown_conversion(self, text: str) -> str:
-        """Simple fallback markdown conversion."""
-        # Clean up the text
-        lines = text.split("\n")
-        cleaned_lines = []
+        """Simple fallback markdown conversion with paragraph grouping."""
+        # Split by double-newlines to get paragraph groups
+        paragraphs = text.split("\n\n")
+        result_paragraphs = []
 
-        for line in lines:
-            line = line.strip()
-            if line:
-                # Convert common patterns to Markdown
+        for paragraph in paragraphs:
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+            if paragraph.startswith("<!--"):
+                continue  # Skip page comments
+
+            # Collect non-empty lines within this paragraph
+            lines = [line.strip() for line in paragraph.split("\n") if line.strip()]
+            if not lines:
+                continue
+
+            if len(lines) == 1:
+                line = lines[0]
+                # Convert common patterns to Markdown headings
                 if line.isupper() and len(line.split()) <= 5:
-                    # Potential heading
-                    cleaned_lines.append(f"# {line}")
+                    result_paragraphs.append(f"# {line}")
                 elif line.endswith(":") and len(line.split()) <= 8:
-                    # Potential subheading
-                    cleaned_lines.append(f"## {line}")
+                    result_paragraphs.append(f"## {line}")
                 elif self._looks_like_title(line):
-                    # Check if it looks like a title (capitalized, short)
-                    cleaned_lines.append(f"# {line}")
+                    result_paragraphs.append(f"# {line}")
                 else:
-                    cleaned_lines.append(line)
+                    result_paragraphs.append(line)
             else:
-                cleaned_lines.append("")
+                # Merge multiple lines into a single paragraph
+                merged = " ".join(lines)
+                result_paragraphs.append(merged)
 
-        return "\n".join(cleaned_lines)
+        return "\n\n".join(result_paragraphs)
 
     def _looks_like_title(self, line: str) -> bool:
         """Check if a line looks like a title."""
@@ -542,6 +585,35 @@ class PDFProcessor:
 
         # If more than half the words are capitalized, it might be a title
         return capitalized_count > len(words) * 0.6
+
+    def _normalize_paragraphs(self, text: str) -> str:
+        """Normalize paragraph separation in raw extracted text.
+
+        When text lacks double-newline paragraph separators (e.g. from pypdf),
+        use heuristics to detect paragraph boundaries and insert blank lines.
+        """
+        # If text already has double-newlines, it has paragraph structure
+        if "\n\n" in text:
+            return text
+
+        lines = text.split("\n")
+        if len(lines) <= 1:
+            return text
+
+        result_lines = []
+        for i, line in enumerate(lines):
+            result_lines.append(line)
+            if i >= len(lines) - 1:
+                continue
+            current = line.strip()
+            next_line = lines[i + 1].strip()
+            if not current or not next_line:
+                continue
+            # Heuristic: sentence-ending punctuation followed by uppercase start
+            if current[-1] in ".?!:" and next_line[0].isupper():
+                result_lines.append("")  # Insert blank line (paragraph break)
+
+        return "\n".join(result_lines)
 
     def _has_markdown_structure(self, text: str) -> bool:
         """Check if text has proper markdown structure (headers, formatting, etc.)."""
