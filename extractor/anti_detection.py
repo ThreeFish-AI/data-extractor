@@ -3,7 +3,6 @@
 import asyncio
 import random
 from typing import Dict, Any, Optional
-from urllib.parse import urljoin
 import logging
 
 from selenium import webdriver
@@ -18,7 +17,12 @@ from playwright.async_api import async_playwright
 
 from .browser_utils import build_chrome_options
 from .config import settings
-from .scraping_utils import extract_default_content, extract_with_selenium_config
+from .content_extraction import (
+    extract_default_content,
+    extract_default_content_playwright,
+    extract_with_playwright_config,
+    extract_with_selenium_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -336,65 +340,13 @@ class AntiDetectionScraper:
             result["meta_description"] = None
 
         if extract_config:
-            for key, config in extract_config.items():
-                try:
-                    if isinstance(config, str):
-                        elements = await self.page.query_selector_all(config)
-                        texts = []
-                        for element in elements:
-                            text = await element.text_content()
-                            texts.append(text)
-                        result["content"][key] = texts
-                    elif isinstance(config, dict):
-                        selector = config.get("selector")
-                        attr = config.get("attr")
-                        multiple = config.get("multiple", False)
-
-                        if multiple:
-                            elements = await self.page.query_selector_all(selector)
-                            extracted = []
-                            for element in elements:
-                                if attr == "text":
-                                    value = await element.text_content()
-                                elif attr:
-                                    value = await element.get_attribute(attr)
-                                else:
-                                    value = await element.inner_html()
-                                extracted.append(value)
-                        else:
-                            element = await self.page.query_selector(selector)
-                            if element:
-                                if attr == "text":
-                                    extracted = await element.text_content()
-                                elif attr:
-                                    extracted = await element.get_attribute(attr)
-                                else:
-                                    extracted = await element.inner_html()
-                            else:
-                                extracted = None
-
-                        result["content"][key] = extracted
-                except Exception as e:
-                    logger.warning(f"Failed to extract {key}: {str(e)}")
-                    result["content"][key] = None
+            result["content"] = await extract_with_playwright_config(
+                self.page, extract_config
+            )
         else:
-            # Default extraction
-            result["content"]["text"] = await self.page.text_content("body")
-
-            # Extract links
-            links = []
-            link_elements = await self.page.query_selector_all("a[href]")
-            for link_elem in link_elements:
-                href = await link_elem.get_attribute("href")
-                text = await link_elem.text_content()
-                if href:
-                    links.append(
-                        {
-                            "url": urljoin(self.page.url, href),
-                            "text": text.strip() if text else "",
-                        }
-                    )
-            result["content"]["links"] = links
+            default = await extract_default_content_playwright(self.page)
+            result["content"]["text"] = default["text"]
+            result["content"]["links"] = default["links"]
 
         return result
 

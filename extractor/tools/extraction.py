@@ -15,7 +15,7 @@ from ..schemas import (
 )
 from ..text_utils import TextCleaner
 from ..url_utils import URLValidator
-from ._registry import app, web_scraper
+from ._registry import app, validate_url, web_scraper
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,9 @@ async def extract_links(
     """
     try:
         # Validate inputs
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
+        url_error = validate_url(url)
+        if url_error:
+            raise ValueError(url_error)
 
         logger.info(f"Extracting links from: {url}")
 
@@ -167,9 +167,9 @@ async def get_page_info(
     """
     try:
         # Validate inputs
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
+        url_error = validate_url(url)
+        if url_error:
+            raise ValueError(url_error)
 
         logger.info(f"Getting page info for: {url}")
 

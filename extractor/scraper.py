@@ -14,7 +14,11 @@ from fake_useragent import UserAgent
 
 from .browser_utils import build_chrome_options
 from .config import settings
-from .scraping_utils import extract_default_content, extract_with_selenium_config
+from .content_extraction import (
+    extract_default_content,
+    extract_with_bs4_config,
+    extract_with_selenium_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -143,54 +147,7 @@ class HttpScraper:
 
             # Extract based on configuration
             if extract_config:
-                for key, selector_config in extract_config.items():
-                    try:
-                        if isinstance(selector_config, str):
-                            # Simple CSS selector
-                            elements = soup.select(selector_config)
-                            result["content"][key] = [
-                                elem.get_text(strip=True) for elem in elements
-                            ]
-                        elif isinstance(selector_config, dict):
-                            # Complex selector configuration
-                            selector = selector_config.get("selector")
-                            attr = selector_config.get("attr")
-                            multiple = selector_config.get("multiple", False)
-
-                            if selector:
-                                elements = soup.select(selector)
-                            else:
-                                elements = []
-
-                            if multiple:
-                                if attr == "text":
-                                    extracted = [
-                                        elem.get_text(strip=True) for elem in elements
-                                    ]
-                                elif attr:
-                                    extracted = [
-                                        elem.get(attr, "")
-                                        for elem in elements
-                                        if hasattr(elem, "get")
-                                    ]
-                                else:
-                                    extracted = [str(elem) for elem in elements]
-                            else:
-                                element = elements[0] if elements else None
-                                if element:
-                                    if attr == "text":
-                                        extracted = element.get_text(strip=True)
-                                    elif attr and hasattr(element, "get"):
-                                        extracted = element.get(attr, "")
-                                    else:
-                                        extracted = str(element)
-                                else:
-                                    extracted = None
-
-                            result["content"][key] = extracted
-                    except Exception as e:
-                        logger.warning(f"Failed to extract {key}: {str(e)}")
-                        result["content"][key] = None
+                result["content"] = extract_with_bs4_config(soup, extract_config)
             else:
                 result["content"] = extract_default_content(soup, url)
 
