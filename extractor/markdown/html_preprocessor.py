@@ -159,6 +159,36 @@ def fallback_html_conversion(html_content: str) -> str:
         return f"Conversion failed: {str(e)}"
 
 
+def _heuristic_split_paragraphs(text: str) -> list:
+    """Split text into paragraphs using heuristics when double-newlines are absent."""
+    lines = text.split("\n")
+    paragraphs = []
+    current = []
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            # Empty line = explicit paragraph break
+            if current:
+                paragraphs.append(" ".join(current))
+                current = []
+            continue
+
+        current.append(stripped)
+
+        # Check if this line ends a paragraph
+        if i < len(lines) - 1:
+            next_stripped = lines[i + 1].strip()
+            if next_stripped and stripped[-1] in ".?!:" and next_stripped[0].isupper():
+                paragraphs.append(" ".join(current))
+                current = []
+
+    if current:
+        paragraphs.append(" ".join(current))
+
+    return paragraphs if len(paragraphs) > 1 else [text.strip()]
+
+
 def build_html_from_text(text_content: str, title: str, content_data: Dict) -> str:
     """Build basic HTML structure from text content."""
     try:
@@ -172,6 +202,11 @@ def build_html_from_text(text_content: str, title: str, content_data: Dict) -> s
 
         # Split text into paragraphs
         paragraphs = [p.strip() for p in text_content.split("\n\n") if p.strip()]
+
+        # Fallback: if text has no double-newlines, use heuristics
+        if len(paragraphs) <= 1 and len(text_content) > 200:
+            paragraphs = _heuristic_split_paragraphs(text_content)
+
         for paragraph in paragraphs:
             if paragraph:
                 html_parts.append(f"<p>{paragraph}</p>")
