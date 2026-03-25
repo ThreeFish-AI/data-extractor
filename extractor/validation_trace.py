@@ -1,4 +1,4 @@
-"""Shared validation trace hooks used by mcp_hub and extractor."""
+"""Shared validation trace hooks for extractor."""
 
 from __future__ import annotations
 
