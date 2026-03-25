@@ -5,6 +5,7 @@ from typing import Annotated, Any, Dict, Optional
 
 from pydantic import Field
 
+from ..browser_utils import build_chrome_options
 from ..config import settings
 from ..form_handler import FormHandler
 from ..rate_limiter import rate_limiter
@@ -113,14 +114,8 @@ async def fill_and_submit_form(
         # Setup browser based on method
         if method == "selenium":
             from selenium import webdriver
-            from selenium.webdriver.chrome.options import Options as ChromeOptions
 
-            options = ChromeOptions()
-            if settings.browser_headless:
-                options.add_argument("--headless")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-
+            options = build_chrome_options(headless=settings.browser_headless)
             driver = webdriver.Chrome(options=options)
             try:
                 driver.get(url)

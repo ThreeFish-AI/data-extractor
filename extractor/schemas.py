@@ -1,6 +1,5 @@
-"""MCP 工具响应模型及数据传输对象定义。"""
+"""MCP 工具响应模型定义。"""
 
-from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -170,27 +169,3 @@ class CacheOperationResponse(BaseModel):
     cache_size_after: int = Field(..., description="清理后缓存大小")
     operation_time: float = Field(..., description="操作耗时（秒）")
     message: str = Field(..., description="操作结果消息")
-
-
-# --- 内部数据传输对象 ---
-
-
-@dataclass
-class ScrapingResult:
-    """Standard result format for scraping operations."""
-
-    url: str
-    success: bool
-    data: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    timestamp: Optional[datetime] = None
-    duration_ms: Optional[int] = None
-    method_used: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        result = asdict(self)
-        if self.timestamp:
-            result["timestamp"] = self.timestamp.isoformat()
-        return result

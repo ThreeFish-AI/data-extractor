@@ -2,13 +2,12 @@
 
 import logging
 from typing import Annotated, Any, Dict, List, Optional
-from urllib.parse import urlparse
 
 from pydantic import Field
 
 from ..schemas import BatchScrapeResponse, ScrapeResponse
 from ..validation_trace import trace_event
-from ._registry import app, web_scraper
+from ._registry import app, validate_url, web_scraper
 
 logger = logging.getLogger(__name__)
 
@@ -55,11 +54,9 @@ async def scrape_webpage(
     """
 
     # Validate inputs and return ScrapeResponse instead of raising exceptions
-    parsed = urlparse(url)
-    if not parsed.scheme or not parsed.netloc:
-        return ScrapeResponse(
-            success=False, url=url, method=method, error="Invalid URL format"
-        )
+    url_error = validate_url(url)
+    if url_error:
+        return ScrapeResponse(success=False, url=url, method=method, error=url_error)
 
     if method not in ["auto", "simple", "scrapy", "selenium"]:
         return ScrapeResponse(
@@ -163,9 +160,9 @@ async def scrape_multiple_webpages(
             raise ValueError("URLs list cannot be empty")
 
         for url in urls:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.netloc:
-                raise ValueError(f"Invalid URL format: {url}")
+            url_error = validate_url(url)
+            if url_error:
+                raise ValueError(f"{url_error}: {url}")
 
         if method not in ["auto", "simple", "scrapy", "selenium"]:
             raise ValueError("Method must be one of: auto, simple, scrapy, selenium")

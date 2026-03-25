@@ -4,7 +4,7 @@ import logging
 from urllib.parse import urlparse
 
 from ..schemas import RobotsResponse
-from ._registry import app, web_scraper
+from ._registry import app, validate_url, web_scraper
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +25,14 @@ async def check_robots_txt(
     """
     try:
         # Validate inputs
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
-            raise ValueError("Invalid URL format")
+        url_error = validate_url(url)
+        if url_error:
+            raise ValueError(url_error)
 
         logger.info(f"Checking robots.txt for: {url}")
 
         # Parse URL to get base domain
+        parsed = urlparse(url)
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
 
         # Scrape robots.txt
