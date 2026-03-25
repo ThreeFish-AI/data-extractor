@@ -23,7 +23,7 @@ tags:
 
 ```bash
 # 启动 MCP 服务器（主要启动命令）
-uv run data-extractor
+uv run mcp-data-extractor
 
 # 以 Python 模块方式运行服务器
 uv run python -m extractor.server
