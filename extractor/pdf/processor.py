@@ -413,9 +413,35 @@ class PDFProcessor:
                 page_image_map = self._page_image_maps.get(page_num, {})
                 page_table_map = self._page_table_maps.get(page_num, {})
 
-                # Pre-compute which text blocks overlap with table regions
+                # Pre-compute which text blocks overlap with table regions.
+                # 算法/伪代码块优先于表格检测：若表格区域与算法文本块重叠，
+                # 则移除该表格区域（避免将算法内容拆解为表格列）。
                 table_block_nos = set()
                 if page_table_map:
+                    # 收集算法文本块的 bbox
+                    algo_bboxes = []
+                    for block in blocks:
+                        if block[6] == 0:
+                            text = block[4].strip()
+                            if text and is_algorithm_block(text):
+                                algo_bboxes.append(
+                                    (block[0], block[1], block[2], block[3])
+                                )
+
+                    # 过滤与算法块重叠的表格区域
+                    if algo_bboxes:
+                        filtered = {}
+                        for tbbox, table in page_table_map.items():
+                            tx0, ty0, tx1, ty1 = tbbox
+                            overlaps_algo = any(
+                                min(ax1, tx1) > max(ax0, tx0)
+                                and min(ay1, ty1) > max(ay0, ty0)
+                                for ax0, ay0, ax1, ay1 in algo_bboxes
+                            )
+                            if not overlaps_algo:
+                                filtered[tbbox] = table
+                        page_table_map = filtered
+
                     for block in blocks:
                         if block[6] == 0:  # text block
                             bx0, by0, bx1, by1 = (

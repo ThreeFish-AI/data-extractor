@@ -229,6 +229,10 @@ def _compute_algorithm_score(text: str) -> int:
     if len(special_chars) >= 2:
         score += 2
 
+    # 惩罚 0: Markdown 表格内容（含 | --- | 分隔行）直接排除
+    if re.search(r"^\|[\s-]+\|", text, re.MULTILINE):
+        return 0
+
     # 惩罚 1: 平均行长 > 120 字符（更像正文） (-3)
     avg_line_len = sum(len(line) for line in lines) / len(lines)
     if avg_line_len > 120:
