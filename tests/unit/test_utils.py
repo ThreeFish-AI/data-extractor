@@ -31,11 +31,9 @@ from extractor.rate_limiter import RateLimiter, rate_limiter
 from extractor.retry import RetryManager, retry_manager
 from extractor.cache import CacheManager, cache_manager
 from extractor.metrics import MetricsCollector, metrics_collector
-from extractor.error_handler import ErrorHandler
 from extractor.url_utils import URLValidator
 from extractor.text_utils import TextCleaner
-from extractor.config import ConfigValidator
-from extractor.timing import timing_decorator
+from extractor.tools._registry import normalize_extract_config
 
 
 class TestRateLimiter:
@@ -296,60 +294,6 @@ class TestMetricsCollector:
         assert stats["total_requests"] == 0
 
 
-class TestErrorHandler:
-    """Test the ErrorHandler class."""
-
-    def test_error_handler_initialization(self):
-        """Test ErrorHandler initializes correctly."""
-        # ErrorHandler is a static class, test its static methods
-        assert hasattr(ErrorHandler, "handle_scraping_error")
-
-    def test_categorize_error_timeout(self):
-        """Test timeout error categorization."""
-        timeout_error = Exception("Request timeout")
-        result = ErrorHandler.handle_scraping_error(
-            timeout_error, "https://example.com", "simple"
-        )
-
-        assert result["success"] is False
-        assert result["error"]["category"] == "timeout"
-
-    def test_categorize_error_connection(self):
-        """Test connection error categorization."""
-        connection_error = Exception("Connection refused")
-        result = ErrorHandler.handle_scraping_error(
-            connection_error, "https://example.com", "simple"
-        )
-
-        assert result["success"] is False
-        assert result["error"]["category"] == "connection"
-
-    def test_handle_error_logging(self):
-        """Test error handling and logging."""
-        error = Exception("Test error")
-
-        with patch("extractor.error_handler.logger") as mock_logger:
-            result = ErrorHandler.handle_scraping_error(
-                error, "https://example.com", "simple"
-            )
-
-            mock_logger.error.assert_called_once()
-            assert result["success"] is False
-
-    def test_should_retry_decision(self):
-        """Test retry decision logic based on error categories."""
-        # Test different error types
-        timeout_result = ErrorHandler.handle_scraping_error(
-            Exception("timeout"), "https://example.com", "simple"
-        )
-        assert timeout_result["error"]["category"] == "timeout"
-
-        connection_result = ErrorHandler.handle_scraping_error(
-            Exception("connection failed"), "https://example.com", "simple"
-        )
-        assert connection_result["error"]["category"] == "connection"
-
-
 class TestUtilityFunctions:
     """Test standalone utility functions."""
 
@@ -378,50 +322,25 @@ class TestUtilityFunctions:
         emails = TextCleaner.extract_emails(text_with_email)
         assert "test@example.com" in emails
 
-    def test_config_validator_validate_extraction_config(self):
-        """Test ConfigValidator extraction config validation."""
+    def test_normalize_extract_config_valid(self):
+        """Test normalize_extract_config with valid config."""
         valid_config = {
             "title": "h1",
             "content": {"selector": "p", "multiple": True, "attr": "text"},
         }
 
-        validated = ConfigValidator.validate_extract_config(valid_config)
+        validated = normalize_extract_config(valid_config)
         assert "title" in validated
         assert "content" in validated
 
-    def test_config_validator_invalid_config(self):
-        """Test ConfigValidator with invalid config."""
+    def test_normalize_extract_config_invalid(self):
+        """Test normalize_extract_config with invalid config."""
         invalid_config = {
             "title": 123,  # Should be string or dict
         }
 
         with pytest.raises(ValueError):
-            ConfigValidator.validate_extract_config(invalid_config)
-
-    @pytest.mark.asyncio
-    async def test_timing_decorator(self):
-        """Test timing decorator functionality."""
-
-        @timing_decorator
-        async def test_function():
-            await asyncio.sleep(0.01)  # Short sleep
-            return {"data": "result"}
-
-        result = await test_function()
-
-        assert result["data"] == "result"
-        assert "duration_ms" in result
-
-    def test_timing_decorator_sync(self):
-        """测试同步函数的计时装饰器功能"""
-
-        @timing_decorator
-        def test_function():
-            time.sleep(0.01)
-            return "result"
-
-        result = test_function()
-        assert result == "result"
+            normalize_extract_config(invalid_config)
 
     def test_global_instances(self):
         """Test global utility instances are properly initialized."""

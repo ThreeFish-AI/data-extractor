@@ -18,6 +18,8 @@ from extractor.content_extraction import (
     extract_with_selenium_config,
     extract_with_playwright_config,
     extract_default_content_playwright,
+    extract_page_data_selenium,
+    extract_page_data_playwright,
 )
 
 
@@ -443,3 +445,116 @@ class TestExtractDefaultContentPlaywright:
 
         assert len(result["links"]) == 1
         assert result["links"][0]["text"] == "Valid"
+
+
+# ---------------------------------------------------------------------------
+# Selenium 整页提取门面
+# ---------------------------------------------------------------------------
+
+
+class TestExtractPageDataSelenium:
+    """测试 Selenium 整页数据提取门面函数。"""
+
+    def _make_driver(self, *, title="Test Page", url="https://example.com",
+                     page_source="<html><body></body></html>",
+                     meta_desc="Test description"):
+        """创建 mock Selenium driver。"""
+        driver = MagicMock()
+        driver.title = title
+        driver.current_url = url
+        driver.page_source = page_source
+
+        if meta_desc is not None:
+            meta_elem = Mock()
+            meta_elem.get_attribute.return_value = meta_desc
+            driver.find_element.return_value = meta_elem
+        else:
+            from selenium.common.exceptions import NoSuchElementException
+            driver.find_element.side_effect = NoSuchElementException()
+
+        return driver
+
+    def test_default_extraction(self):
+        """测试默认提取（无 extract_config）。"""
+        html = "<html><body><p>Hello</p><a href='/link'>Link</a></body></html>"
+        driver = self._make_driver(page_source=html)
+
+        result = extract_page_data_selenium(driver)
+
+        assert result["title"] == "Test Page"
+        assert result["meta_description"] == "Test description"
+        assert "text" in result["content"]
+        assert "links" in result["content"]
+
+    def test_with_extract_config(self):
+        """测试配置化提取。"""
+        driver = self._make_driver()
+        elem = Mock(text="Heading")
+        driver.find_elements.return_value = [elem]
+
+        result = extract_page_data_selenium(driver, {"heading": "h1"})
+
+        assert result["title"] == "Test Page"
+        assert "heading" in result["content"]
+
+    def test_meta_description_not_found(self):
+        """测试 meta description 不存在时返回 None。"""
+        driver = self._make_driver(meta_desc=None)
+
+        result = extract_page_data_selenium(driver)
+
+        assert result["meta_description"] is None
+
+
+# ---------------------------------------------------------------------------
+# Playwright 整页提取门面
+# ---------------------------------------------------------------------------
+
+
+class TestExtractPageDataPlaywright:
+    """测试 Playwright 整页数据提取门面函数。"""
+
+    async def test_default_extraction(self):
+        """测试默认提取（无 extract_config）。"""
+        page = AsyncMock()
+        page.title.return_value = "Test Page"
+        page.url = "https://example.com"
+        page.get_attribute.return_value = "Test description"
+        page.text_content.return_value = "Hello World"
+        page.query_selector_all.return_value = []
+
+        result = await extract_page_data_playwright(page)
+
+        assert result["title"] == "Test Page"
+        assert result["meta_description"] == "Test description"
+        assert result["content"]["text"] == "Hello World"
+        assert result["content"]["links"] == []
+
+    async def test_with_extract_config(self):
+        """测试配置化提取。"""
+        page = AsyncMock()
+        page.title.return_value = "Test Page"
+        page.get_attribute.return_value = None
+
+        mock_elem = AsyncMock()
+        mock_elem.text_content.return_value = "Heading"
+        page.query_selector_all.return_value = [mock_elem]
+
+        result = await extract_page_data_playwright(page, {"heading": "h1"})
+
+        assert result["title"] == "Test Page"
+        assert "heading" in result["content"]
+
+    async def test_meta_description_exception(self):
+        """测试 meta description 获取异常时返回 None。"""
+        page = AsyncMock()
+        page.title.return_value = "Test Page"
+        page.url = "https://example.com"
+        page.get_attribute.side_effect = Exception("Not found")
+        page.text_content.return_value = "Content"
+        page.query_selector_all.return_value = []
+
+        result = await extract_page_data_playwright(page)
+
+        assert result["meta_description"] is None
+        assert result["content"]["text"] == "Content"

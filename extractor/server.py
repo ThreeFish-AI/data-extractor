@@ -10,8 +10,7 @@ from .tools import markdown_converter as markdown_converter
 from .tools import create_pdf_processor as create_pdf_processor
 from .tools.scraping import scrape_webpage, scrape_multiple_webpages  # noqa: F401
 from .tools.stealth import scrape_with_stealth  # noqa: F401
-from .tools.extraction import extract_links, get_page_info, extract_structured_data  # noqa: F401
-from .tools.utility import check_robots_txt  # noqa: F401
+from .tools.extraction import extract_links, get_page_info, extract_structured_data, check_robots_txt  # noqa: F401
 from .tools.form import fill_and_submit_form  # noqa: F401
 from .tools.markdown import convert_webpage_to_markdown as convert_webpage_to_markdown
 from .tools.markdown import (

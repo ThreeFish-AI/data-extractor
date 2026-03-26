@@ -6,13 +6,19 @@ from typing import Annotated, Any, Dict, Optional
 from pydantic import Field
 
 from ..cache import cache_manager
-from ..config import ConfigValidator
 from ..rate_limiter import rate_limiter
 from ..retry import retry_manager
 from ..schemas import ScrapeResponse
 from ..text_utils import TextCleaner
 from ..url_utils import URLValidator
-from ._registry import app, anti_detection_scraper, validate_url, ToolTimer
+from ._registry import (
+    BrowserMethod,
+    app,
+    anti_detection_scraper,
+    normalize_extract_config,
+    validate_url,
+    ToolTimer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +33,7 @@ async def scrape_with_stealth(
         ),
     ],
     method: Annotated[
-        str,
+        BrowserMethod,
         Field(
             default="selenium",
             description="""隐身方法选择，可选值：
@@ -87,14 +93,6 @@ async def scrape_with_stealth(
                 error=url_error,
             )
 
-        if method not in ["selenium", "playwright"]:
-            return ScrapeResponse(
-                success=False,
-                url=url,
-                method=method,
-                error="Method must be one of: selenium, playwright",
-            )
-
         logger.info(f"Stealth scraping: {url} with method: {method}")
 
         # Apply rate limiting
@@ -122,7 +120,7 @@ async def scrape_with_stealth(
 
         # Validate and normalize extract config
         if extract_config:
-            extract_config = ConfigValidator.validate_extract_config(extract_config)
+            extract_config = normalize_extract_config(extract_config)
 
         # Perform stealth scraping with retry
         result = await retry_manager.retry_async(

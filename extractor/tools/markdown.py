@@ -10,7 +10,7 @@ from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
 from ..validation_trace import trace_event
-from ._registry import app, markdown_converter, validate_url, ToolTimer, web_scraper
+from ._registry import ScrapeMethod, app, markdown_converter, validate_url, ToolTimer, web_scraper
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ async def convert_webpage_to_markdown(
         ),
     ],
     method: Annotated[
-        str,
+        ScrapeMethod,
         Field(
             default="auto",
             description="""抓取方法选择，可选值：
@@ -112,15 +112,6 @@ async def convert_webpage_to_markdown(
                 url=url,
                 method=method,
                 error=url_error,
-                conversion_time=0,
-            )
-
-        if method not in ["auto", "simple", "scrapy", "selenium"]:
-            return MarkdownResponse(
-                success=False,
-                url=url,
-                method=method,
-                error="Method must be one of: auto, simple, scrapy, selenium",
                 conversion_time=0,
             )
 
@@ -223,7 +214,7 @@ async def batch_convert_webpages_to_markdown(
         ),
     ],
     method: Annotated[
-        str,
+        ScrapeMethod,
         Field(
             default="auto",
             description="""统一的抓取方法：
@@ -311,16 +302,6 @@ async def batch_convert_webpages_to_markdown(
                     results=[],
                     total_conversion_time=0,
                 )
-
-        if method not in ["auto", "simple", "scrapy", "selenium"]:
-            return BatchMarkdownResponse(
-                success=False,
-                total_urls=0,
-                successful_count=0,
-                failed_count=0,
-                results=[],
-                total_conversion_time=0,
-            )
 
         start_time = time.time()
         logger.info(

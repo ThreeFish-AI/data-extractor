@@ -1,7 +1,7 @@
 """反检测抓取 (anti_detection) 单元测试。"""
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 
 from extractor.anti_detection import AntiDetectionScraper
 
@@ -9,21 +9,16 @@ from extractor.anti_detection import AntiDetectionScraper
 class TestAntiDetectionScraperInit:
     """AntiDetectionScraper 初始化测试。"""
 
-    def test_init_attributes(self):
-        """初始化属性校验。"""
+    def test_init_creates_instance(self):
+        """实例化不报错。"""
         scraper = AntiDetectionScraper()
-        assert scraper.driver is None
-        assert scraper.page is None
-        assert scraper.browser is None
-        assert scraper.context is None
-        assert scraper.playwright is None
-        assert scraper.ua is not None
+        assert scraper is not None
 
-    def test_init_user_agent(self):
-        """UserAgent 实例可用。"""
+    def test_has_scrape_method(self):
+        """核心方法存在。"""
         scraper = AntiDetectionScraper()
-        # UserAgent 实例应该有 random 属性
-        assert hasattr(scraper.ua, "random")
+        assert hasattr(scraper, "scrape_with_stealth")
+        assert hasattr(scraper, "cleanup")
 
 
 class TestAntiDetectionScraperStealth:
@@ -44,12 +39,10 @@ class TestAntiDetectionScraperStealth:
         scraper = AntiDetectionScraper()
         with patch.object(
             scraper,
-            "_scrape_with_selenium_stealth",
+            "_scrape_selenium",
             new_callable=AsyncMock,
             return_value={"title": "Test", "content": {}},
-        ) as mock_method, patch.object(
-            scraper, "cleanup", new_callable=AsyncMock
-        ):
+        ) as mock_method:
             result = await scraper.scrape_with_stealth(
                 url="https://example.com", method="selenium"
             )
@@ -62,42 +55,26 @@ class TestAntiDetectionScraperStealth:
         scraper = AntiDetectionScraper()
         with patch.object(
             scraper,
-            "_scrape_with_playwright_stealth",
+            "_scrape_playwright",
             new_callable=AsyncMock,
             return_value={"title": "Test", "content": {}},
-        ) as mock_method, patch.object(
-            scraper, "cleanup", new_callable=AsyncMock
-        ):
+        ) as mock_method:
             result = await scraper.scrape_with_stealth(
                 url="https://example.com", method="playwright"
             )
             mock_method.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup_called_on_success(self):
-        """成功执行后清理资源。"""
+    async def test_error_returns_error_dict(self):
+        """异常时返回错误字典。"""
         scraper = AntiDetectionScraper()
         with patch.object(
             scraper,
-            "_scrape_with_selenium_stealth",
-            new_callable=AsyncMock,
-            return_value={"title": "Test", "content": {}},
-        ), patch.object(scraper, "cleanup", new_callable=AsyncMock) as mock_cleanup:
-            await scraper.scrape_with_stealth(url="https://example.com")
-            mock_cleanup.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_cleanup_called_on_error(self):
-        """异常时仍然清理资源。"""
-        scraper = AntiDetectionScraper()
-        with patch.object(
-            scraper,
-            "_scrape_with_selenium_stealth",
+            "_scrape_selenium",
             new_callable=AsyncMock,
             side_effect=Exception("test error"),
-        ), patch.object(scraper, "cleanup", new_callable=AsyncMock) as mock_cleanup:
+        ):
             result = await scraper.scrape_with_stealth(url="https://example.com")
-            mock_cleanup.assert_called_once()
             assert "error" in result
 
 
@@ -105,44 +82,8 @@ class TestAntiDetectionScraperCleanup:
     """AntiDetectionScraper 资源清理测试。"""
 
     @pytest.mark.asyncio
-    async def test_cleanup_driver(self):
-        """清理 Selenium driver。"""
-        scraper = AntiDetectionScraper()
-        mock_driver = MagicMock()
-        scraper.driver = mock_driver
-
-        await scraper.cleanup()
-
-        mock_driver.quit.assert_called_once()
-        assert scraper.driver is None
-
-    @pytest.mark.asyncio
-    async def test_cleanup_playwright(self):
-        """清理 Playwright 资源。"""
-        scraper = AntiDetectionScraper()
-        mock_page = AsyncMock()
-        mock_context = AsyncMock()
-        mock_browser = AsyncMock()
-        mock_playwright = AsyncMock()
-        scraper.page = mock_page
-        scraper.context = mock_context
-        scraper.browser = mock_browser
-        scraper.playwright = mock_playwright
-
-        await scraper.cleanup()
-
-        mock_page.close.assert_called_once()
-        mock_context.close.assert_called_once()
-        mock_browser.close.assert_called_once()
-        mock_playwright.stop.assert_called_once()
-        assert scraper.page is None
-        assert scraper.context is None
-        assert scraper.browser is None
-        assert scraper.playwright is None
-
-    @pytest.mark.asyncio
-    async def test_cleanup_no_resources(self):
-        """无资源时清理不报错。"""
+    async def test_cleanup_no_op(self):
+        """cleanup 为空操作（资源由上下文管理器管理）。"""
         scraper = AntiDetectionScraper()
         await scraper.cleanup()  # 不应抛出异常
 
@@ -156,8 +97,18 @@ class TestImportCompatibility:
 
         assert AntiDetectionScraper is not None
 
-    def test_import_from_anti_detection_module(self):
-        """直接从 anti_detection 模块导入。"""
-        from extractor.anti_detection import AntiDetectionScraper
+    def test_import_module_level_functions(self):
+        """模块级函数可导入。"""
+        from extractor.anti_detection import (
+            _random_delay,
+            _scroll_page_selenium,
+            _scroll_page_playwright,
+            _simulate_human_behavior_selenium,
+            _simulate_human_behavior_playwright,
+        )
 
-        assert AntiDetectionScraper is not None
+        assert callable(_random_delay)
+        assert callable(_scroll_page_selenium)
+        assert callable(_scroll_page_playwright)
+        assert callable(_simulate_human_behavior_selenium)
+        assert callable(_simulate_human_behavior_playwright)

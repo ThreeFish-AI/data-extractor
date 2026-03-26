@@ -11,11 +11,12 @@ from ..schemas import (
     LinkItem,
     LinksResponse,
     PageInfoResponse,
+    RobotsResponse,
     StructuredDataResponse,
 )
 from ..text_utils import TextCleaner
 from ..url_utils import URLValidator
-from ._registry import app, validate_url, web_scraper
+from ._registry import StructuredDataType, app, validate_url, web_scraper
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ async def extract_structured_data(
         ),
     ],
     data_type: Annotated[
-        str,
+        StructuredDataType,
         Field(
             default="all",
             description="""数据类型过滤器，指定要提取的结构化数据类型。可选值：
@@ -239,10 +240,6 @@ async def extract_structured_data(
         url_error = validate_url(url)
         if url_error:
             raise ValueError(url_error)
-
-        valid_types = ["all", "contact", "social", "content", "products", "addresses"]
-        if data_type not in valid_types:
-            raise ValueError(f"Data type must be one of: {', '.join(valid_types)}")
 
         logger.info(f"Extracting structured data from: {url}")
 
@@ -339,5 +336,64 @@ async def extract_structured_data(
             data_type=data_type,
             extracted_data={},
             data_count=0,
+            error=str(e),
+        )
+
+
+@app.tool()
+async def check_robots_txt(
+    url: str,
+) -> RobotsResponse:
+    """
+    Check the robots.txt file for a domain to understand crawling permissions.
+
+    This tool helps ensure ethical scraping by checking the robots.txt file
+    of a website to see what crawling rules are in place.
+
+    Returns:
+        RobotsResponse object containing success status, robots.txt content, base domain, and content availability.
+        Helps determine crawling permissions and restrictions for the specified domain.
+    """
+    try:
+        url_error = validate_url(url)
+        if url_error:
+            raise ValueError(url_error)
+
+        logger.info(f"Checking robots.txt for: {url}")
+
+        parsed = urlparse(url)
+        robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+
+        result = await web_scraper.http_scraper.scrape(robots_url, extract_config={})
+
+        if "error" in result:
+            return RobotsResponse(
+                success=False,
+                url=url,
+                robots_txt_url=robots_url,
+                is_allowed=False,
+                user_agent="*",
+                error=f"Could not fetch robots.txt: {result['error']}",
+            )
+
+        robots_content = result.get("content", {}).get("text", "")
+
+        return RobotsResponse(
+            success=True,
+            url=url,
+            robots_txt_url=robots_url,
+            robots_content=robots_content,
+            is_allowed=True,
+            user_agent="*",
+        )
+
+    except Exception as e:
+        logger.error(f"Error checking robots.txt for {url}: {str(e)}")
+        return RobotsResponse(
+            success=False,
+            url=url,
+            robots_txt_url="",
+            is_allowed=False,
+            user_agent="*",
             error=str(e),
         )

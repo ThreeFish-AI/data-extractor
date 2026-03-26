@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager, contextmanager
 from typing import TYPE_CHECKING, AsyncIterator, Iterator, Optional
 
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from playwright.async_api import Page
@@ -126,6 +129,115 @@ async def playwright_session(
                 wait_for_element,
                 timeout=settings.browser_timeout * 1000,
             )
+        yield page
+    finally:
+        await browser.close()
+        await pw.stop()
+
+
+@asynccontextmanager
+async def stealth_selenium_session(
+    url: str,
+    *,
+    wait_for_element: Optional[str] = None,
+) -> AsyncIterator[Chrome]:
+    """隐身 Selenium 会话，使用 undetected-chromedriver。
+
+    Yields:
+        已导航到目标 URL 的 undetected Chrome WebDriver 实例。
+    """
+    import undetected_chromedriver as uc
+    from fake_useragent import UserAgent
+    from selenium.common.exceptions import TimeoutException
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import WebDriverWait
+
+    ua = UserAgent()
+    user_agent = ua.random if settings.use_random_user_agent else None
+    options = build_chrome_options(
+        headless=settings.browser_headless,
+        stealth=True,
+        user_agent=user_agent,
+    )
+    driver = uc.Chrome(options=options)
+    driver.execute_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
+    try:
+        driver.get(url)
+        if wait_for_element:
+            try:
+                WebDriverWait(driver, settings.browser_timeout).until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, wait_for_element)
+                    )
+                )
+            except TimeoutException:
+                logger.warning(f"Timeout waiting for element: {wait_for_element}")
+        yield driver
+    finally:
+        driver.quit()
+
+
+@asynccontextmanager
+async def stealth_playwright_session(
+    url: str,
+    *,
+    wait_for_element: Optional[str] = None,
+) -> AsyncIterator[Page]:
+    """隐身 Playwright 会话，注入反检测脚本。
+
+    Yields:
+        已导航到目标 URL 的 Playwright Page 实例。
+    """
+    from fake_useragent import UserAgent
+    from playwright.async_api import async_playwright
+
+    ua = UserAgent()
+    pw = await async_playwright().start()
+    try:
+        browser = await pw.chromium.launch(
+            headless=settings.browser_headless,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-extensions",
+                "--window-size=1920,1080",
+            ],
+        )
+        context_options: dict = {
+            "viewport": {"width": 1920, "height": 1080},
+            "user_agent": ua.random
+            if settings.use_random_user_agent
+            else settings.default_user_agent,
+        }
+        if settings.use_proxy and settings.proxy_url:
+            context_options["proxy"] = {"server": settings.proxy_url}
+
+        context = await browser.new_context(**context_options)
+        await context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined,
+            });
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5],
+            });
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en'],
+            });
+        """)
+        page = await context.new_page()
+        await page.goto(url, timeout=60000, wait_until="domcontentloaded")
+        if wait_for_element:
+            try:
+                await page.wait_for_selector(
+                    wait_for_element,
+                    timeout=settings.browser_timeout * 1000,
+                )
+            except Exception:
+                logger.warning(f"Timeout waiting for element: {wait_for_element}")
         yield page
     finally:
         await browser.close()
