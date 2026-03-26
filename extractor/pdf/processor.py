@@ -11,7 +11,7 @@ import asyncio
 
 import aiohttp
 
-from .enhanced import EnhancedPDFProcessor, ExtractedImage
+from .enhanced import EnhancedPDFProcessor, ExtractedImage, ExtractedTable
 
 
 # 延迟导入 PDF 处理库，避免启动时的 SWIG 警告
@@ -65,6 +65,11 @@ class PDFProcessor:
         # consumed during text extraction for inline image placement.
         # Structure: {page_num: {block_no: ExtractedImage}}
         self._page_image_maps: Dict[int, Dict[int, ExtractedImage]] = {}
+
+        # Page-level table maps populated during enhanced extraction,
+        # consumed during text extraction for inline table placement.
+        # Structure: {page_num: {(x0, y0, x1, y1): ExtractedTable}}
+        self._page_table_maps: Dict[int, Dict[tuple, ExtractedTable]] = {}
 
     async def process_pdf(
         self,
@@ -218,6 +223,7 @@ class PDFProcessor:
                     pass
             # Reset per-run state
             self._page_image_maps.clear()
+            self._page_table_maps.clear()
 
     async def batch_process_pdfs(
         self,
@@ -390,32 +396,71 @@ class PDFProcessor:
                 end_page = min(total_pages, page_range[1])
 
             # Extract text from pages using block-level extraction
-            # Each block naturally corresponds to a paragraph/text element
+            # Each block naturally corresponds to a paragraph/text element.
+            # Tables and images are placed inline at their correct y-positions.
             text_content = []
             for page_num in range(start_page, end_page):
                 page = doc.load_page(page_num)
                 blocks = page.get_text("blocks")
 
-                # Get the image map for this page (populated by _extract_enhanced_assets)
+                # Get the image and table maps for this page
                 page_image_map = self._page_image_maps.get(page_num, {})
+                page_table_map = self._page_table_maps.get(page_num, {})
 
-                page_paragraphs = []
+                # Pre-compute which text blocks overlap with table regions
+                table_block_nos = set()
+                if page_table_map:
+                    for block in blocks:
+                        if block[6] == 0:  # text block
+                            bx0, by0, bx1, by1 = (
+                                block[0], block[1], block[2], block[3],
+                            )
+                            for tbbox in page_table_map:
+                                tx0, ty0, tx1, ty1 = tbbox
+                                # Check geometric intersection
+                                if (
+                                    min(bx1, tx1) > max(bx0, tx0)
+                                    and min(by1, ty1) > max(by0, ty0)
+                                ):
+                                    table_block_nos.add(block[5])
+                                    break
+
+                # Build unified element list: (y_position, content)
+                # to maintain correct vertical ordering
+                page_elements: list = []
+
                 for block in sorted(blocks, key=lambda b: (b[1], b[0])):
+                    block_no = block[5]
+
                     if block[6] == 0:  # text block
+                        if block_no in table_block_nos:
+                            continue  # Skip text covered by a table
                         block_text = block[4].strip()
                         if block_text:
                             # Merge line breaks within a block into spaces
                             # (intra-paragraph line wraps from PDF layout)
                             block_text = re.sub(r"\n+", " ", block_text)
-                            page_paragraphs.append(block_text)
+                            page_elements.append((block[1], block_text))
+
                     elif block[6] == 1 and page_image_map:  # image block
-                        block_no = block[5]
                         if block_no in page_image_map:
                             img = page_image_map[block_no]
                             alt_text = img.caption or img.filename
-                            page_paragraphs.append(
-                                f"![{alt_text}]({img.filename})"
+                            page_elements.append(
+                                (block[1], f"![{alt_text}]({img.filename})")
                             )
+
+                # Insert tables at correct vertical positions
+                for tbbox, table in page_table_map.items():
+                    table_y = tbbox[1]  # y0 of table bbox
+                    md = table.markdown
+                    if table.caption:
+                        md = f"**{table.caption}**\n\n{md}"
+                    page_elements.append((table_y, md))
+
+                # Sort by y-position and assemble
+                page_elements.sort(key=lambda e: e[0])
+                page_paragraphs = [elem[1] for elem in page_elements]
 
                 if page_paragraphs:
                     page_text = "\n\n".join(page_paragraphs)
@@ -532,6 +577,11 @@ class PDFProcessor:
                 elif p.startswith("!["):
                     # Preserve inline image references as-is
                     html_parts.append(p)
+                elif p.startswith("|") or (
+                    p.startswith("**") and "\n|" in p
+                ):
+                    # Preserve inline markdown tables as-is
+                    html_parts.append(p)
                 else:
                     # Merge intra-paragraph line breaks into spaces
                     p_clean = p.replace("\n", " ")
@@ -574,6 +624,13 @@ class PDFProcessor:
 
             # Preserve inline image references
             if paragraph.startswith("!["):
+                result_paragraphs.append(paragraph)
+                continue
+
+            # Preserve inline markdown tables
+            if paragraph.startswith("|") or (
+                paragraph.startswith("**") and "\n|" in paragraph
+            ):
                 result_paragraphs.append(paragraph)
                 continue
 
@@ -732,30 +789,57 @@ class PDFProcessor:
                     self.enhanced_processor.images
                 )
 
-            # Extract text for table and formula processing
-            for page_num in range(start_page, end_page):
-                try:
-                    page = doc[page_num]
-                    text = page.get_text()
+            # Extract tables using geometric detection (primary) with text fallback
+            if extract_tables:
+                for page_num in range(start_page, end_page):
+                    try:
+                        page = doc[page_num]
+                        blocks = page.get_text("blocks")
 
-                    # Extract tables
-                    if extract_tables:
-                        tables = self.enhanced_processor.extract_tables_from_text(
-                            text, page_num
+                        # Primary: geometric table detection via find_tables()
+                        bbox_map, geo_tables = (
+                            self.enhanced_processor.extract_tables_with_geometry(
+                                doc, page_num, blocks,
+                            )
                         )
-                        self.enhanced_processor.tables.extend(tables)
 
-                    # Extract formulas
-                    if extract_formulas:
-                        formulas = self.enhanced_processor.extract_formulas_from_text(
-                            text, page_num
+                        if bbox_map:
+                            self._page_table_maps[page_num] = bbox_map
+
+                        self.enhanced_processor.tables.extend(geo_tables)
+
+                        # Fallback: if geometric detection found nothing,
+                        # try text-based pattern matching
+                        if not geo_tables:
+                            text = page.get_text()
+                            text_tables = (
+                                self.enhanced_processor.extract_tables_from_text(
+                                    text, page_num
+                                )
+                            )
+                            self.enhanced_processor.tables.extend(text_tables)
+
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to extract tables from page {page_num}: {str(e)}"
+                        )
+
+            # Extract formulas
+            if extract_formulas:
+                for page_num in range(start_page, end_page):
+                    try:
+                        page = doc[page_num]
+                        text = page.get_text()
+                        formulas = (
+                            self.enhanced_processor.extract_formulas_from_text(
+                                text, page_num
+                            )
                         )
                         self.enhanced_processor.formulas.extend(formulas)
-
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to process page {page_num} for tables/formulas: {str(e)}"
-                    )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to extract formulas from page {page_num}: {str(e)}"
+                        )
 
             # Add extraction summaries
             if extract_tables:
@@ -787,5 +871,6 @@ class PDFProcessor:
                 shutil.rmtree(self.temp_dir)
 
             self._page_image_maps.clear()
+            self._page_table_maps.clear()
         except Exception as e:
             logger.warning(f"Failed to cleanup temp directory: {str(e)}")

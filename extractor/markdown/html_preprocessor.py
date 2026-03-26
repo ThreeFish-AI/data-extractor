@@ -132,13 +132,23 @@ def extract_content_area(html_content: str) -> str:
 
 
 def fallback_html_conversion(html_content: str) -> str:
-    """Fallback HTML conversion when MarkItDown fails."""
+    """Fallback HTML conversion when MarkItDown fails.
+
+    Preserves table structures by converting them to markdown before
+    stripping HTML tags.
+    """
     try:
         soup = BeautifulSoup(html_content, "html.parser")
 
         # Remove unwanted elements
         for tag in soup.find_all(["script", "style", "nav", "header", "footer"]):
             tag.decompose()
+
+        # Convert <table> elements to markdown BEFORE stripping HTML
+        for table_tag in soup.find_all("table"):
+            md_table = _html_table_to_markdown(table_tag)
+            if md_table:
+                table_tag.replace_with(f"\n\n{md_table}\n\n")
 
         # Simple conversion logic
         text_content = soup.get_text()
@@ -157,6 +167,50 @@ def fallback_html_conversion(html_content: str) -> str:
     except Exception as e:
         logger.warning(f"Fallback conversion failed: {str(e)}")
         return f"Conversion failed: {str(e)}"
+
+
+def _html_table_to_markdown(table_tag) -> Optional[str]:
+    """Convert a BeautifulSoup <table> element to markdown table format.
+
+    Args:
+        table_tag: BeautifulSoup Tag for <table>
+
+    Returns:
+        Markdown table string, or None if table has no meaningful content
+    """
+    try:
+        rows = []
+        for tr in table_tag.find_all("tr"):
+            cells = []
+            for cell in tr.find_all(["th", "td"]):
+                cell_text = cell.get_text(strip=True).replace("|", "\\|")
+                cells.append(cell_text)
+            if cells:
+                rows.append(cells)
+
+        if len(rows) < 2:
+            return None
+
+        # Normalize column count
+        max_cols = max(len(row) for row in rows)
+        for row in rows:
+            while len(row) < max_cols:
+                row.append("")
+
+        # Build markdown
+        md_lines = []
+        # Header row
+        md_lines.append("| " + " | ".join(rows[0]) + " |")
+        # Separator
+        md_lines.append("| " + " | ".join(["---"] * max_cols) + " |")
+        # Data rows
+        for row in rows[1:]:
+            md_lines.append("| " + " | ".join(row) + " |")
+
+        return "\n".join(md_lines)
+
+    except Exception:
+        return None
 
 
 def _heuristic_split_paragraphs(text: str) -> list:
