@@ -10,7 +10,14 @@ from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ..validation_trace import trace_event
-from ._registry import PDFMethod, PDFOutputFormat, app, create_pdf_processor, ToolTimer, validate_page_range
+from ._registry import (
+    PDFMethod,
+    PDFOutputFormat,
+    app,
+    create_pdf_processor,
+    ToolTimer,
+    validate_page_range,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -400,7 +400,7 @@ class TestBuildHtmlFromTextParagraphs:
 class TestRealPDFIntegration:
     """使用实际 PDF 文件验证端到端段落分隔。"""
 
-    PDF_PATH = Path(__file__).parent.parent.parent / "assets" / "Context Engineering 2.0: The Context of Context Engineering.pdf"
+    PDF_PATH = Path(__file__).parent.parent.parent / "assets" / "Context Engineering 2.0 - The Context of Context Engineering.pdf"
 
     @pytest.mark.asyncio
     async def test_pdf_paragraph_separation(self):

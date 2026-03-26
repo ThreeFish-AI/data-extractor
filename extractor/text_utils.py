@@ -44,4 +44,3 @@ class TextCleaner:
             phone_numbers.extend(re.findall(pattern, text))
 
         return phone_numbers
-

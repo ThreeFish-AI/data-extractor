@@ -8,17 +8,47 @@ from urllib.parse import urlparse
 from fastmcp import FastMCP
 
 from ..anti_detection import AntiDetectionScraper
-from ..cache import cache_manager
+from ..cache import cache_manager  # noqa: F401
 from ..config import settings
 from ..markdown.converter import MarkdownConverter
 from ..metrics import metrics_collector
-from ..rate_limiter import rate_limiter
-from ..retry import retry_manager
+from ..rate_limiter import rate_limiter  # noqa: F401
+from ..retry import retry_manager  # noqa: F401
 from ..scraper import WebScraper
-from ..text_utils import TextCleaner
-from ..url_utils import URLValidator
+from ..text_utils import TextCleaner  # noqa: F401
+from ..url_utils import URLValidator  # noqa: F401
 
 logger = logging.getLogger(__name__)
+
+__all__ = [
+    # 类型别名
+    "ScrapeMethod",
+    "BrowserMethod",
+    "PDFMethod",
+    "PDFOutputFormat",
+    "StructuredDataType",
+    # FastMCP 实例
+    "app",
+    # 共享服务实例
+    "web_scraper",
+    "anti_detection_scraper",
+    "markdown_converter",
+    "cache_manager",
+    "rate_limiter",
+    "retry_manager",
+    "TextCleaner",
+    "URLValidator",
+    "metrics_collector",
+    # 工厂函数
+    "create_pdf_processor",
+    # 辅助函数
+    "validate_url",
+    "validate_page_range",
+    "normalize_extract_config",
+    "record_error",
+    "elapsed_ms",
+    "ToolTimer",
+]
 
 # --- Literal 类型别名（由 Pydantic/MCP 层自动进行参数验证） ---
 
@@ -127,8 +157,7 @@ def record_error(e: Exception, url: str, method: str, duration_ms: int) -> str:
         category = "unknown"
 
     logger.error(
-        f"Scraping error for {url} using {method}: "
-        f"{type(e).__name__}: {error_message}"
+        f"Scraping error for {url} using {method}: {type(e).__name__}: {error_message}"
     )
     metrics_collector.record_request(url, False, duration_ms, method, category)
     return error_message
