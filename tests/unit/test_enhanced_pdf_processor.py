@@ -2,7 +2,7 @@
 
 import pytest
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from extractor.pdf.enhanced import (
     EnhancedPDFProcessor,
@@ -53,7 +53,7 @@ class TestEnhancedPDFProcessor:
         mock_doc.__getitem__ = Mock(return_value=mock_page)
 
         # Mock image list and pixmap
-        mock_page.get_images.return_value = [(1, 0, 0, 100, 200, 0, 0, 0, 0)]
+        mock_page.get_images.return_value = [(1, 0, 0, 100, 200, 0, 0, "Im1", 0)]
         mock_pix = Mock()
         mock_pix.n = 3  # RGB image
         mock_pix.alpha = 0
@@ -64,6 +64,14 @@ class TestEnhancedPDFProcessor:
 
         mock_fitz.Pixmap.return_value = mock_pix
         mock_fitz.Pixmap.__getitem__ = Mock(return_value=mock_pix)
+
+        # Mock get_image_rects to return a real position
+        mock_rect = Mock()
+        mock_rect.x0 = 50.0
+        mock_rect.y0 = 100.0
+        mock_rect.x1 = 550.0
+        mock_rect.y1 = 400.0
+        mock_page.get_image_rects.return_value = [mock_rect]
 
         # Test extraction
         images = await processor.extract_images_from_pdf_page(mock_doc, 0, "png")
@@ -76,6 +84,52 @@ class TestEnhancedPDFProcessor:
         assert image.height == 200
         assert image.page_number == 0
         assert image.mime_type == "image/png"
+        assert image.xref == 1
+        # Verify position uses real rect coordinates
+        assert image.position is not None
+        assert image.position["x0"] == 50.0
+        assert image.position["y0"] == 100.0
+
+    @patch("extractor.pdf.enhanced.fitz")
+    @pytest.mark.asyncio
+    async def test_extract_cmyk_image_converted_to_rgb(self, mock_fitz, processor):
+        """Test that CMYK images are converted to RGB instead of being skipped."""
+        mock_doc = Mock()
+        mock_page = Mock()
+        mock_doc.__getitem__ = Mock(return_value=mock_page)
+
+        mock_page.get_images.return_value = [(1, 0, 0, 100, 200, 0, 0, "cmyk_img", 0)]
+
+        # First pixmap is CMYK (n - alpha >= 4)
+        mock_cmyk_pix = Mock()
+        mock_cmyk_pix.n = 5  # CMYK + alpha
+        mock_cmyk_pix.alpha = 1
+
+        # Converted RGB pixmap
+        mock_rgb_pix = Mock()
+        mock_rgb_pix.n = 3
+        mock_rgb_pix.alpha = 0
+        mock_rgb_pix.width = 100
+        mock_rgb_pix.height = 200
+        mock_rgb_pix.save = Mock()
+        mock_rgb_pix.tobytes = Mock(return_value=b"rgb_data")
+
+        # First call returns CMYK, second call (conversion) returns RGB
+        mock_fitz.Pixmap.side_effect = [mock_cmyk_pix, mock_rgb_pix]
+        mock_fitz.csRGB = "csRGB_sentinel"
+
+        mock_rect = Mock()
+        mock_rect.x0 = 0
+        mock_rect.y0 = 0
+        mock_rect.x1 = 100
+        mock_rect.y1 = 200
+        mock_page.get_image_rects.return_value = [mock_rect]
+
+        images = await processor.extract_images_from_pdf_page(mock_doc, 0, "png")
+
+        assert len(images) == 1
+        # Verify CMYK conversion was called
+        mock_fitz.Pixmap.assert_any_call("csRGB_sentinel", mock_cmyk_pix)
 
     def test_extract_tables_from_text(self, processor):
         """Test table extraction from text."""
@@ -189,14 +243,46 @@ class TestEnhancedPDFProcessor:
         headers = processor._extract_table_headers("Name    Age    City")
         assert headers == ["Name", "Age", "City"]
 
-    def test_enhance_markdown_with_assets(self, processor):
-        """Test Markdown enhancement with extracted assets."""
-        original_markdown = "# Document Title\n\nThis is the main content."
+    def test_enhance_markdown_with_assets_images_already_inline(self, processor):
+        """Test that images already inline in markdown are NOT duplicated in Extracted Images."""
+        # Simulate a markdown that already has images inline
+        original_markdown = (
+            "# Document Title\n\n"
+            "This is the main content.\n\n"
+            "![Figure 1](figure-1-architecture.png)\n\n"
+            "More text after the image."
+        )
 
-        # Add some mock assets
+        # Add the same image to the processor's image list
         processor.images = [
             ExtractedImage(
-                id="img_1_0_001",
+                id="img_1_0",
+                filename="figure-1-architecture.png",
+                local_path="/tmp/figure-1-architecture.png",
+                base64_data="iVBORw0KGgo...",
+                mime_type="image/png",
+                width=100,
+                height=100,
+                page_number=0,
+            )
+        ]
+
+        enhanced = processor.enhance_markdown_with_assets(
+            original_markdown, embed_images=False
+        )
+
+        # The Extracted Images section should NOT appear since the image is already inline
+        assert "## Extracted Images" not in enhanced
+        # The original inline image should still be present
+        assert "![Figure 1](figure-1-architecture.png)" in enhanced
+
+    def test_enhance_markdown_with_unplaced_images(self, processor):
+        """Test that unplaced images are appended at the end."""
+        original_markdown = "# Document Title\n\nThis is the main content."
+
+        processor.images = [
+            ExtractedImage(
+                id="img_1_0",
                 filename="image1.png",
                 local_path="/tmp/image1.png",
                 base64_data="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
@@ -207,36 +293,13 @@ class TestEnhancedPDFProcessor:
             )
         ]
 
-        processor.tables = [
-            ExtractedTable(
-                id="table_1_0_001",
-                markdown="| Name | Age |\n| --- | --- |\n| John | 25 |",
-                rows=2,
-                columns=2,
-                page_number=0,
-            )
-        ]
-
-        processor.formulas = [
-            ExtractedFormula(
-                id="formula_1_0_001",
-                latex="E = mc^2",
-                formula_type="inline",
-                page_number=0,
-            )
-        ]
-
-        # Test enhancement without embedding
         enhanced = processor.enhance_markdown_with_assets(
             original_markdown, embed_images=False
         )
 
+        # Image NOT in original markdown, so it should be appended
         assert "## Extracted Images" in enhanced
         assert "![image1.png](image1.png)" in enhanced
-        assert "## Extracted Tables" in enhanced
-        assert "| Name | Age |" in enhanced
-        assert "## Mathematical Formulas" in enhanced
-        assert "$E = mc^2$" in enhanced
         assert "*Dimensions: 100×100px*" in enhanced
 
     def test_enhance_markdown_with_embedded_images(self, processor):
@@ -261,6 +324,38 @@ class TestEnhancedPDFProcessor:
 
         assert "data:image/png;base64," in enhanced
         assert "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ" in enhanced
+
+    def test_enhance_markdown_with_tables_and_formulas(self, processor):
+        """Test Markdown enhancement with tables and formulas."""
+        original_markdown = "# Document Title\n\nContent."
+
+        processor.tables = [
+            ExtractedTable(
+                id="table_1_0_001",
+                markdown="| Name | Age |\n| --- | --- |\n| John | 25 |",
+                rows=2,
+                columns=2,
+                page_number=0,
+            )
+        ]
+
+        processor.formulas = [
+            ExtractedFormula(
+                id="formula_1_0_001",
+                latex="E = mc^2",
+                formula_type="inline",
+                page_number=0,
+            )
+        ]
+
+        enhanced = processor.enhance_markdown_with_assets(
+            original_markdown, embed_images=False
+        )
+
+        assert "## Extracted Tables" in enhanced
+        assert "| Name | Age |" in enhanced
+        assert "## Mathematical Formulas" in enhanced
+        assert "$E = mc^2$" in enhanced
 
     def test_get_extraction_summary(self, processor):
         """Test extraction summary generation."""
@@ -342,3 +437,109 @@ class TestEnhancedPDFProcessor:
 
         assert len(tables) == 0
         assert len(formulas) == 0
+
+
+class TestImageNaming:
+    """Test cases for semantic image naming."""
+
+    @pytest.fixture
+    def processor(self):
+        temp_dir = tempfile.mkdtemp()
+        processor = EnhancedPDFProcessor(output_dir=temp_dir)
+        yield processor
+        processor.cleanup()
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_slugify_basic(self, processor):
+        """Test basic slugification."""
+        assert processor._slugify("Hello World") == "hello-world"
+        assert processor._slugify("Figure 1: Architecture Diagram") == "figure-1-architecture-diagram"
+
+    def test_slugify_special_chars(self, processor):
+        """Test slugify strips special characters."""
+        assert processor._slugify("test@#$%file") == "testfile"
+        assert processor._slugify("  spaces  around  ") == "spaces-around"
+
+    def test_slugify_cjk(self, processor):
+        """Test slugify preserves CJK characters."""
+        result = processor._slugify("图 1 架构设计")
+        assert "图" in result
+        assert "架构设计" in result
+
+    def test_slugify_max_length(self, processor):
+        """Test slugify respects max length."""
+        long_text = "a " * 100
+        result = processor._slugify(long_text, max_length=20)
+        assert len(result) <= 20
+
+    def test_generate_image_name_with_caption(self, processor):
+        """Test image name generation prioritizes caption."""
+        name = processor._generate_image_name(
+            page_num=0, img_index=0,
+            caption="Figure 1: Architecture Diagram",
+        )
+        assert "figure-1-architecture-diagram" == name
+
+    def test_generate_image_name_with_xref_name(self, processor):
+        """Test image name from xref internal name."""
+        name = processor._generate_image_name(
+            page_num=2, img_index=0,
+            xref_name="company-logo",
+        )
+        assert "p3-company-logo" == name
+
+    def test_generate_image_name_with_context(self, processor):
+        """Test image name from nearby text context."""
+        name = processor._generate_image_name(
+            page_num=0, img_index=0,
+            nearby_text="This section describes the authentication flow in detail",
+        )
+        assert name.startswith("p1-")
+        assert "this" in name or "section" in name
+
+    def test_generate_image_name_fallback(self, processor):
+        """Test fallback image name when no context available."""
+        name = processor._generate_image_name(
+            page_num=4, img_index=2,
+            pdf_name="annual-report-2025",
+        )
+        assert name == "annual-report-2025-p5-3"
+
+    def test_generate_image_name_empty_fallback(self, processor):
+        """Test fallback with no pdf_name."""
+        name = processor._generate_image_name(page_num=0, img_index=0)
+        assert name == "img-p1-1"
+
+    def test_detect_caption_found(self, processor):
+        """Test caption detection finds figure caption below image."""
+        text_blocks = [
+            # (x0, y0, x1, y1, text, block_no, block_type)
+            (50, 300, 550, 320, "Figure 1: System Architecture Overview", 2, 0),
+            (50, 350, 550, 400, "The system uses a microservices approach.", 3, 0),
+        ]
+        caption = processor._detect_caption(
+            text_blocks, img_y1=295.0, img_x0=50.0, img_x1=550.0
+        )
+        assert caption is not None
+        assert "Figure 1" in caption
+
+    def test_detect_caption_not_found(self, processor):
+        """Test caption detection returns None when no caption pattern matches."""
+        text_blocks = [
+            (50, 300, 550, 320, "Regular text, not a caption.", 2, 0),
+        ]
+        caption = processor._detect_caption(
+            text_blocks, img_y1=295.0, img_x0=50.0, img_x1=550.0
+        )
+        assert caption is None
+
+    def test_detect_caption_too_far(self, processor):
+        """Test caption detection ignores text blocks that are too far below."""
+        text_blocks = [
+            (50, 500, 550, 520, "Figure 99: Very Far Away", 5, 0),
+        ]
+        caption = processor._detect_caption(
+            text_blocks, img_y1=100.0, img_x0=50.0, img_x1=550.0, tolerance=30.0
+        )
+        assert caption is None

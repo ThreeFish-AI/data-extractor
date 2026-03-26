@@ -280,6 +280,68 @@ class TestPyMuPDFExtraction:
 
     @pytest.mark.asyncio
     @patch("extractor.pdf.processor._import_fitz")
+    async def test_pymupdf_extraction_with_inline_images(self, mock_import_fitz):
+        """测试PyMuPDF提取中图片被内联到文本中"""
+        mock_fitz = Mock()
+        mock_import_fitz.return_value = mock_fitz
+
+        mock_doc = Mock()
+        mock_doc.page_count = 1
+        mock_doc.metadata = {}
+        mock_fitz.open.return_value = mock_doc
+
+        # 模拟页面 - 包含文本块和图片块，按位置排序
+        # (x0, y0, x1, y1, text/data, block_no, block_type)
+        mock_page = Mock()
+        mock_page.get_text.return_value = [
+            (0, 0, 500, 30, "Introduction paragraph.\n", 0, 0),    # text block
+            (0, 40, 500, 300, b"image_binary", 1, 1),               # image block
+            (0, 310, 500, 350, "Text after the image.\n", 2, 0),    # text block
+        ]
+        mock_doc.load_page.return_value = mock_page
+
+        # 预填充 _page_image_maps（模拟 _extract_enhanced_assets 已运行）
+        from extractor.pdf.enhanced import ExtractedImage
+        self.processor._page_image_maps = {
+            0: {
+                1: ExtractedImage(
+                    id="img_0_0",
+                    filename="figure-1-architecture.png",
+                    local_path="/tmp/figure-1-architecture.png",
+                    caption="Figure 1: Architecture",
+                    page_number=0,
+                )
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
+            tmp_path = Path(tmp_file.name)
+
+        try:
+            result = await self.processor._extract_with_pymupdf(
+                tmp_path, include_metadata=False
+            )
+
+            assert result["success"] is True
+            text = result["text"]
+            # 验证图片引用内联在正确位置
+            assert "Introduction paragraph." in text
+            assert "![Figure 1: Architecture](figure-1-architecture.png)" in text
+            assert "Text after the image." in text
+
+            # 验证顺序: text -> image -> text
+            intro_pos = text.index("Introduction paragraph.")
+            img_pos = text.index("![Figure 1: Architecture]")
+            after_pos = text.index("Text after the image.")
+            assert intro_pos < img_pos < after_pos
+
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+            self.processor._page_image_maps.clear()
+
+    @pytest.mark.asyncio
+    @patch("extractor.pdf.processor._import_fitz")
     async def test_pymupdf_extraction_error(self, mock_import_fitz):
         """测试PyMuPDF提取错误"""
         # 模拟导入错误
@@ -569,6 +631,21 @@ class TestMarkdownConversion:
 
         # 由于标题太长（超过5个词），不应该转换为Markdown标题
         assert result.strip() == text
+
+    def test_inline_image_references_preserved_in_markdown(self):
+        """测试内联图片引用在Markdown转换中被保留"""
+        text = (
+            "TITLE\n\n"
+            "Some text before the image.\n\n"
+            "![Figure 1: Architecture](figure-1-architecture.png)\n\n"
+            "Some text after the image."
+        )
+
+        result = self.processor._convert_to_markdown(text)
+
+        assert "![Figure 1: Architecture](figure-1-architecture.png)" in result
+        assert "Some text before the image." in result
+        assert "Some text after the image." in result
 
 
 class TestPDFProcessing:
