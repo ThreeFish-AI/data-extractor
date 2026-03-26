@@ -108,6 +108,81 @@ class TestRecordError:
                 "https://example.com", False, 5000, "selenium", "timeout"
             )
 
+    def test_categorize_timeout(self):
+        """timeout 关键字归类为 timeout。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            msg = record_error(
+                Exception("Request timeout"), "https://example.com", "simple", 100
+            )
+            assert msg == "Request timeout"
+            mock_metrics.record_request.assert_called_once_with(
+                "https://example.com", False, 100, "simple", "timeout"
+            )
+
+    def test_categorize_connection(self):
+        """connection 关键字归类为 connection。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            msg = record_error(
+                Exception("Connection refused"), "https://example.com", "simple", 100
+            )
+            assert msg == "Connection refused"
+            mock_metrics.record_request.assert_called_once_with(
+                "https://example.com", False, 100, "simple", "connection"
+            )
+
+    def test_categorize_not_found(self):
+        """404 归类为 not_found。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            msg = record_error(
+                Exception("HTTP 404"), "https://example.com", "simple", 100
+            )
+            assert msg == "HTTP 404"
+            mock_metrics.record_request.assert_called_once_with(
+                "https://example.com", False, 100, "simple", "not_found"
+            )
+
+    def test_categorize_forbidden(self):
+        """403 归类为 forbidden。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            msg = record_error(
+                Exception("HTTP 403"), "https://example.com", "simple", 100
+            )
+            assert msg == "HTTP 403"
+            mock_metrics.record_request.assert_called_once_with(
+                "https://example.com", False, 100, "simple", "forbidden"
+            )
+
+    def test_categorize_anti_bot(self):
+        """cloudflare 关键字归类为 anti_bot。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            msg = record_error(
+                Exception("Cloudflare challenge"), "https://example.com", "simple", 100
+            )
+            assert msg == "Cloudflare challenge"
+            mock_metrics.record_request.assert_called_once_with(
+                "https://example.com", False, 100, "simple", "anti_bot"
+            )
+
+    def test_categorize_unknown(self):
+        """无法匹配的错误归类为 unknown。"""
+        with patch("extractor.tools._registry.metrics_collector") as mock_metrics:
+            msg = record_error(
+                Exception("Some random error"), "https://example.com", "simple", 100
+            )
+            assert msg == "Some random error"
+            mock_metrics.record_request.assert_called_once_with(
+                "https://example.com", False, 100, "simple", "unknown"
+            )
+
+    def test_logs_error(self):
+        """record_error 应记录错误日志。"""
+        with patch("extractor.tools._registry.metrics_collector"):
+            with patch("extractor.tools._registry.logger") as mock_logger:
+                record_error(
+                    Exception("test error"), "https://example.com", "simple", 100
+                )
+                mock_logger.error.assert_called_once()
+
 
 class TestElapsedMs:
     """测试耗时计算辅助函数"""

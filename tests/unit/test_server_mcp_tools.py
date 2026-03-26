@@ -70,19 +70,6 @@ class TestMCPToolsScraping:
         assert "Invalid URL format" in result.error
 
     @pytest.mark.asyncio
-    async def test_scrape_webpage_invalid_method(self):
-        """测试无效方法处理 - 现在在函数内部验证"""
-        result = await scrape_webpage(
-            url="https://example.com",
-            method="invalid-method",
-            extract_config=None,
-            wait_for_element=None,
-        )
-
-        assert result.success is False
-        assert "Method must be one of" in result.error
-
-    @pytest.mark.asyncio
     async def test_scrape_multiple_webpages_success(self):
         """测试批量抓取成功"""
         with patch("extractor.tools.scraping.web_scraper") as mock_scraper:
@@ -196,7 +183,7 @@ class TestMCPToolsInformation:
     @pytest.mark.asyncio
     async def test_check_robots_txt_success(self):
         """测试robots.txt检查成功"""
-        with patch("extractor.tools.utility.web_scraper") as mock_scraper:
+        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {"content": {"text": "User-agent: *\nDisallow: /admin/"}}
             mock_scraper.http_scraper.scrape = AsyncMock(return_value=mock_result)
 
@@ -210,7 +197,7 @@ class TestMCPToolsInformation:
     @pytest.mark.asyncio
     async def test_check_robots_txt_not_found(self):
         """测试robots.txt不存在"""
-        with patch("extractor.tools.utility.web_scraper") as mock_scraper:
+        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
             mock_scraper.http_scraper.scrape = AsyncMock(
                 return_value={"error": "404 Not Found"}
             )
@@ -515,24 +502,6 @@ class TestMCPToolsPDF:
             assert result.content == "# PDF Title\n\nPDF content"
 
     @pytest.mark.asyncio
-    async def test_convert_pdf_to_markdown_invalid_method(self):
-        """测试PDF转换无效方法"""
-        result = await convert_pdf_to_markdown(
-            pdf_source="https://example.com/document.pdf",
-            method="invalid-method",
-            include_metadata=True,
-            page_range=None,
-            output_format="markdown",
-            extract_images=True,
-            extract_tables=True,
-            extract_formulas=True,
-            embed_images=False,
-            enhanced_options=None,
-        )
-        assert result.success is False
-        assert "Method must be one of" in result.error
-
-    @pytest.mark.asyncio
     async def test_batch_convert_pdfs_to_markdown_success(self):
         """测试批量PDF转换成功"""
         with (
@@ -629,19 +598,3 @@ class TestMCPToolsValidation:
                     "Invalid schema",
                 ]
             )
-
-    @pytest.mark.asyncio
-    async def test_method_validation_consistency(self):
-        """测试方法参数验证的一致性"""
-        invalid_methods = ["invalid", "unknown", "", "AUTO"]  # 大写应该无效
-
-        for invalid_method in invalid_methods:
-            # 测试不同工具的方法验证一致性
-            result = await scrape_webpage(
-                url="https://example.com",
-                method=invalid_method,
-                extract_config=None,
-                wait_for_element=None,
-            )
-            assert result.success is False
-            assert "Method must be one of" in result.error

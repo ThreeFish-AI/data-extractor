@@ -45,10 +45,3 @@ class TextCleaner:
 
         return phone_numbers
 
-    @staticmethod
-    def truncate_text(text: str, max_length: int = 1000) -> str:
-        """Truncate text to maximum length."""
-        if len(text) <= max_length:
-            return text
-
-        return text[:max_length] + "..."

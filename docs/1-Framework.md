@@ -167,8 +167,7 @@ sequenceDiagram
 | `RetryManager` | [`retry.py`](../extractor/retry.py) | 指数退避重试：`base_delay × backoff_factor^attempt`（全局配置：max=3, factor=2.0） |
 | `CacheManager` | [`cache.py`](../extractor/cache.py) | 内存 TTL 缓存：MD5 键、可配置过期时间，FIFO 淘汰策略（按时间戳淘汰最旧条目） |
 | `MetricsCollector` | [`metrics.py`](../extractor/metrics.py) | 计数器/累加器：统计总请求数、成功/失败数、累计耗时、方法使用分布、错误分类 |
-| `ErrorHandler` | [`error_handler.py`](../extractor/error_handler.py) | 字符串匹配分类器：按关键字匹配为 timeout/connection/not_found/forbidden/anti_bot/unknown |
-| `timing_decorator` | [`timing.py`](../extractor/timing.py) | 函数执行计时装饰器，同时支持 sync 和 async 函数 |
+| `record_error()` | [`tools/_registry.py`](../extractor/tools/_registry.py) | 字符串匹配分类器：按关键字匹配为 timeout/connection/not_found/forbidden/anti_bot/unknown |
 
 ### 缓存流程
 
@@ -189,7 +188,7 @@ graph TD
 
 ### 错误处理
 
-`ErrorHandler` 通过字符串匹配将异常分类为网络层（timeout/connection）、协议层（not_found/forbidden）、反爬层（anti_bot）和未知错误。`RetryManager` 对所有可重试错误应用统一的指数退避策略（3 次重试，退避因子 2.0）。
+`record_error()` 通过字符串匹配将异常分类为网络层（timeout/connection）、协议层（not_found/forbidden）、反爬层（anti_bot）和未知错误。`RetryManager` 对所有可重试错误应用统一的指数退避策略（3 次重试，退避因子 2.0）。
 
 ## 配置系统
 

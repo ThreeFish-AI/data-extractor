@@ -2,19 +2,28 @@
 
 import logging
 import time
-from typing import List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlparse
 
 from fastmcp import FastMCP
 
 from ..anti_detection import AntiDetectionScraper
 from ..config import settings
-from ..error_handler import ErrorHandler
 from ..markdown.converter import MarkdownConverter
 from ..metrics import metrics_collector
 from ..scraper import WebScraper
 
 logger = logging.getLogger(__name__)
+
+# --- Literal 类型别名（由 Pydantic/MCP 层自动进行参数验证） ---
+
+ScrapeMethod = Literal["auto", "simple", "scrapy", "selenium"]
+BrowserMethod = Literal["selenium", "playwright"]
+PDFMethod = Literal["auto", "pymupdf", "pypdf"]
+PDFOutputFormat = Literal["markdown", "text"]
+StructuredDataType = Literal[
+    "all", "contact", "social", "content", "products", "addresses"
+]
 
 # Configure logging
 logging.basicConfig(
@@ -67,17 +76,57 @@ def validate_page_range(
     return tuple(page_range), None
 
 
+def normalize_extract_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """校验并规范化提取配置字典。
+
+    将简写形式（字符串 CSS 选择器）展开为完整配置字典，
+    并为缺失字段补充默认值。
+    """
+    if not isinstance(config, dict):
+        raise ValueError("Extract config must be a dictionary")
+
+    normalized: Dict[str, Any] = {}
+    for key, value in config.items():
+        if isinstance(value, str):
+            normalized[key] = {"selector": value, "multiple": True}
+        elif isinstance(value, dict):
+            if "selector" not in value:
+                raise ValueError(f"Missing 'selector' for key '{key}'")
+            normalized[key] = {
+                "selector": value["selector"],
+                "attr": value.get("attr", "text"),
+                "multiple": value.get("multiple", False),
+                "type": value.get("type", "css"),
+            }
+        else:
+            raise ValueError(f"Invalid config value for key '{key}'")
+    return normalized
+
+
 def record_error(e: Exception, url: str, method: str, duration_ms: int) -> str:
-    """Handle error + record metrics. Returns user-facing error message."""
-    error_response = ErrorHandler.handle_scraping_error(e, url, method)
-    metrics_collector.record_request(
-        url,
-        False,
-        duration_ms,
-        method,
-        error_response["error"]["category"],
+    """Handle error + record metrics. Returns original error message."""
+    error_message = str(e)
+    msg_lower = error_message.lower()
+
+    if "timeout" in msg_lower:
+        category = "timeout"
+    elif "connection" in msg_lower:
+        category = "connection"
+    elif "404" in error_message:
+        category = "not_found"
+    elif "403" in error_message:
+        category = "forbidden"
+    elif "cloudflare" in msg_lower:
+        category = "anti_bot"
+    else:
+        category = "unknown"
+
+    logger.error(
+        f"Scraping error for {url} using {method}: "
+        f"{type(e).__name__}: {error_message}"
     )
-    return error_response["error"]["message"]
+    metrics_collector.record_request(url, False, duration_ms, method, category)
+    return error_message
 
 
 def elapsed_ms(start_time: float) -> int:
