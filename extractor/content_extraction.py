@@ -1,7 +1,7 @@
 """统一内容提取模块：BeautifulSoup / Selenium / Playwright 三引擎数据提取。"""
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
@@ -265,3 +265,78 @@ async def extract_default_content_playwright(
             )
 
     return {"text": text, "links": links}
+
+
+# ---------------------------------------------------------------------------
+# 整页数据提取门面（title + meta_description + content）
+# ---------------------------------------------------------------------------
+
+
+def extract_page_data_selenium(
+    driver, extract_config: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Selenium 整页数据提取：title + meta_description + content。
+
+    Args:
+        driver: Selenium WebDriver 实例
+        extract_config: 可选的提取配置字典
+
+    Returns:
+        包含 title、meta_description、content 键的字典
+    """
+    from selenium.webdriver.common.by import By
+    from selenium.common.exceptions import NoSuchElementException
+
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    result: Dict[str, Any] = {"title": driver.title, "content": {}}
+
+    try:
+        meta_elem = driver.find_element(
+            By.CSS_SELECTOR, "meta[name='description']"
+        )
+        result["meta_description"] = meta_elem.get_attribute("content")
+    except NoSuchElementException:
+        result["meta_description"] = None
+
+    if extract_config:
+        result["content"] = extract_with_selenium_config(driver, extract_config)
+    else:
+        default = extract_default_content(soup, driver.current_url)
+        result["content"]["text"] = default["text"]
+        result["content"]["links"] = default["links"]
+
+    return result
+
+
+async def extract_page_data_playwright(
+    page, extract_config: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Playwright 整页数据提取：title + meta_description + content。
+
+    Args:
+        page: Playwright Page 实例
+        extract_config: 可选的提取配置字典
+
+    Returns:
+        包含 title、meta_description、content 键的字典
+    """
+    result: Dict[str, Any] = {"title": await page.title(), "content": {}}
+
+    try:
+        meta_desc = await page.get_attribute(
+            "meta[name='description']", "content"
+        )
+        result["meta_description"] = meta_desc
+    except Exception:
+        result["meta_description"] = None
+
+    if extract_config:
+        result["content"] = await extract_with_playwright_config(
+            page, extract_config
+        )
+    else:
+        default = await extract_default_content_playwright(page)
+        result["content"]["text"] = default["text"]
+        result["content"]["links"] = default["links"]
+
+    return result

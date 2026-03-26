@@ -3,7 +3,13 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
-from extractor.browser_utils import build_chrome_options, playwright_session, selenium_session
+from extractor.browser_utils import (
+    build_chrome_options,
+    playwright_session,
+    selenium_session,
+    stealth_selenium_session,
+    stealth_playwright_session,
+)
 
 
 class TestBuildChromeOptions:
@@ -200,6 +206,190 @@ class TestPlaywrightSession:
         with patch("playwright.async_api.async_playwright", return_value=mock_instance):
             with pytest.raises(RuntimeError):
                 async with playwright_session("https://example.com"):
+                    raise RuntimeError("test")
+
+            mock_browser.close.assert_called_once()
+            mock_pw.stop.assert_called_once()
+
+
+class TestStealthSeleniumSession:
+    """stealth_selenium_session 上下文管理器测试。"""
+
+    @patch("undetected_chromedriver.Chrome")
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_yields_driver_and_quits(self, mock_ua_cls, mock_uc_cls):
+        """上下文管理器应 yield driver 并在退出时调用 quit()。"""
+        mock_ua = Mock()
+        mock_ua.random = "RandomAgent/1.0"
+        mock_ua_cls.return_value = mock_ua
+
+        mock_driver = Mock()
+        mock_uc_cls.return_value = mock_driver
+
+        async with stealth_selenium_session("https://example.com") as driver:
+            assert driver is mock_driver
+            mock_driver.get.assert_called_once_with("https://example.com")
+
+        mock_driver.quit.assert_called_once()
+
+    @patch("undetected_chromedriver.Chrome")
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_injects_webdriver_override(self, mock_ua_cls, mock_uc_cls):
+        """应注入 navigator.webdriver = undefined 反检测脚本。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_driver = Mock()
+        mock_uc_cls.return_value = mock_driver
+
+        async with stealth_selenium_session("https://example.com"):
+            pass
+
+        # 验证 execute_script 被调用且包含 webdriver 覆盖
+        calls = [str(c) for c in mock_driver.execute_script.call_args_list]
+        assert any("webdriver" in c for c in calls)
+
+    @patch("selenium.webdriver.support.ui.WebDriverWait")
+    @patch("undetected_chromedriver.Chrome")
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_waits_for_element(self, mock_ua_cls, mock_uc_cls, mock_wait_cls):
+        """指定 wait_for_element 时应使用 WebDriverWait。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_driver = Mock()
+        mock_uc_cls.return_value = mock_driver
+        mock_wait_instance = Mock()
+        mock_wait_cls.return_value = mock_wait_instance
+
+        async with stealth_selenium_session(
+            "https://example.com", wait_for_element=".content"
+        ):
+            pass
+
+        mock_wait_cls.assert_called_once()
+
+    @patch("undetected_chromedriver.Chrome")
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_quits_on_exception(self, mock_ua_cls, mock_uc_cls):
+        """即使内部抛异常也应调用 quit()。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_driver = Mock()
+        mock_uc_cls.return_value = mock_driver
+
+        with pytest.raises(RuntimeError):
+            async with stealth_selenium_session("https://example.com"):
+                raise RuntimeError("test")
+
+        mock_driver.quit.assert_called_once()
+
+    @patch("undetected_chromedriver.Chrome")
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_uses_stealth_chrome_options(self, mock_ua_cls, mock_uc_cls):
+        """应使用 stealth=True 构建 Chrome 选项。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_driver = Mock()
+        mock_uc_cls.return_value = mock_driver
+
+        async with stealth_selenium_session("https://example.com"):
+            pass
+
+        # 验证 uc.Chrome 被调用时传入了 options
+        mock_uc_cls.assert_called_once()
+        call_kwargs = mock_uc_cls.call_args
+        assert call_kwargs is not None
+
+
+class TestStealthPlaywrightSession:
+    """stealth_playwright_session 上下文管理器测试。"""
+
+    @staticmethod
+    def _setup_playwright_mocks():
+        """创建 Playwright mock 链。"""
+        mock_page = AsyncMock()
+        mock_context = AsyncMock()
+        mock_context.new_page.return_value = mock_page
+        mock_browser = AsyncMock()
+        mock_browser.new_context.return_value = mock_context
+        mock_pw = AsyncMock()
+        mock_pw.chromium.launch.return_value = mock_browser
+        mock_instance = Mock()
+        mock_instance.start = AsyncMock(return_value=mock_pw)
+        return mock_instance, mock_pw, mock_browser, mock_context, mock_page
+
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_yields_page_and_closes(self, mock_ua_cls):
+        """上下文管理器应 yield page 并在退出时关闭资源。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_instance, mock_pw, mock_browser, mock_context, mock_page = (
+            self._setup_playwright_mocks()
+        )
+
+        with patch(
+            "playwright.async_api.async_playwright", return_value=mock_instance
+        ):
+            async with stealth_playwright_session("https://example.com") as page:
+                assert page is mock_page
+                mock_page.goto.assert_called_once()
+
+            mock_browser.close.assert_called_once()
+            mock_pw.stop.assert_called_once()
+
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_injects_anti_detection_script(self, mock_ua_cls):
+        """应注入反检测初始化脚本。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_instance, mock_pw, mock_browser, mock_context, mock_page = (
+            self._setup_playwright_mocks()
+        )
+
+        with patch(
+            "playwright.async_api.async_playwright", return_value=mock_instance
+        ):
+            async with stealth_playwright_session("https://example.com"):
+                pass
+
+        mock_context.add_init_script.assert_called_once()
+        script = mock_context.add_init_script.call_args[0][0]
+        assert "webdriver" in script
+        assert "plugins" in script
+
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_waits_for_selector(self, mock_ua_cls):
+        """指定 wait_for_element 时应调用 wait_for_selector。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_instance, mock_pw, mock_browser, mock_context, mock_page = (
+            self._setup_playwright_mocks()
+        )
+
+        with patch(
+            "playwright.async_api.async_playwright", return_value=mock_instance
+        ):
+            async with stealth_playwright_session(
+                "https://example.com", wait_for_element="#app"
+            ):
+                pass
+
+        mock_page.wait_for_selector.assert_called_once()
+
+    @patch("fake_useragent.UserAgent")
+    @pytest.mark.asyncio
+    async def test_closes_on_exception(self, mock_ua_cls):
+        """即使内部抛异常也应关闭资源。"""
+        mock_ua_cls.return_value = Mock(random="Agent/1.0")
+        mock_instance, mock_pw, mock_browser, mock_context, mock_page = (
+            self._setup_playwright_mocks()
+        )
+
+        with patch(
+            "playwright.async_api.async_playwright", return_value=mock_instance
+        ):
+            with pytest.raises(RuntimeError):
+                async with stealth_playwright_session("https://example.com"):
                     raise RuntimeError("test")
 
             mock_browser.close.assert_called_once()
