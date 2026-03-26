@@ -11,12 +11,19 @@ import asyncio
 
 import aiohttp
 
-from .enhanced import EnhancedPDFProcessor, ExtractedImage, ExtractedTable
+from .enhanced import EnhancedPDFProcessor, ExtractedImage, ExtractedTable, ExtractedFormula
 from ..markdown.algorithm_detector import (
     _compute_algorithm_score,
     is_algorithm_block,
     detect_algorithm_regions,
     wrap_as_code_fence,
+)
+from .math_formula import (
+    DoclingFormulaEnricher,
+    FormulaReconstructor,
+    MathRegion,
+    unicode_to_latex,
+    has_math_unicode,
 )
 
 
@@ -76,6 +83,14 @@ class PDFProcessor:
         # consumed during text extraction for inline table placement.
         # Structure: {page_num: {(x0, y0, x1, y1): ExtractedTable}}
         self._page_table_maps: Dict[int, Dict[tuple, ExtractedTable]] = {}
+
+        # Page-level enhanced text blocks from formula reconstruction.
+        # Structure: {page_num: [text_block_str, ...]}
+        self._page_math_blocks: Dict[int, List[str]] = {}
+
+        # Page-level math regions detected during formula extraction.
+        # Structure: {page_num: [MathRegion, ...]}
+        self._page_math_regions: Dict[int, List[MathRegion]] = {}
 
     async def process_pdf(
         self,
@@ -230,6 +245,8 @@ class PDFProcessor:
             # Reset per-run state
             self._page_image_maps.clear()
             self._page_table_maps.clear()
+            self._page_math_blocks.clear()
+            self._page_math_regions.clear()
 
     async def batch_process_pdfs(
         self,
@@ -407,11 +424,11 @@ class PDFProcessor:
             text_content = []
             for page_num in range(start_page, end_page):
                 page = doc.load_page(page_num)
-                blocks = page.get_text("blocks")
 
                 # Get the image and table maps for this page
                 page_image_map = self._page_image_maps.get(page_num, {})
                 page_table_map = self._page_table_maps.get(page_num, {})
+                blocks = page.get_text("blocks")
 
                 # Pre-compute which text blocks overlap with table regions.
                 # 算法/伪代码块优先于表格检测：若表格区域与算法文本块重叠，
@@ -461,30 +478,47 @@ class PDFProcessor:
                 # to maintain correct vertical ordering
                 page_elements: list = []
 
-                for block in sorted(blocks, key=lambda b: (b[1], b[0])):
-                    block_no = block[5]
+                # If formula reconstruction produced enhanced blocks, use them
+                math_blocks = self._page_math_blocks.get(page_num)
+                if math_blocks is not None:
+                    # 公式增强路径：使用已含 LaTeX 的增强文本块
+                    for i, mb in enumerate(math_blocks):
+                        page_elements.append((i, mb))
+                    # 补充图片引用
+                    if page_image_map:
+                        for block in sorted(blocks, key=lambda b: (b[1], b[0])):
+                            if block[6] == 1 and block[5] in page_image_map:
+                                img = page_image_map[block[5]]
+                                alt_text = img.caption or img.filename
+                                page_elements.append(
+                                    (block[1], f"![{alt_text}]({img.filename})")
+                                )
+                else:
+                    # 标准路径：算法检测 + 表格过滤 + 图片内联
+                    for block in sorted(blocks, key=lambda b: (b[1], b[0])):
+                        block_no = block[5]
 
-                    if block[6] == 0:  # text block
-                        if block_no in table_block_nos:
-                            continue  # Skip text covered by a table
-                        block_text = block[4].strip()
-                        if block_text:
-                            if is_algorithm_block(block_text):
-                                # 算法/伪代码块：保留行结构
-                                page_elements.append((block[1], block_text))
-                            else:
-                                # Merge line breaks within a block into spaces
-                                # (intra-paragraph line wraps from PDF layout)
-                                block_text = re.sub(r"\n+", " ", block_text)
-                                page_elements.append((block[1], block_text))
+                        if block[6] == 0:  # text block
+                            if block_no in table_block_nos:
+                                continue  # Skip text covered by a table
+                            block_text = block[4].strip()
+                            if block_text:
+                                if is_algorithm_block(block_text):
+                                    # 算法/伪代码块：保留行结构
+                                    page_elements.append((block[1], block_text))
+                                else:
+                                    # Merge line breaks within a block into spaces
+                                    # (intra-paragraph line wraps from PDF layout)
+                                    block_text = re.sub(r"\n+", " ", block_text)
+                                    page_elements.append((block[1], block_text))
 
-                    elif block[6] == 1 and page_image_map:  # image block
-                        if block_no in page_image_map:
-                            img = page_image_map[block_no]
-                            alt_text = img.caption or img.filename
-                            page_elements.append(
-                                (block[1], f"![{alt_text}]({img.filename})")
-                            )
+                        elif block[6] == 1 and page_image_map:  # image block
+                            if block_no in page_image_map:
+                                img = page_image_map[block_no]
+                                alt_text = img.caption or img.filename
+                                page_elements.append(
+                                    (block[1], f"![{alt_text}]({img.filename})")
+                                )
 
                 # Insert tables at correct vertical positions
                 for tbbox, table in page_table_map.items():
@@ -931,22 +965,11 @@ class PDFProcessor:
                             f"Failed to extract tables from page {page_num}: {str(e)}"
                         )
 
-            # Extract formulas
+            # Extract formulas using dual-path strategy
             if extract_formulas:
-                for page_num in range(start_page, end_page):
-                    try:
-                        page = doc[page_num]
-                        text = page.get_text()
-                        formulas = (
-                            self.enhanced_processor.extract_formulas_from_text(
-                                text, page_num
-                            )
-                        )
-                        self.enhanced_processor.formulas.extend(formulas)
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to extract formulas from page {page_num}: {str(e)}"
-                        )
+                self._extract_formulas_dual_path(
+                    doc, pdf_path, start_page, end_page
+                )
 
             # Add extraction summaries
             if extract_tables:
@@ -965,6 +988,101 @@ class PDFProcessor:
             logger.error(f"Error in enhanced asset extraction: {str(e)}")
             return {"success": False, "error": str(e)}
 
+    def _extract_formulas_dual_path(
+        self,
+        doc,  # noqa: ANN001 — fitz.Document
+        pdf_path: Path,
+        start_page: int,
+        end_page: int,
+    ) -> None:
+        """使用双路径策略提取公式。
+
+        高保真路径：Docling CodeFormula（需安装可选依赖）
+        降级路径：PyMuPDF 字体分析 + Unicode→LaTeX 映射
+        """
+        if not self.enhanced_processor:
+            return
+
+        # 路径 1: 尝试 Docling 高保真路径
+        if DoclingFormulaEnricher.is_available():
+            try:
+                logger.info("使用 Docling CodeFormula 模型提取公式")
+                enricher = DoclingFormulaEnricher()
+                docling_md = enricher.get_markdown_with_formulas(str(pdf_path))
+                self._inject_docling_formulas(docling_md)
+                return
+            except Exception as e:
+                logger.warning(
+                    f"Docling 公式提取失败，降级至 PyMuPDF 字体分析: {e}"
+                )
+
+        # 路径 2: PyMuPDF 字体分析降级路径
+        logger.info("使用 PyMuPDF 字体分析提取公式")
+        reconstructor = FormulaReconstructor()
+        for page_num in range(start_page, end_page):
+            try:
+                page = doc[page_num]
+                enhanced_blocks, regions = reconstructor.extract_formulas_from_page(
+                    page, page_num
+                )
+                if enhanced_blocks:
+                    self._page_math_blocks[page_num] = enhanced_blocks
+                if regions:
+                    self._page_math_regions[page_num] = regions
+                    # 转换为 ExtractedFormula 追加到 enhanced_processor
+                    for i, region in enumerate(regions):
+                        formula = ExtractedFormula(
+                            id=self.enhanced_processor._generate_asset_id(
+                                "formula", page_num, i
+                            ),
+                            latex=region.latex,
+                            formula_type=region.formula_type,
+                            page_number=page_num,
+                            position=region.bbox,
+                            description=f"Equation ({region.equation_number})"
+                            if region.equation_number
+                            else None,
+                        )
+                        self.enhanced_processor.formulas.append(formula)
+            except Exception as e:
+                logger.warning(
+                    f"PyMuPDF 公式提取失败 (page {page_num}): {e}"
+                )
+
+    def _inject_docling_formulas(self, docling_md: str) -> None:
+        """从 Docling 输出的 Markdown 中提取公式，注入到 enhanced_processor。"""
+        if not self.enhanced_processor or not docling_md:
+            return
+
+        # 提取块级公式: $$ ... $$
+        block_pattern = re.compile(r"\$\$([\s\S]+?)\$\$")
+        for i, match in enumerate(block_pattern.finditer(docling_md)):
+            latex = match.group(1).strip()
+            if latex:
+                formula = ExtractedFormula(
+                    id=self.enhanced_processor._generate_asset_id("formula", 0, i),
+                    latex=latex,
+                    formula_type="block",
+                    description="Docling CodeFormula",
+                )
+                self.enhanced_processor.formulas.append(formula)
+
+        # 提取行内公式: $ ... $ (排除 $$)
+        inline_pattern = re.compile(r"(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)")
+        offset = len(self.enhanced_processor.formulas)
+        for i, match in enumerate(inline_pattern.finditer(docling_md)):
+            latex = match.group(1).strip()
+            if latex and len(latex) > 1:
+                formula = ExtractedFormula(
+                    id=self.enhanced_processor._generate_asset_id(
+                        "formula", 0, offset + i
+                    ),
+                    latex=latex,
+                    formula_type="inline",
+                    description="Docling CodeFormula",
+                )
+                self.enhanced_processor.formulas.append(formula)
+
     def cleanup(self):
         """Clean up temporary files and directories."""
         try:
@@ -979,5 +1097,7 @@ class PDFProcessor:
 
             self._page_image_maps.clear()
             self._page_table_maps.clear()
+            self._page_math_blocks.clear()
+            self._page_math_regions.clear()
         except Exception as e:
             logger.warning(f"Failed to cleanup temp directory: {str(e)}")

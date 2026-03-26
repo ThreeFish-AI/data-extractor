@@ -1094,6 +1094,10 @@ class EnhancedPDFProcessor:
         """
         Extract mathematical formulas from text.
 
+        支持两层检测：
+        1. LaTeX 定界符匹配 (``$...$``, ``$$...$$``, ``\\[...\\]``, ``\\(...\\)``)
+        2. Unicode 数学符号检测（当无 LaTeX 定界符时自动启用）
+
         Args:
             text: Text content from PDF page
             page_num: Page number
@@ -1104,7 +1108,10 @@ class EnhancedPDFProcessor:
         formulas = []
 
         try:
-            # Pattern for LaTeX formulas (both inline and block)
+            # 延迟导入避免循环依赖
+            from .math_formula import unicode_to_latex, has_math_unicode
+
+            # Layer 1: LaTeX 定界符匹配
             patterns = [
                 # Block formulas: \[ ... \] or $$ ... $$
                 (r"\\\[\s*([^]]+?)\s*\\\]", "block"),
@@ -1115,6 +1122,8 @@ class EnhancedPDFProcessor:
             ]
 
             formula_index = 0
+            matched_ranges = set()  # 记录已匹配区间避免重复
+
             for pattern, formula_type in patterns:
                 matches = re.finditer(pattern, text, re.MULTILINE | re.DOTALL)
 
@@ -1140,11 +1149,36 @@ class EnhancedPDFProcessor:
                         )
 
                         formulas.append(extracted_formula)
+                        matched_ranges.add((match.start(), match.end()))
                         formula_index += 1
 
                         self.logger.info(
                             f"Extracted {formula_type} formula {formula_id} from page {page_num}"
                         )
+
+            # Layer 2: Unicode 数学符号检测
+            # 当 Layer 1 未检测到公式时，扫描文本中的 Unicode 数学符号
+            if not formulas and has_math_unicode(text):
+                # 按行扫描，检测含有数学符号的文本段
+                for line in text.split("\n"):
+                    line_stripped = line.strip()
+                    if not line_stripped or not has_math_unicode(line_stripped):
+                        continue
+
+                    latex_converted = unicode_to_latex(line_stripped)
+                    if latex_converted != line_stripped:
+                        formula_id = self._generate_asset_id(
+                            "formula", page_num, formula_index
+                        )
+                        extracted_formula = ExtractedFormula(
+                            id=formula_id,
+                            latex=latex_converted,
+                            formula_type="inline",
+                            page_number=page_num,
+                            description="Unicode math symbols detected",
+                        )
+                        formulas.append(extracted_formula)
+                        formula_index += 1
 
         except Exception as e:
             self.logger.error(
