@@ -291,9 +291,7 @@ def extract_page_data_selenium(
     result: Dict[str, Any] = {"title": driver.title, "content": {}}
 
     try:
-        meta_elem = driver.find_element(
-            By.CSS_SELECTOR, "meta[name='description']"
-        )
+        meta_elem = driver.find_element(By.CSS_SELECTOR, "meta[name='description']")
         result["meta_description"] = meta_elem.get_attribute("content")
     except NoSuchElementException:
         result["meta_description"] = None
@@ -323,17 +321,13 @@ async def extract_page_data_playwright(
     result: Dict[str, Any] = {"title": await page.title(), "content": {}}
 
     try:
-        meta_desc = await page.get_attribute(
-            "meta[name='description']", "content"
-        )
+        meta_desc = await page.get_attribute("meta[name='description']", "content")
         result["meta_description"] = meta_desc
     except Exception:
         result["meta_description"] = None
 
     if extract_config:
-        result["content"] = await extract_with_playwright_config(
-            page, extract_config
-        )
+        result["content"] = await extract_with_playwright_config(page, extract_config)
     else:
         default = await extract_default_content_playwright(page)
         result["content"]["text"] = default["text"]

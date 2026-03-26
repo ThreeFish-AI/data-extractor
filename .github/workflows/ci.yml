@@ -67,7 +67,8 @@ jobs:
       - name: Run pip-audit vulnerability scan
         run: |
           uv run pip-audit --format=json --output=audit-report.json || true
-          uv run pip-audit
+          # 忽略 CVE-2026-4539 (pygments)，暂无修复版本
+          uv run pip-audit --ignore-vuln CVE-2026-4539
 
       - name: Upload security reports
         uses: actions/upload-artifact@v7

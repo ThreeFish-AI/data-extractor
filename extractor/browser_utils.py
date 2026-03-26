@@ -169,9 +169,7 @@ async def stealth_selenium_session(
         if wait_for_element:
             try:
                 WebDriverWait(driver, settings.browser_timeout).until(
-                    EC.presence_of_element_located(
-                        (By.CSS_SELECTOR, wait_for_element)
-                    )
+                    EC.presence_of_element_located((By.CSS_SELECTOR, wait_for_element))
                 )
             except TimeoutException:
                 logger.warning(f"Timeout waiting for element: {wait_for_element}")

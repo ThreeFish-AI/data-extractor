@@ -10,7 +10,14 @@ from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
 from ..validation_trace import trace_event
-from ._registry import ScrapeMethod, app, markdown_converter, validate_url, ToolTimer, web_scraper
+from ._registry import (
+    ScrapeMethod,
+    app,
+    markdown_converter,
+    validate_url,
+    ToolTimer,
+    web_scraper,
+)
 
 logger = logging.getLogger(__name__)
 
