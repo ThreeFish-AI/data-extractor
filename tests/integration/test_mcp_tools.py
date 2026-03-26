@@ -9,8 +9,7 @@ import asyncio
 import gc
 import time
 import pytest
-import json
-from unittest.mock import patch, AsyncMock, Mock
+from unittest.mock import patch
 
 from extractor.server import app, web_scraper, anti_detection_scraper
 from extractor.scraper import WebScraper
@@ -589,7 +588,6 @@ class TestMCPToolRobustness:
     @pytest.mark.asyncio
     async def test_memory_and_resource_management(self):
         """Test that the system manages memory and resources properly."""
-        import gc
 
         # Get initial memory usage
         initial_objects = len(gc.get_objects())
@@ -624,7 +622,6 @@ class TestMCPToolPerformance:
     @pytest.mark.asyncio
     async def test_tool_registration_performance(self):
         """测试工具注册性能"""
-        import time
 
         start_time = time.time()
         tools = await app.list_tools()
@@ -638,7 +635,6 @@ class TestMCPToolPerformance:
     @pytest.mark.asyncio
     async def test_tool_access_performance(self):
         """测试工具访问性能"""
-        import time
 
         tool_names = [
             "scrape_webpage",

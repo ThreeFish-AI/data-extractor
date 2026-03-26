@@ -429,3 +429,61 @@ class TestUtilityFunctions:
         assert retry_manager is not None
         assert cache_manager is not None
         assert metrics_collector is not None
+
+
+class TestCacheInterface:
+    """cache.py 接口补充测试（步骤 3 新增）。"""
+
+    def test_cache_clear_returns_count(self):
+        """clear() 应返回被清除的条目数。"""
+        cm = CacheManager()
+        cm.set("url1", "m1", {"data": 1}, {})
+        cm.set("url2", "m2", {"data": 2}, {})
+        count = cm.clear()
+        assert count == 2
+        assert cm.size() == 0
+
+    def test_cache_clear_empty(self):
+        """空缓存 clear() 返回 0。"""
+        cm = CacheManager()
+        assert cm.clear() == 0
+
+    def test_cache_size(self):
+        """size() 应返回当前缓存条目数。"""
+        cm = CacheManager()
+        assert cm.size() == 0
+        cm.set("url", "method", {"data": 1}, {})
+        assert cm.size() == 1
+        cm.clear()
+        assert cm.size() == 0
+
+
+class TestMetricsFieldMapping:
+    """metrics.py 字段映射测试（步骤 4 新增）。"""
+
+    def test_get_stats_field_mapping(self):
+        """get_stats() 应包含 MetricsResponse 兼容字段。"""
+        mc = MetricsCollector()
+        mc.record_request("https://example.com", True, 500, "simple")
+        mc.record_request("https://example.com", True, 300, "simple")
+        stats = mc.get_stats()
+
+        # 兼容字段
+        assert "average_response_time" in stats
+        assert "method_usage" in stats
+
+        # average_response_time 应为秒
+        assert stats["average_response_time"] == stats["average_duration_ms"] / 1000.0
+
+        # method_usage 应与 methods_used 同源
+        assert stats["method_usage"] is stats["methods_used"]
+        assert stats["method_usage"]["simple"] == 2
+
+    def test_get_stats_success_rate(self):
+        """success_rate 计算准确。"""
+        mc = MetricsCollector()
+        mc.record_request("https://a.com", True, 100, "simple")
+        mc.record_request("https://b.com", False, 200, "simple", "timeout")
+        stats = mc.get_stats()
+        assert stats["success_rate"] == 0.5
+        assert stats["error_categories"]["timeout"] == 1

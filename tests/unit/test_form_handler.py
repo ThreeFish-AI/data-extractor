@@ -1,7 +1,7 @@
 """表单处理 (form_handler) 单元测试。"""
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, PropertyMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from extractor.form_handler import FormHandler
 

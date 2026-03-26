@@ -1,8 +1,9 @@
 """浏览器配置工具 (browser_utils) 单元测试。"""
 
 import pytest
+from unittest.mock import AsyncMock, Mock, patch
 
-from extractor.browser_utils import build_chrome_options
+from extractor.browser_utils import build_chrome_options, playwright_session, selenium_session
 
 
 class TestBuildChromeOptions:
@@ -104,3 +105,102 @@ class TestBuildChromeOptions:
         assert "--disable-extensions" in args
         assert any("--user-agent=TestBot/1.0" in a for a in args)
         assert "--proxy-server=http://localhost:3128" in args
+
+
+class TestSeleniumSession:
+    """selenium_session 上下文管理器测试（步骤 7 新增）。"""
+
+    @patch("selenium.webdriver.Chrome")
+    def test_yields_driver_and_quits(self, mock_chrome_cls):
+        """上下文管理器应 yield driver 并在退出时调用 quit()。"""
+        mock_driver = Mock()
+        mock_chrome_cls.return_value = mock_driver
+
+        with selenium_session("https://example.com") as driver:
+            assert driver is mock_driver
+            mock_driver.get.assert_called_once_with("https://example.com")
+
+        mock_driver.quit.assert_called_once()
+
+    @patch("selenium.webdriver.support.ui.WebDriverWait")
+    @patch("selenium.webdriver.Chrome")
+    def test_waits_for_element(self, mock_chrome_cls, mock_wait_cls):
+        """指定 wait_for_element 时应使用 WebDriverWait。"""
+        mock_driver = Mock()
+        mock_chrome_cls.return_value = mock_driver
+        mock_wait_instance = Mock()
+        mock_wait_cls.return_value = mock_wait_instance
+
+        with selenium_session("https://example.com", wait_for_element=".content") as driver:
+            assert driver is mock_driver
+
+        mock_wait_cls.assert_called_once()
+        mock_driver.quit.assert_called_once()
+
+    @patch("selenium.webdriver.Chrome")
+    def test_quits_on_exception(self, mock_chrome_cls):
+        """即使内部抛异常也应调用 quit()。"""
+        mock_driver = Mock()
+        mock_chrome_cls.return_value = mock_driver
+
+        with pytest.raises(RuntimeError):
+            with selenium_session("https://example.com"):
+                raise RuntimeError("test")
+
+        mock_driver.quit.assert_called_once()
+
+
+class TestPlaywrightSession:
+    """playwright_session 上下文管理器测试（步骤 7 新增）。"""
+
+    @staticmethod
+    def _setup_playwright_mocks():
+        """创建 Playwright mock 链：async_playwright().start() -> pw."""
+        mock_page = AsyncMock()
+        mock_context = AsyncMock()
+        mock_context.new_page.return_value = mock_page
+        mock_browser = AsyncMock()
+        mock_browser.new_context.return_value = mock_context
+        mock_pw = AsyncMock()
+        mock_pw.chromium.launch.return_value = mock_browser
+        # async_playwright() returns sync object, .start() is async
+        mock_instance = Mock()
+        mock_instance.start = AsyncMock(return_value=mock_pw)
+        return mock_instance, mock_pw, mock_browser, mock_page
+
+    @pytest.mark.asyncio
+    async def test_yields_page_and_closes(self):
+        """上下文管理器应 yield page 并在退出时关闭资源。"""
+        mock_instance, mock_pw, mock_browser, mock_page = self._setup_playwright_mocks()
+
+        with patch("playwright.async_api.async_playwright", return_value=mock_instance):
+            async with playwright_session("https://example.com") as page:
+                assert page is mock_page
+                mock_page.goto.assert_called_once()
+
+            mock_browser.close.assert_called_once()
+            mock_pw.stop.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_waits_for_selector(self):
+        """指定 wait_for_element 时应调用 wait_for_selector。"""
+        mock_instance, mock_pw, mock_browser, mock_page = self._setup_playwright_mocks()
+
+        with patch("playwright.async_api.async_playwright", return_value=mock_instance):
+            async with playwright_session("https://example.com", wait_for_element="#app"):
+                pass
+
+            mock_page.wait_for_selector.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_closes_on_exception(self):
+        """即使内部抛异常也应关闭资源。"""
+        mock_instance, mock_pw, mock_browser, mock_page = self._setup_playwright_mocks()
+
+        with patch("playwright.async_api.async_playwright", return_value=mock_instance):
+            with pytest.raises(RuntimeError):
+                async with playwright_session("https://example.com"):
+                    raise RuntimeError("test")
+
+            mock_browser.close.assert_called_once()
+            mock_pw.stop.assert_called_once()

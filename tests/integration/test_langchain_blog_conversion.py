@@ -54,13 +54,13 @@ async def test_langchain_blog_conversion():
                 lines = markdown.split("\n")
                 empty_lines = [i for i, line in enumerate(lines) if line.strip() == ""]
 
-                print(f"✅ Conversion successful!")
+                print("✅ Conversion successful!")
                 print(f"   Total lines: {len(lines)}")
                 print(f"   Empty lines: {len(empty_lines)}")
                 print(f"   Total chars: {len(markdown)}")
 
                 # Show first few lines to check structure
-                print(f"\nFirst 10 lines:")
+                print("\nFirst 10 lines:")
                 for i, line in enumerate(lines[:10]):
                     print(f"  {i:2d}: {repr(line[:80])}")
 
@@ -83,7 +83,7 @@ async def test_langchain_blog_conversion():
 
                 # Show a sample middle section
                 if len(lines) > 50:
-                    print(f"\nSample from middle (lines 25-35):")
+                    print("\nSample from middle (lines 25-35):")
                     for i in range(25, min(35, len(lines))):
                         print(f"  {i:2d}: {repr(lines[i][:80])}")
 
@@ -93,7 +93,7 @@ async def test_langchain_blog_conversion():
         except Exception as e:
             print(f"❌ Error with {method}: {str(e)}")
 
-    print(f"\n🏁 Testing complete!")
+    print("\n🏁 Testing complete!")
 
 
 if __name__ == "__main__":

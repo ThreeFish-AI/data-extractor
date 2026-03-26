@@ -41,7 +41,7 @@
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from bs4 import BeautifulSoup
 
 from extractor.markdown.converter import MarkdownConverter

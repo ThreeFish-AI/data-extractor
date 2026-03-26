@@ -9,7 +9,6 @@
 - extract_default_content_playwright (Playwright)
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, MagicMock
 from bs4 import BeautifulSoup
 
