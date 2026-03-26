@@ -47,6 +47,11 @@ dependencies = [
     "setuptools>=82.0.0",  # undetected-chromedriver 依赖 distutils（Python 3.12+ 已移除）
 ]
 
+[project.optional-dependencies]
+formula = [
+    "docling>=2.70.0",
+]
+
 [project.scripts]
 mcp-data-extractor = "extractor.server:main"
 

@@ -37,6 +37,9 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
         for comment in comments:
             comment.extract()
 
+        # Preserve math elements (MathJax, KaTeX, MathML) BEFORE removing scripts
+        _preserve_math_elements(soup)
+
         # Remove unwanted elements that typically don't contain main content
         unwanted_tags = [
             "script",
@@ -361,3 +364,89 @@ def build_html_from_text(text_content: str, title: str, content_data: Dict) -> s
     except Exception as e:
         logger.warning(f"Error building HTML from text: {str(e)}")
         return f"<html><body><p>{text_content}</p></body></html>"
+
+
+def _preserve_math_elements(soup: BeautifulSoup) -> None:
+    """保护 HTML 中的数学元素，将其转换为 LaTeX 文本以避免被清理掉。
+
+    支持：
+    - MathJax: ``<script type="math/tex">`` → 提取 LaTeX 源码
+    - MathJax 渲染输出: ``.MathJax`` 容器 → 从 annotation 提取 LaTeX
+    - KaTeX: ``.katex`` 容器 → 从 annotation 提取 LaTeX
+    - MathML: ``<math>`` 标签 → 从 annotation 提取 LaTeX，否则保留
+    """
+    from bs4 import NavigableString, Tag
+
+    # 1. MathJax <script type="math/tex"> 或 <script type="math/tex; mode=display">
+    for script in soup.find_all("script", type=re.compile(r"math/tex")):
+        latex = script.string or ""
+        latex = latex.strip()
+        if not latex:
+            continue
+        script_type = script.get("type", "")
+        if "display" in script_type:
+            replacement = soup.new_tag("span")
+            replacement.string = f"$${latex}$$"
+        else:
+            replacement = soup.new_tag("span")
+            replacement.string = f"${latex}$"
+        script.replace_with(replacement)
+
+    # 2. MathJax 渲染容器 (.MathJax, .MathJax_Display, .MathJax_Preview)
+    for container in soup.find_all(class_=re.compile(r"MathJax")):
+        latex = _extract_latex_from_annotation(container)
+        if latex:
+            replacement = soup.new_tag("span")
+            # 判断是否为 display 模式
+            classes = container.get("class", [])
+            is_display = any("Display" in c or "display" in c for c in classes)
+            if is_display:
+                replacement.string = f"$${latex}$$"
+            else:
+                replacement.string = f"${latex}$"
+            container.replace_with(replacement)
+
+    # 3. KaTeX 容器 (.katex, .katex-display)
+    for container in soup.find_all(class_=re.compile(r"katex")):
+        latex = _extract_latex_from_annotation(container)
+        if latex:
+            replacement = soup.new_tag("span")
+            classes = container.get("class", [])
+            is_display = any("display" in c for c in classes)
+            if is_display:
+                replacement.string = f"$${latex}$$"
+            else:
+                replacement.string = f"${latex}$"
+            container.replace_with(replacement)
+
+    # 4. MathML <math> 标签
+    for math_elem in soup.find_all("math"):
+        latex = _extract_latex_from_annotation(math_elem)
+        if latex:
+            replacement = soup.new_tag("span")
+            display = math_elem.get("display", "")
+            if display == "block":
+                replacement.string = f"$${latex}$$"
+            else:
+                replacement.string = f"${latex}$"
+            math_elem.replace_with(replacement)
+
+
+def _extract_latex_from_annotation(element) -> Optional[str]:  # noqa: ANN001
+    """从 MathML/MathJax/KaTeX 容器中提取 LaTeX annotation。
+
+    查找 ``<annotation encoding="application/x-tex">`` 或
+    ``<annotation encoding="application/x-latex">`` 元素。
+    """
+    if element is None:
+        return None
+
+    # 查找 annotation 元素
+    for annotation in element.find_all("annotation"):
+        encoding = annotation.get("encoding", "")
+        if "tex" in encoding.lower() or "latex" in encoding.lower():
+            latex = annotation.string
+            if latex:
+                return latex.strip()
+
+    return None

@@ -290,21 +290,30 @@ class MarkdownFormatter:
             return markdown_content
 
     def _apply_typography_fixes(self, markdown_content: str) -> str:
-        """Apply typography improvements."""
+        """Apply typography improvements.
+
+        使用 extract-process-restore 模式保护 LaTeX 数学内容，
+        防止排版修正破坏公式中的空格和标点。
+        """
         try:
-            markdown_content = re.sub(r"(?<!\-)\-\-(?!\-)", "\u2014", markdown_content)
+            from ..pdf.math_formula import protect_math_content
 
-            lines = markdown_content.split("\n")
-            fixed_lines = []
-            for line in lines:
-                line = re.sub(r" {2,}", " ", line)
-                fixed_lines.append(line)
-            markdown_content = "\n".join(fixed_lines)
+            def _typography_inner(text: str) -> str:
+                text = re.sub(r"(?<!\-)\-\-(?!\-)", "\u2014", text)
 
-            markdown_content = re.sub(r"\s+([.!?:;,])", r"\1", markdown_content)
-            markdown_content = re.sub(r"([.!?])\s*([A-Z])", r"\1 \2", markdown_content)
+                lines = text.split("\n")
+                fixed_lines = []
+                for line in lines:
+                    line = re.sub(r" {2,}", " ", line)
+                    fixed_lines.append(line)
+                text = "\n".join(fixed_lines)
 
-            return markdown_content
+                text = re.sub(r"\s+([.!?:;,])", r"\1", text)
+                text = re.sub(r"([.!?])\s*([A-Z])", r"\1 \2", text)
+
+                return text
+
+            return protect_math_content(markdown_content, _typography_inner)
         except Exception as e:
             logger.warning(f"Error applying typography fixes: {str(e)}")
             return markdown_content
