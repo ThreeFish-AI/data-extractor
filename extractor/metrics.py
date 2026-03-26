@@ -59,6 +59,9 @@ class MetricsCollector:
         stats["average_duration_ms"] = self.metrics["total_duration_ms"] / max(
             1, self.metrics["total_requests"]
         )
+        # 兼容 MetricsResponse schema 的字段名
+        stats["average_response_time"] = stats["average_duration_ms"] / 1000.0
+        stats["method_usage"] = stats["methods_used"]
         return stats
 
     def reset(self) -> None:

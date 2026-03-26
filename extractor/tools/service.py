@@ -74,16 +74,14 @@ async def clear_cache() -> CacheOperationResponse:
     """
     try:
         start_time = time.time()
-        cache_size_before = (
-            cache_manager.size() if hasattr(cache_manager, "size") else 0
-        )
+        cache_size_before = cache_manager.size()
         cleared_items = cache_manager.clear()
         cache_size_after = 0
         operation_time = time.time() - start_time
 
         return CacheOperationResponse(
             success=True,
-            cleared_items=cleared_items if isinstance(cleared_items, int) else 0,
+            cleared_items=cleared_items,
             cache_size_before=cache_size_before,
             cache_size_after=cache_size_after,
             operation_time=operation_time,

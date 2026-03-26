@@ -36,7 +36,7 @@ async def check_robots_txt(
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
 
         # Scrape robots.txt
-        result = await web_scraper.simple_scraper.scrape(robots_url, extract_config={})
+        result = await web_scraper.http_scraper.scrape(robots_url, extract_config={})
 
         if "error" in result:
             return RobotsResponse(

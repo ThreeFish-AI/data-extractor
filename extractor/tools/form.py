@@ -5,14 +5,12 @@ from typing import Annotated, Any, Dict, Optional
 
 from pydantic import Field
 
-from ..browser_utils import build_chrome_options
-from ..config import settings
+from ..browser_utils import playwright_session, selenium_session
 from ..form_handler import FormHandler
 from ..rate_limiter import rate_limiter
 from ..schemas import ScrapeResponse
-from ..url_utils import URLValidator
 from ..validation_trace import trace_event
-from ._registry import app, ToolTimer
+from ._registry import app, validate_url, ToolTimer
 
 logger = logging.getLogger(__name__)
 
@@ -81,12 +79,13 @@ async def fill_and_submit_form(
     timer = ToolTimer(url, method_key)
     try:
         # Validate inputs
-        if not URLValidator.is_valid_url(url):
+        url_error = validate_url(url)
+        if url_error:
             return ScrapeResponse(
                 success=False,
                 url=url,
                 method=method,
-                error="Invalid URL format",
+                error=url_error,
             )
 
         if method not in ["selenium", "playwright"]:
@@ -113,34 +112,13 @@ async def fill_and_submit_form(
 
         # Setup browser based on method
         if method == "selenium":
-            from selenium import webdriver
-
-            options = build_chrome_options(headless=settings.browser_headless)
-            driver = webdriver.Chrome(options=options)
-            try:
-                driver.get(url)
-
-                # Wait for element if specified
-                if wait_for_element:
-                    from selenium.webdriver.common.by import By
-                    from selenium.webdriver.support import expected_conditions as EC
-                    from selenium.webdriver.support.ui import WebDriverWait
-
-                    WebDriverWait(driver, settings.browser_timeout).until(
-                        EC.presence_of_element_located(
-                            (By.CSS_SELECTOR, wait_for_element)
-                        )
-                    )
-
-                # Fill and submit form
+            with selenium_session(url, wait_for_element=wait_for_element) as driver:
                 form_handler = FormHandler(driver)
                 result = await form_handler.fill_form(
                     form_data=form_data,
                     submit=submit,
                     submit_button_selector=submit_button_selector,
                 )
-
-                # Get final page info
                 final_url = driver.current_url
                 final_title = driver.title
                 trace_event(
@@ -150,38 +128,16 @@ async def fill_and_submit_form(
                     final_url=final_url,
                 )
 
-            finally:
-                driver.quit()
-
         elif method == "playwright":
-            from playwright.async_api import async_playwright
-
-            playwright = await async_playwright().start()
-            try:
-                browser = await playwright.chromium.launch(
-                    headless=settings.browser_headless
-                )
-                context = await browser.new_context()
-                page = await context.new_page()
-
-                await page.goto(url, timeout=60000)
-
-                # Wait for element if specified
-                if wait_for_element:
-                    await page.wait_for_selector(
-                        wait_for_element,
-                        timeout=settings.browser_timeout * 1000,
-                    )
-
-                # Fill and submit form
+            async with playwright_session(
+                url, wait_for_element=wait_for_element
+            ) as page:
                 form_handler = FormHandler(page)
                 result = await form_handler.fill_form(
                     form_data=form_data,
                     submit=submit,
                     submit_button_selector=submit_button_selector,
                 )
-
-                # Get final page info
                 final_url = page.url
                 final_title = await page.title()
                 trace_event(
@@ -190,10 +146,6 @@ async def fill_and_submit_form(
                     success=bool(result.get("success")),
                     final_url=final_url,
                 )
-
-            finally:
-                await browser.close()
-                await playwright.stop()
 
         if result.get("success"):
             timer.record_success()

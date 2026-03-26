@@ -71,7 +71,6 @@ async def scrape_webpage(
         trace_event("scrape_webpage", "input_validated", url=url, method=method)
 
         # Validate extract_config if provided
-        parsed_extract_config = None
         if extract_config:
             if not isinstance(extract_config, dict):
                 return ScrapeResponse(
@@ -80,17 +79,16 @@ async def scrape_webpage(
                     method=method,
                     error="extract_config must be a dictionary",
                 )
-            parsed_extract_config = extract_config
             trace_event(
                 "scrape_webpage",
                 "extract_config_received",
-                field_count=len(parsed_extract_config),
+                field_count=len(extract_config),
             )
 
         result = await web_scraper.scrape_url(
             url=url,
             method=method,
-            extract_config=parsed_extract_config,
+            extract_config=extract_config,
             wait_for_element=wait_for_element,
         )
         trace_event(
@@ -170,23 +168,20 @@ async def scrape_multiple_webpages(
         logger.info(f"Scraping {len(urls)} webpages with method: {method}")
 
         # Validate extract_config if provided
-        parsed_extract_config = None
-        if extract_config:
-            if not isinstance(extract_config, dict):
-                return BatchScrapeResponse(
-                    success=False,
-                    total_urls=len(urls),
-                    successful_count=0,
-                    failed_count=len(urls),
-                    results=[],
-                    summary={"error": "extract_config must be a dictionary"},
-                )
-            parsed_extract_config = extract_config
+        if extract_config and not isinstance(extract_config, dict):
+            return BatchScrapeResponse(
+                success=False,
+                total_urls=len(urls),
+                successful_count=0,
+                failed_count=len(urls),
+                results=[],
+                summary={"error": "extract_config must be a dictionary"},
+            )
 
         results = await web_scraper.scrape_multiple_urls(
             urls=urls,
             method=method,
-            extract_config=parsed_extract_config,
+            extract_config=extract_config,
         )
 
         # Convert results to ScrapeResponse objects
