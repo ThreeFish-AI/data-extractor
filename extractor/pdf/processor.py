@@ -12,6 +12,12 @@ import asyncio
 import aiohttp
 
 from .enhanced import EnhancedPDFProcessor, ExtractedImage, ExtractedTable
+from ..markdown.algorithm_detector import (
+    _compute_algorithm_score,
+    is_algorithm_block,
+    detect_algorithm_regions,
+    wrap_as_code_fence,
+)
 
 
 # 延迟导入 PDF 处理库，避免启动时的 SWIG 警告
@@ -407,9 +413,35 @@ class PDFProcessor:
                 page_image_map = self._page_image_maps.get(page_num, {})
                 page_table_map = self._page_table_maps.get(page_num, {})
 
-                # Pre-compute which text blocks overlap with table regions
+                # Pre-compute which text blocks overlap with table regions.
+                # 算法/伪代码块优先于表格检测：若表格区域与算法文本块重叠，
+                # 则移除该表格区域（避免将算法内容拆解为表格列）。
                 table_block_nos = set()
                 if page_table_map:
+                    # 收集算法文本块的 bbox
+                    algo_bboxes = []
+                    for block in blocks:
+                        if block[6] == 0:
+                            text = block[4].strip()
+                            if text and is_algorithm_block(text):
+                                algo_bboxes.append(
+                                    (block[0], block[1], block[2], block[3])
+                                )
+
+                    # 过滤与算法块重叠的表格区域
+                    if algo_bboxes:
+                        filtered = {}
+                        for tbbox, table in page_table_map.items():
+                            tx0, ty0, tx1, ty1 = tbbox
+                            overlaps_algo = any(
+                                min(ax1, tx1) > max(ax0, tx0)
+                                and min(ay1, ty1) > max(ay0, ty0)
+                                for ax0, ay0, ax1, ay1 in algo_bboxes
+                            )
+                            if not overlaps_algo:
+                                filtered[tbbox] = table
+                        page_table_map = filtered
+
                     for block in blocks:
                         if block[6] == 0:  # text block
                             bx0, by0, bx1, by1 = (
@@ -437,10 +469,14 @@ class PDFProcessor:
                             continue  # Skip text covered by a table
                         block_text = block[4].strip()
                         if block_text:
-                            # Merge line breaks within a block into spaces
-                            # (intra-paragraph line wraps from PDF layout)
-                            block_text = re.sub(r"\n+", " ", block_text)
-                            page_elements.append((block[1], block_text))
+                            if is_algorithm_block(block_text):
+                                # 算法/伪代码块：保留行结构
+                                page_elements.append((block[1], block_text))
+                            else:
+                                # Merge line breaks within a block into spaces
+                                # (intra-paragraph line wraps from PDF layout)
+                                block_text = re.sub(r"\n+", " ", block_text)
+                                page_elements.append((block[1], block_text))
 
                     elif block[6] == 1 and page_image_map:  # image block
                         if block_no in page_image_map:
@@ -563,8 +599,16 @@ class PDFProcessor:
 
             converter = MarkdownConverter()
 
+            # 预处理：检测跨段落的算法区域并合并为代码围栏
+            text = self._merge_algorithm_regions(text)
+
             # Split text into paragraphs and wrap each in <p> tags
-            # so MarkItDown can properly convert paragraph structure
+            # so MarkItDown can properly convert paragraph structure.
+            # 算法代码围栏使用 UUID 占位符绕过 MarkItDown（避免标签丢失），
+            # 转换后再还原。
+            import uuid as _uuid
+
+            algo_placeholders: dict = {}
             paragraphs = text.split("\n\n")
             html_parts = []
             for p in paragraphs:
@@ -582,6 +626,17 @@ class PDFProcessor:
                 ):
                     # Preserve inline markdown tables as-is
                     html_parts.append(p)
+                elif p.startswith("```algorithm\n"):
+                    # _merge_algorithm_regions 产生的算法围栏：用占位符绕过 MarkItDown
+                    placeholder = f"ALGOPH{_uuid.uuid4().hex[:16]}"
+                    algo_placeholders[placeholder] = p
+                    html_parts.append(f"<p>{placeholder}</p>")
+                elif is_algorithm_block(p) and _compute_algorithm_score(p) >= 7:
+                    # 独立算法/伪代码块：使用更高阈值避免普通段落误判
+                    fence = wrap_as_code_fence(p)
+                    placeholder = f"ALGOPH{_uuid.uuid4().hex[:16]}"
+                    algo_placeholders[placeholder] = fence
+                    html_parts.append(f"<p>{placeholder}</p>")
                 else:
                     # Merge intra-paragraph line breaks into spaces
                     p_clean = p.replace("\n", " ")
@@ -591,6 +646,10 @@ class PDFProcessor:
 
             # Use MarkItDown through the converter
             result = converter.html_to_markdown(html_content)
+
+            # 还原算法代码围栏占位符
+            for placeholder, fence in algo_placeholders.items():
+                result = result.replace(placeholder, fence)
 
             # Check if the result has proper markdown formatting (headers, structure)
             # If not, fall back to our simple conversion which is better for PDFs
@@ -608,6 +667,45 @@ class PDFProcessor:
             )
             # Fallback to the simple conversion method
             return self._simple_markdown_conversion(text)
+
+    def _merge_algorithm_regions(self, text: str) -> str:
+        """检测并合并跨段落的算法区域为代码围栏。
+
+        PDF 提取中，一个算法块可能被拆分为多个段落（标题、Require/Ensure、编号行），
+        此方法将它们合并为单个代码围栏。
+        """
+        regions = detect_algorithm_regions(text)
+        if not regions:
+            return text
+
+        paragraphs = text.split("\n\n")
+        # 标记哪些段落属于算法区域
+        merged_indices: set = set()
+        insertions: dict = {}  # {start_idx: code_fence_text}
+
+        for region in regions:
+            for idx in range(region.start_idx, region.end_idx):
+                merged_indices.add(idx)
+            # 合并区域内的段落并包装为代码围栏
+            region_paragraphs = []
+            for idx in range(region.start_idx, region.end_idx):
+                if idx < len(paragraphs):
+                    p = paragraphs[idx].strip()
+                    if p and not p.startswith("<!--"):
+                        region_paragraphs.append(p)
+            if region_paragraphs:
+                merged_content = "\n".join(region_paragraphs)
+                insertions[region.start_idx] = wrap_as_code_fence(merged_content)
+
+        # 重组段落
+        result_parts = []
+        for i, p in enumerate(paragraphs):
+            if i in insertions:
+                result_parts.append(insertions[i])
+            elif i not in merged_indices:
+                result_parts.append(p)
+
+        return "\n\n".join(result_parts)
 
     def _simple_markdown_conversion(self, text: str) -> str:
         """Simple fallback markdown conversion with paragraph grouping."""
@@ -651,9 +749,14 @@ class PDFProcessor:
                 else:
                     result_paragraphs.append(line)
             else:
-                # Merge multiple lines into a single paragraph
-                merged = " ".join(lines)
-                result_paragraphs.append(merged)
+                # 检测算法/伪代码块，保留行结构
+                raw_text = "\n".join(lines)
+                if is_algorithm_block(raw_text) and _compute_algorithm_score(raw_text) >= 7:
+                    result_paragraphs.append(wrap_as_code_fence(raw_text))
+                else:
+                    # Merge multiple lines into a single paragraph
+                    merged = " ".join(lines)
+                    result_paragraphs.append(merged)
 
         return "\n\n".join(result_paragraphs)
 
@@ -678,6 +781,10 @@ class PDFProcessor:
         """
         # If text already has double-newlines, it has paragraph structure
         if "\n\n" in text:
+            return text
+
+        # 算法/伪代码块不应被段落拆分
+        if is_algorithm_block(text):
             return text
 
         lines = text.split("\n")

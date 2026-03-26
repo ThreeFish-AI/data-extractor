@@ -24,6 +24,14 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
     try:
         soup = BeautifulSoup(html_content, "html.parser")
 
+        # 收集 <pre>/<code>/<samp> 元素及其所有后代的引用，
+        # 确保代码内容在清理阶段不被意外删除
+        protected_ids: set = set()
+        for pre in soup.find_all(["pre", "code", "samp"]):
+            protected_ids.add(id(pre))
+            for descendant in pre.descendants:
+                protected_ids.add(id(descendant))
+
         # Remove comments
         comments = soup.find_all(string=lambda text: isinstance(text, Comment))
         for comment in comments:
@@ -42,7 +50,8 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
         ]
         for tag in unwanted_tags:
             for element in soup.find_all(tag):
-                element.decompose()
+                if id(element) not in protected_ids:
+                    element.decompose()
 
         # Remove elements with specific classes/ids commonly used for ads/navigation
         unwanted_patterns = [
@@ -51,9 +60,11 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
 
         for pattern in unwanted_patterns:
             for element in soup.find_all(class_=pattern):
-                element.decompose()
+                if id(element) not in protected_ids:
+                    element.decompose()
             for element in soup.find_all(id=pattern):
-                element.decompose()
+                if id(element) not in protected_ids:
+                    element.decompose()
 
         # Convert relative URLs to absolute if base_url is provided
         if base_url:
