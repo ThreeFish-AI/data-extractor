@@ -3,7 +3,8 @@
 import logging
 import os
 import re
-from typing import Dict, Optional
+import uuid
+from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,9 @@ class MarkdownFormatter:
             Enhanced and cleaned up Markdown content
         """
         try:
+            # 保护代码块内容不被格式化 pass 修改
+            markdown_content, protected = self._protect_code_blocks(markdown_content)
+
             if self.options.get("format_tables", True):
                 markdown_content = self._format_tables(markdown_content)
 
@@ -64,11 +68,46 @@ class MarkdownFormatter:
 
             markdown_content = self._basic_cleanup(markdown_content)
 
+            # 还原被保护的代码块
+            markdown_content = self._restore_code_blocks(markdown_content, protected)
+
             return markdown_content
 
         except Exception as e:
             logger.warning(f"Error post-processing Markdown: {str(e)}")
             return markdown_content
+
+    def _protect_code_blocks(
+        self, markdown_content: str
+    ) -> Tuple[str, Dict[str, str]]:
+        """提取已标注语言的代码块并替换为占位符，防止格式化管线修改其内容。
+
+        仅保护已有语言标签的代码块（如 ```python, ```algorithm），
+        未标注语言的代码块留给 _format_code_blocks 进行语言检测。
+        """
+        protected: Dict[str, str] = {}
+
+        def _replacer(match: re.Match) -> str:
+            placeholder = f"%%CODEBLOCK_{uuid.uuid4().hex[:12]}%%"
+            protected[placeholder] = match.group(0)
+            return placeholder
+
+        # 仅匹配带语言标签的代码块（```后紧跟字母）
+        result = re.sub(
+            r"^```[a-zA-Z][^\n]*\n.*?^```\s*$",
+            _replacer,
+            markdown_content,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        return result, protected
+
+    def _restore_code_blocks(
+        self, markdown_content: str, protected: Dict[str, str]
+    ) -> str:
+        """将占位符还原为原始代码块内容。"""
+        for placeholder, original in protected.items():
+            markdown_content = markdown_content.replace(placeholder, original)
+        return markdown_content
 
     def _format_tables(self, markdown_content: str) -> str:
         """Format and align Markdown tables."""
