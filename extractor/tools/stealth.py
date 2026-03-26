@@ -12,7 +12,7 @@ from ..retry import retry_manager
 from ..schemas import ScrapeResponse
 from ..text_utils import TextCleaner
 from ..url_utils import URLValidator
-from ._registry import app, anti_detection_scraper, ToolTimer
+from ._registry import app, anti_detection_scraper, validate_url, ToolTimer
 
 logger = logging.getLogger(__name__)
 
@@ -78,12 +78,13 @@ async def scrape_with_stealth(
     timer = ToolTimer(url, method_key)
     try:
         # Validate inputs
-        if not URLValidator.is_valid_url(url):
+        url_error = validate_url(url)
+        if url_error:
             return ScrapeResponse(
                 success=False,
                 url=url,
                 method=method,
-                error="Invalid URL format",
+                error=url_error,
             )
 
         if method not in ["selenium", "playwright"]:
@@ -112,8 +113,12 @@ async def scrape_with_stealth(
         cached_result = cache_manager.get(normalized_url, method_key, cache_key_data)
         if cached_result:
             logger.info(f"Returning cached result for {normalized_url}")
-            cached_result["from_cache"] = True
-            return cached_result
+            return ScrapeResponse(
+                success=True,
+                url=url,
+                method=method_key,
+                data=cached_result,
+            )
 
         # Validate and normalize extract config
         if extract_config:
@@ -139,13 +144,12 @@ async def scrape_with_stealth(
             # Cache successful result
             cache_manager.set(normalized_url, method_key, result, cache_key_data)
 
+            timer.record_success()
             return ScrapeResponse(
                 success=True,
                 url=url,
                 method=method_key,
                 data=result,
-                duration_ms=timer.record_success(),
-                from_cache=False,
             )
         else:
             return ScrapeResponse(

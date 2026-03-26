@@ -9,7 +9,6 @@ from pydantic import Field
 from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
-from ..timing import timing_decorator
 from ..validation_trace import trace_event
 from ._registry import app, create_pdf_processor, ToolTimer, validate_page_range
 
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 @app.tool()
-@timing_decorator
 async def convert_pdf_to_markdown(
     pdf_source: Annotated[
         str,
@@ -222,7 +220,6 @@ async def convert_pdf_to_markdown(
 
 
 @app.tool()
-@timing_decorator
 async def batch_convert_pdfs_to_markdown(
     pdf_sources: Annotated[
         List[str],

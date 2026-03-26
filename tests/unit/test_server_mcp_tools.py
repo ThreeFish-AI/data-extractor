@@ -184,7 +184,7 @@ class TestMCPToolsInformation:
                 "title": "Test Page",
                 "meta_description": "A test page",
             }
-            mock_scraper.simple_scraper.scrape = AsyncMock(return_value=mock_result)
+            mock_scraper.http_scraper.scrape = AsyncMock(return_value=mock_result)
 
             # Using individual parameter
             result = await get_page_info(url="https://example.com")
@@ -198,7 +198,7 @@ class TestMCPToolsInformation:
         """测试robots.txt检查成功"""
         with patch("extractor.tools.utility.web_scraper") as mock_scraper:
             mock_result = {"content": {"text": "User-agent: *\nDisallow: /admin/"}}
-            mock_scraper.simple_scraper.scrape = AsyncMock(return_value=mock_result)
+            mock_scraper.http_scraper.scrape = AsyncMock(return_value=mock_result)
 
             # Using individual parameter
             result = await check_robots_txt(url="https://example.com")
@@ -211,7 +211,7 @@ class TestMCPToolsInformation:
     async def test_check_robots_txt_not_found(self):
         """测试robots.txt不存在"""
         with patch("extractor.tools.utility.web_scraper") as mock_scraper:
-            mock_scraper.simple_scraper.scrape = AsyncMock(
+            mock_scraper.http_scraper.scrape = AsyncMock(
                 return_value={"error": "404 Not Found"}
             )
 
@@ -256,19 +256,53 @@ class TestMCPToolsAdvanced:
             assert result.data == mock_result
 
     @pytest.mark.asyncio
-    async def test_fill_and_submit_form_success(self):
-        """测试表单填写成功"""
+    async def test_scrape_with_stealth_cache_returns_response(self):
+        """缓存命中时应返回 ScrapeResponse 而非 raw dict（步骤 6 新增）。"""
+        from extractor.schemas import ScrapeResponse
+
         with (
-            patch("extractor.tools.form.rate_limiter") as mock_limiter,
-            patch("selenium.webdriver.Chrome") as mock_driver,
-            patch("extractor.tools.form.settings") as mock_settings,
+            patch("extractor.tools.stealth.rate_limiter") as mock_limiter,
+            patch("extractor.tools.stealth.cache_manager") as mock_cache,
         ):
             mock_limiter.wait = AsyncMock()
-            mock_settings.browser_headless = True
-            mock_settings.browser_timeout = 10
+            cached_data = {
+                "content": {"text": "Cached content"},
+                "status_code": 200,
+            }
+            mock_cache.get.return_value = cached_data
 
-            mock_driver_instance = Mock()
-            mock_driver.return_value = mock_driver_instance
+            result = await scrape_with_stealth(
+                url="https://example.com",
+                method="selenium",
+                extract_config=None,
+                wait_for_element=None,
+                scroll_page=False,
+            )
+
+            assert isinstance(result, ScrapeResponse)
+            assert result.success is True
+            assert result.data == cached_data
+
+    @pytest.mark.asyncio
+    async def test_fill_and_submit_form_success(self):
+        """测试表单填写成功"""
+        mock_driver = Mock()
+        mock_driver.current_url = "https://example.com/form"
+        mock_driver.title = "Form Page"
+
+        with (
+            patch("extractor.tools.form.rate_limiter") as mock_limiter,
+            patch(
+                "extractor.tools.form.selenium_session",
+            ) as mock_session,
+            patch("extractor.tools.form.FormHandler") as mock_handler_cls,
+        ):
+            mock_limiter.wait = AsyncMock()
+            mock_session.return_value.__enter__ = Mock(return_value=mock_driver)
+            mock_session.return_value.__exit__ = Mock(return_value=False)
+            mock_handler_cls.return_value.fill_form = AsyncMock(
+                return_value={"success": True}
+            )
 
             result = await fill_and_submit_form(
                 url="https://example.com/form",
@@ -279,8 +313,8 @@ class TestMCPToolsAdvanced:
                 wait_for_element=None,
             )
 
-            # 由于复杂的浏览器交互，这里主要测试参数验证
-            assert hasattr(result, "success")
+            assert result.success is True
+            assert result.data["final_url"] == "https://example.com/form"
 
     @pytest.mark.asyncio
     async def test_extract_structured_data_success(self):
@@ -341,7 +375,8 @@ class TestMCPToolsServer:
     async def test_clear_cache_success(self):
         """测试缓存清理成功"""
         with patch("extractor.tools.service.cache_manager") as mock_cache:
-            mock_cache.clear.return_value = None
+            mock_cache.clear.return_value = 5
+            mock_cache.size.return_value = 5
 
             result = await clear_cache()
 

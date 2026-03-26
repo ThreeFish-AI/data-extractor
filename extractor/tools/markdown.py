@@ -3,22 +3,19 @@
 import logging
 import time
 from typing import Annotated, Any, Dict, List, Optional
-from urllib.parse import urlparse
 
 from pydantic import Field
 
 from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
-from ..timing import timing_decorator
 from ..validation_trace import trace_event
-from ._registry import app, markdown_converter, ToolTimer, web_scraper
+from ._registry import app, markdown_converter, validate_url, ToolTimer, web_scraper
 
 logger = logging.getLogger(__name__)
 
 
 @app.tool()
-@timing_decorator
 async def convert_webpage_to_markdown(
     url: Annotated[
         str,
@@ -108,13 +105,13 @@ async def convert_webpage_to_markdown(
     timer = ToolTimer(url, method_key)
     try:
         # Validate inputs
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
+        url_error = validate_url(url)
+        if url_error:
             return MarkdownResponse(
                 success=False,
                 url=url,
                 method=method,
-                error="Invalid URL format",
+                error=url_error,
                 conversion_time=0,
             )
 
@@ -217,7 +214,6 @@ async def convert_webpage_to_markdown(
 
 
 @app.tool()
-@timing_decorator
 async def batch_convert_webpages_to_markdown(
     urls: Annotated[
         List[str],
@@ -305,8 +301,8 @@ async def batch_convert_webpages_to_markdown(
             )
 
         for url in urls:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.netloc:
+            url_error = validate_url(url)
+            if url_error:
                 return BatchMarkdownResponse(
                     success=False,
                     total_urls=0,

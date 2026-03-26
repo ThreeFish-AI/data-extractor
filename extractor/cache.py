@@ -72,10 +72,16 @@ class CacheManager:
         oldest_key = min(self.timestamps.keys(), key=lambda k: self.timestamps[k])
         self._remove(oldest_key)
 
-    def clear(self) -> None:
-        """Clear all cache."""
+    def clear(self) -> int:
+        """Clear all cache. Returns number of cleared items."""
+        count = len(self.cache)
         self.cache.clear()
         self.timestamps.clear()
+        return count
+
+    def size(self) -> int:
+        """Return current number of cached items."""
+        return len(self.cache)
 
     def stats(self) -> Dict[str, Any]:
         """Get cache statistics."""

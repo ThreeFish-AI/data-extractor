@@ -174,7 +174,7 @@ async def get_page_info(
         logger.info(f"Getting page info for: {url}")
 
         # Use simple scraper for quick info
-        result = await web_scraper.simple_scraper.scrape(url, extract_config={})
+        result = await web_scraper.http_scraper.scrape(url, extract_config={})
 
         if "error" in result:
             return PageInfoResponse(
@@ -236,8 +236,9 @@ async def extract_structured_data(
     """
     try:
         # Validate inputs
-        if not URLValidator.is_valid_url(url):
-            raise ValueError("Invalid URL format")
+        url_error = validate_url(url)
+        if url_error:
+            raise ValueError(url_error)
 
         valid_types = ["all", "contact", "social", "content", "products", "addresses"]
         if data_type not in valid_types:

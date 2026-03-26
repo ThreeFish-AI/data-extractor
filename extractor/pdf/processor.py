@@ -394,9 +394,7 @@ class PDFProcessor:
                             page_paragraphs.append(block_text)
                 if page_paragraphs:
                     page_text = "\n\n".join(page_paragraphs)
-                    text_content.append(
-                        f"<!-- Page {page_num + 1} -->\n\n{page_text}"
-                    )
+                    text_content.append(f"<!-- Page {page_num + 1} -->\n\n{page_text}")
 
             full_text = "\n\n".join(text_content)
 
@@ -456,9 +454,7 @@ class PDFProcessor:
                     text = page.extract_text()
                     if text.strip():  # Only add non-empty pages
                         text = self._normalize_paragraphs(text)
-                        text_content.append(
-                            f"<!-- Page {page_num + 1} -->\n\n{text}"
-                        )
+                        text_content.append(f"<!-- Page {page_num + 1} -->\n\n{text}")
 
                 full_text = "\n\n".join(text_content)
 
@@ -513,9 +509,7 @@ class PDFProcessor:
                     p_clean = p.replace("\n", " ")
                     html_parts.append(f"<p>{p_clean}</p>")
 
-            html_content = (
-                f"<html><body><div>{''.join(html_parts)}</div></body></html>"
-            )
+            html_content = f"<html><body><div>{''.join(html_parts)}</div></body></html>"
 
             # Use MarkItDown through the converter
             result = converter.html_to_markdown(html_content)

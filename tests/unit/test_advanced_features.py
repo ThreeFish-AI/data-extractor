@@ -14,7 +14,7 @@ WebDriverWait 元素等待功能、元素未找到等异常处理。
 
 import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 
 from extractor.anti_detection import AntiDetectionScraper
 from extractor.form_handler import FormHandler

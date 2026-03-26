@@ -13,8 +13,7 @@
 
 import pytest
 import tempfile
-import os
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 from extractor.pdf.processor import PDFProcessor

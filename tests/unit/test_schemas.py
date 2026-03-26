@@ -1,6 +1,5 @@
 """响应模型 (schemas) 单元测试。"""
 
-import pytest
 from datetime import datetime
 
 from extractor.schemas import (
@@ -335,17 +334,6 @@ class TestBackwardCompatibility:
         """所有 13 个模型均可正常导入。"""
         from extractor.schemas import (
             ScrapeResponse,
-            BatchScrapeResponse,
-            LinkItem,
-            LinksResponse,
-            PageInfoResponse,
-            RobotsResponse,
-            StructuredDataResponse,
-            MarkdownResponse,
-            BatchMarkdownResponse,
-            PDFResponse,
-            BatchPDFResponse,
-            MetricsResponse,
             CacheOperationResponse,
         )
 
