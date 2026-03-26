@@ -10,7 +10,7 @@ from ..metrics import metrics_collector
 from ..rate_limiter import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ..validation_trace import trace_event
-from ._registry import app, create_pdf_processor, ToolTimer, validate_page_range
+from ._registry import PDFMethod, PDFOutputFormat, app, create_pdf_processor, ToolTimer, validate_page_range
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ async def convert_pdf_to_markdown(
         ),
     ],
     method: Annotated[
-        str,
+        PDFMethod,
         Field(
             default="auto",
             description="""PDF 提取方法：
@@ -53,7 +53,7 @@ async def convert_pdf_to_markdown(
         ),
     ],
     output_format: Annotated[
-        str,
+        PDFOutputFormat,
         Field(
             default="markdown",
             description="""输出格式选择：
@@ -95,27 +95,6 @@ async def convert_pdf_to_markdown(
     method_key = f"pdf_{method}"
     timer = ToolTimer(pdf_source, method_key)
     try:
-        # Validate inputs
-        if method not in ["auto", "pymupdf", "pypdf"]:
-            return PDFResponse(
-                success=False,
-                pdf_source=pdf_source,
-                method=method,
-                output_format=output_format,
-                error="Method must be one of: auto, pymupdf, pypdf",
-                conversion_time=0,
-            )
-
-        if output_format not in ["markdown", "text"]:
-            return PDFResponse(
-                success=False,
-                pdf_source=pdf_source,
-                method=method,
-                output_format=output_format,
-                error="Output format must be one of: markdown, text",
-                conversion_time=0,
-            )
-
         # Validate page range using shared helper
         page_range_tuple, page_range_error = validate_page_range(page_range)
         if page_range_error:
@@ -234,7 +213,7 @@ async def batch_convert_pdfs_to_markdown(
         ),
     ],
     method: Annotated[
-        str,
+        PDFMethod,
         Field(
             description="""统一的PDF提取方法：
                 "auto"（智能选择最佳引擎）、
@@ -256,7 +235,7 @@ async def batch_convert_pdfs_to_markdown(
         ),
     ] = None,
     output_format: Annotated[
-        str,
+        PDFOutputFormat,
         Field(
             description="""统一输出格式：
                 "markdown"（保留标题、列表等结构化信息）、
@@ -321,26 +300,6 @@ async def batch_convert_pdfs_to_markdown(
                 total_pdfs=0,
                 successful_count=0,
                 failed_count=0,
-                results=[],
-                total_conversion_time=0,
-            )
-
-        if method not in ["auto", "pymupdf", "pypdf"]:
-            return BatchPDFResponse(
-                success=False,
-                total_pdfs=len(pdf_sources),
-                successful_count=0,
-                failed_count=len(pdf_sources),
-                results=[],
-                total_conversion_time=0,
-            )
-
-        if output_format not in ["markdown", "text"]:
-            return BatchPDFResponse(
-                success=False,
-                total_pdfs=len(pdf_sources),
-                successful_count=0,
-                failed_count=len(pdf_sources),
                 results=[],
                 total_conversion_time=0,
             )

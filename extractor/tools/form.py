@@ -10,7 +10,7 @@ from ..form_handler import FormHandler
 from ..rate_limiter import rate_limiter
 from ..schemas import ScrapeResponse
 from ..validation_trace import trace_event
-from ._registry import app, validate_url, ToolTimer
+from ._registry import BrowserMethod, app, validate_url, ToolTimer
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def fill_and_submit_form(
         ),
     ],
     method: Annotated[
-        str,
+        BrowserMethod,
         Field(
             default="selenium",
             description="""自动化方法选择，可选值：
@@ -86,14 +86,6 @@ async def fill_and_submit_form(
                 url=url,
                 method=method,
                 error=url_error,
-            )
-
-        if method not in ["selenium", "playwright"]:
-            return ScrapeResponse(
-                success=False,
-                url=url,
-                method=method,
-                error="Method must be one of: selenium, playwright",
             )
 
         logger.info(f"Form interaction for: {url}")

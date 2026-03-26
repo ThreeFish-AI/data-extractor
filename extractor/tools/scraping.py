@@ -7,7 +7,7 @@ from pydantic import Field
 
 from ..schemas import BatchScrapeResponse, ScrapeResponse
 from ..validation_trace import trace_event
-from ._registry import app, validate_url, web_scraper
+from ._registry import ScrapeMethod, app, validate_url, web_scraper
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ async def scrape_webpage(
         Field(..., description="目标网页 URL，必须包含协议前缀（http://或https://）"),
     ],
     method: Annotated[
-        str,
+        ScrapeMethod,
         Field(
             default="auto",
             description="""抓取方法选择：
@@ -57,14 +57,6 @@ async def scrape_webpage(
     url_error = validate_url(url)
     if url_error:
         return ScrapeResponse(success=False, url=url, method=method, error=url_error)
-
-    if method not in ["auto", "simple", "scrapy", "selenium"]:
-        return ScrapeResponse(
-            success=False,
-            url=url,
-            method=method,
-            error="Method must be one of: auto, simple, scrapy, selenium",
-        )
 
     try:
         logger.info(f"Scraping webpage: {url} with method: {method}")
@@ -126,7 +118,7 @@ async def scrape_multiple_webpages(
         ),
     ],
     method: Annotated[
-        str,
+        ScrapeMethod,
         Field(
             default="auto",
             description="""抓取方法选择：
@@ -161,9 +153,6 @@ async def scrape_multiple_webpages(
             url_error = validate_url(url)
             if url_error:
                 raise ValueError(f"{url_error}: {url}")
-
-        if method not in ["auto", "simple", "scrapy", "selenium"]:
-            raise ValueError("Method must be one of: auto, simple, scrapy, selenium")
 
         logger.info(f"Scraping {len(urls)} webpages with method: {method}")
 
