@@ -8,10 +8,15 @@ from urllib.parse import urlparse
 from fastmcp import FastMCP
 
 from ..anti_detection import AntiDetectionScraper
+from ..cache import cache_manager
 from ..config import settings
 from ..markdown.converter import MarkdownConverter
 from ..metrics import metrics_collector
+from ..rate_limiter import rate_limiter
+from ..retry import retry_manager
 from ..scraper import WebScraper
+from ..text_utils import TextCleaner
+from ..url_utils import URLValidator
 
 logger = logging.getLogger(__name__)
 
