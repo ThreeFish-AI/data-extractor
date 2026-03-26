@@ -543,3 +543,59 @@ class TestImageNaming:
             text_blocks, img_y1=100.0, img_x0=50.0, img_x1=550.0, tolerance=30.0
         )
         assert caption is None
+
+
+class TestUnicodeMathDetection:
+    """测试 extract_formulas_from_text 的 Unicode 数学符号检测层。"""
+
+    @pytest.fixture
+    def processor(self):
+        temp_dir = tempfile.mkdtemp()
+        processor = EnhancedPDFProcessor(output_dir=temp_dir)
+        yield processor
+        processor.cleanup()
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_detects_unicode_math_symbols(self, processor):
+        """含 Unicode 数学符号的文本应被检测为公式。"""
+        text = "E_rel ⊆ E"
+        formulas = processor.extract_formulas_from_text(text, 0)
+        assert len(formulas) >= 1
+        assert any(r"\subseteq" in f.latex for f in formulas)
+
+    def test_detects_arrows(self, processor):
+        """箭头符号应被转换。"""
+        text = "CE : (C, T) → f_context"
+        formulas = processor.extract_formulas_from_text(text, 0)
+        assert len(formulas) >= 1
+        assert any(r"\to" in f.latex for f in formulas)
+
+    def test_detects_greek_letters(self, processor):
+        """希腊字母应被转换。"""
+        text = "f(ϕ₁, ϕ₂, ..., ϕₙ)"
+        formulas = processor.extract_formulas_from_text(text, 0)
+        assert len(formulas) >= 1
+        assert any(r"\phi" in f.latex for f in formulas)
+
+    def test_plain_text_no_formulas(self, processor):
+        """纯文本不应产生公式。"""
+        text = "This is a plain text paragraph with no math at all."
+        formulas = processor.extract_formulas_from_text(text, 0)
+        assert len(formulas) == 0
+
+    def test_latex_delimiters_still_work(self, processor):
+        """LaTeX 定界符匹配仍然优先。"""
+        text = "Equation: $x^2 + y^2 = z^2$"
+        formulas = processor.extract_formulas_from_text(text, 0)
+        assert len(formulas) >= 1
+        inline = [f for f in formulas if f.formula_type == "inline"]
+        assert len(inline) >= 1
+        assert "x^2 + y^2 = z^2" in inline[0].latex
+
+    def test_bigcup_and_set_operators(self, processor):
+        """集合运算符应被正确检测。"""
+        text = "C = ⋃ Char(e)"
+        formulas = processor.extract_formulas_from_text(text, 0)
+        assert len(formulas) >= 1
+        assert any(r"\bigcup" in f.latex for f in formulas)
