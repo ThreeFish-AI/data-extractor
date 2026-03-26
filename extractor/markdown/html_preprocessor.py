@@ -189,8 +189,25 @@ def _heuristic_split_paragraphs(text: str) -> list:
     return paragraphs if len(paragraphs) > 1 else [text.strip()]
 
 
+def _match_image_to_paragraph(paragraph: str, img_alt: str) -> bool:
+    """Check if an image is contextually related to a paragraph via alt text."""
+    if not img_alt or not paragraph:
+        return False
+    # Normalize for comparison
+    alt_lower = img_alt.lower().strip()
+    para_lower = paragraph.lower()
+    # Skip generic alt texts
+    if alt_lower in ("", "image", "img", "photo", "picture", "icon", "logo"):
+        return False
+    return alt_lower in para_lower
+
+
 def build_html_from_text(text_content: str, title: str, content_data: Dict) -> str:
-    """Build basic HTML structure from text content."""
+    """Build basic HTML structure from text content.
+
+    Images are distributed proportionally among paragraphs to approximate
+    the original document layout, rather than being appended at the end.
+    """
     try:
         html_parts = ["<html><head>"]
         if title:
@@ -207,9 +224,59 @@ def build_html_from_text(text_content: str, title: str, content_data: Dict) -> s
         if len(paragraphs) <= 1 and len(text_content) > 200:
             paragraphs = _heuristic_split_paragraphs(text_content)
 
-        for paragraph in paragraphs:
+        images = content_data.get("images", [])[:20]
+        num_images = len(images)
+        num_paragraphs = len(paragraphs)
+
+        # First pass: try to match images to paragraphs by alt text
+        alt_matched: dict = {}  # img_index -> paragraph_index
+        matched_img_indices: set = set()
+        if images and paragraphs:
+            for img_idx, img in enumerate(images):
+                img_alt = img.get("alt", "")
+                for para_idx, paragraph in enumerate(paragraphs):
+                    if _match_image_to_paragraph(paragraph, img_alt):
+                        alt_matched[img_idx] = para_idx
+                        matched_img_indices.add(img_idx)
+                        break
+
+        # Second pass: distribute remaining images proportionally
+        unmatched_images = [i for i in range(num_images) if i not in matched_img_indices]
+        proportional: dict = {}  # paragraph_index -> [img_indices]
+        if unmatched_images and num_paragraphs > 0:
+            for seq, img_idx in enumerate(unmatched_images):
+                # Distribute evenly: place after paragraph at proportional position
+                para_idx = min(
+                    (seq + 1) * num_paragraphs // (len(unmatched_images) + 1),
+                    num_paragraphs - 1,
+                )
+                proportional.setdefault(para_idx, []).append(img_idx)
+
+        # Build a combined schedule: paragraph_index -> [img_indices to place after]
+        placement: dict = {}
+        for img_idx, para_idx in alt_matched.items():
+            placement.setdefault(para_idx, []).append(img_idx)
+        for para_idx, img_indices in proportional.items():
+            placement.setdefault(para_idx, []).extend(img_indices)
+
+        # Emit paragraphs with interleaved images
+        for i, paragraph in enumerate(paragraphs):
             if paragraph:
                 html_parts.append(f"<p>{paragraph}</p>")
+            # Place images scheduled for after this paragraph
+            if i in placement:
+                for img_idx in placement[i]:
+                    img = images[img_idx]
+                    img_src = img.get("src", "")
+                    img_alt = img.get("alt", "")
+                    html_parts.append(f"<img src='{img_src}' alt='{img_alt}'>")
+
+        # Handle edge case: images without any paragraphs
+        if images and not paragraphs:
+            for img in images:
+                img_src = img.get("src", "")
+                img_alt = img.get("alt", "")
+                html_parts.append(f"<img src='{img_src}' alt='{img_alt}'>")
 
         html_parts.append("</div>")
 
@@ -221,16 +288,6 @@ def build_html_from_text(text_content: str, title: str, content_data: Dict) -> s
                 link_url = link.get("url", "")
                 link_text = link.get("text", link_url)
                 html_parts.append(f"<a href='{link_url}'>{link_text}</a><br>")
-            html_parts.append("</div>")
-
-        # Add images if available
-        images = content_data.get("images", [])
-        if images:
-            html_parts.append("<div class='images'>")
-            for img in images[:20]:
-                img_src = img.get("src", "")
-                img_alt = img.get("alt", "")
-                html_parts.append(f"<img src='{img_src}' alt='{img_alt}'>")
             html_parts.append("</div>")
 
         html_parts.append("</body></html>")

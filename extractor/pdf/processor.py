@@ -11,7 +11,7 @@ import asyncio
 
 import aiohttp
 
-from .enhanced import EnhancedPDFProcessor
+from .enhanced import EnhancedPDFProcessor, ExtractedImage
 
 
 # 延迟导入 PDF 处理库，避免启动时的 SWIG 警告
@@ -60,6 +60,11 @@ class PDFProcessor:
             self.enhanced_processor = EnhancedPDFProcessor(output_dir)
         else:
             self.enhanced_processor = None
+
+        # Page-level image maps populated during enhanced extraction,
+        # consumed during text extraction for inline image placement.
+        # Structure: {page_num: {block_no: ExtractedImage}}
+        self._page_image_maps: Dict[int, Dict[int, ExtractedImage]] = {}
 
     async def process_pdf(
         self,
@@ -121,7 +126,24 @@ class PDFProcessor:
                         "source": pdf_source,
                     }
 
-            # Extract text using selected method
+            # Derive PDF basename for image naming
+            pdf_name = Path(pdf_source).stem if pdf_source else ""
+
+            # ── NEW ORDER ──
+            # 1. Extract enhanced assets (images with positions) FIRST
+            #    This populates self._page_image_maps for inline placement
+            enhanced_assets = None
+            if self.enable_enhanced_features and self.enhanced_processor:
+                enhanced_assets = await self._extract_enhanced_assets(
+                    pdf_path,
+                    page_range,
+                    extract_images,
+                    extract_tables,
+                    extract_formulas,
+                    pdf_name=pdf_name,
+                )
+
+            # 2. Extract text (with inline image references when available)
             extraction_result = None
             if method == "auto":
                 extraction_result = await self._auto_extract(
@@ -143,22 +165,11 @@ class PDFProcessor:
                     "source": pdf_source,
                 }
 
-            # Enhanced processing for images, tables, and formulas
-            enhanced_assets = None
-            if self.enable_enhanced_features and self.enhanced_processor:
-                enhanced_assets = await self._extract_enhanced_assets(
-                    pdf_path,
-                    page_range,
-                    extract_images,
-                    extract_tables,
-                    extract_formulas,
-                )
-
-            # Convert to markdown if requested
+            # 3. Convert to markdown if requested
             if output_format == "markdown":
                 markdown_content = self._convert_to_markdown(extraction_result["text"])
 
-                # Enhance markdown with extracted assets
+                # Enhance markdown with remaining assets (unplaced images, tables, formulas)
                 if enhanced_assets:
                     enhanced_options = enhanced_options or {}
                     embed_images_setting = enhanced_options.get(
@@ -204,8 +215,9 @@ class PDFProcessor:
                 try:
                     os.unlink(pdf_path)
                 except (FileNotFoundError, PermissionError, OSError):
-                    # Ignore cleanup errors - file might already be deleted or inaccessible
                     pass
+            # Reset per-run state
+            self._page_image_maps.clear()
 
     async def batch_process_pdfs(
         self,
@@ -363,7 +375,7 @@ class PDFProcessor:
         page_range: Optional[tuple] = None,
         include_metadata: bool = True,
     ) -> Dict[str, Any]:
-        """Extract text using PyMuPDF (fitz)."""
+        """Extract text using PyMuPDF (fitz), interleaving images inline."""
         try:
             fitz = _import_fitz()
             doc = fitz.open(str(pdf_path))
@@ -383,15 +395,28 @@ class PDFProcessor:
             for page_num in range(start_page, end_page):
                 page = doc.load_page(page_num)
                 blocks = page.get_text("blocks")
+
+                # Get the image map for this page (populated by _extract_enhanced_assets)
+                page_image_map = self._page_image_maps.get(page_num, {})
+
                 page_paragraphs = []
                 for block in sorted(blocks, key=lambda b: (b[1], b[0])):
-                    if block[6] == 0:  # text block (not image)
+                    if block[6] == 0:  # text block
                         block_text = block[4].strip()
                         if block_text:
                             # Merge line breaks within a block into spaces
                             # (intra-paragraph line wraps from PDF layout)
                             block_text = re.sub(r"\n+", " ", block_text)
                             page_paragraphs.append(block_text)
+                    elif block[6] == 1 and page_image_map:  # image block
+                        block_no = block[5]
+                        if block_no in page_image_map:
+                            img = page_image_map[block_no]
+                            alt_text = img.caption or img.filename
+                            page_paragraphs.append(
+                                f"![{alt_text}]({img.filename})"
+                            )
+
                 if page_paragraphs:
                     page_text = "\n\n".join(page_paragraphs)
                     text_content.append(f"<!-- Page {page_num + 1} -->\n\n{page_text}")
@@ -504,6 +529,9 @@ class PDFProcessor:
                 if p.startswith("<!--"):
                     # Preserve page comments as-is
                     html_parts.append(p)
+                elif p.startswith("!["):
+                    # Preserve inline image references as-is
+                    html_parts.append(p)
                 else:
                     # Merge intra-paragraph line breaks into spaces
                     p_clean = p.replace("\n", " ")
@@ -543,6 +571,11 @@ class PDFProcessor:
                 continue
             if paragraph.startswith("<!--"):
                 continue  # Skip page comments
+
+            # Preserve inline image references
+            if paragraph.startswith("!["):
+                result_paragraphs.append(paragraph)
+                continue
 
             # Collect non-empty lines within this paragraph
             lines = [line.strip() for line in paragraph.split("\n") if line.strip()]
@@ -634,9 +667,14 @@ class PDFProcessor:
         extract_images: bool,
         extract_tables: bool,
         extract_formulas: bool,
+        pdf_name: str = "",
     ) -> Dict[str, Any]:
         """
         Extract enhanced assets (images, tables, formulas) from PDF.
+
+        For images, this also populates self._page_image_maps with
+        block_no -> ExtractedImage mappings for each page, enabling
+        inline image placement during text extraction.
 
         Args:
             pdf_path: Path to PDF file
@@ -644,6 +682,7 @@ class PDFProcessor:
             extract_images: Whether to extract images
             extract_tables: Whether to extract tables
             extract_formulas: Whether to extract formulas
+            pdf_name: Original PDF filename for image naming
 
         Returns:
             Dict with extraction results
@@ -669,16 +708,21 @@ class PDFProcessor:
                 "pages_processed": end_page - start_page,
             }
 
-            # Extract images
+            # Extract images with position mapping for inline placement
             if extract_images:
                 for page_num in range(start_page, end_page):
                     try:
-                        images = (
-                            await self.enhanced_processor.extract_images_from_pdf_page(
-                                doc, page_num
+                        page = doc[page_num]
+                        blocks = page.get_text("blocks")
+
+                        image_map = (
+                            await self.enhanced_processor.extract_images_with_positions(
+                                doc, page_num, blocks,
+                                pdf_name=pdf_name,
                             )
                         )
-                        self.enhanced_processor.images.extend(images)
+                        if image_map:
+                            self._page_image_maps[page_num] = image_map
                     except Exception as e:
                         logger.warning(
                             f"Failed to extract images from page {page_num}: {str(e)}"
@@ -741,5 +785,7 @@ class PDFProcessor:
 
             if os.path.exists(self.temp_dir):
                 shutil.rmtree(self.temp_dir)
+
+            self._page_image_maps.clear()
         except Exception as e:
             logger.warning(f"Failed to cleanup temp directory: {str(e)}")

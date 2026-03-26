@@ -5,10 +5,10 @@ import tempfile
 import os
 import re
 import base64
+import unicodedata
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
 
 # PyMuPDF imports for PDF processing
 try:
@@ -31,6 +31,7 @@ class ExtractedImage:
     page_number: Optional[int] = None
     position: Optional[Dict[str, float]] = None
     caption: Optional[str] = None
+    xref: Optional[int] = None
 
 
 @dataclass
@@ -57,6 +58,14 @@ class ExtractedFormula:
     page_number: Optional[int] = None
     position: Optional[Dict[str, float]] = None
     description: Optional[str] = None
+
+
+# Caption detection patterns
+_CAPTION_PATTERNS = [
+    re.compile(r"^(Figure|Fig\.?|Image|Diagram|Chart|Graph|Illustration)\s*\d+", re.IGNORECASE),
+    re.compile(r"^(图|插图|示意图|架构图|流程图)\s*\d+", re.IGNORECASE),
+    re.compile(r"^(Table|表)\s*\d+", re.IGNORECASE),
+]
 
 
 class EnhancedPDFProcessor:
@@ -89,9 +98,128 @@ class EnhancedPDFProcessor:
         self.extract_formulas = True
 
     def _generate_asset_id(self, asset_type: str, page_num: int, index: int) -> str:
-        """Generate unique ID for extracted assets."""
+        """Generate unique ID for extracted assets (tables, formulas)."""
+        from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"{asset_type}_{page_num}_{index}_{timestamp}"
+
+    @staticmethod
+    def _slugify(text: str, max_length: int = 60) -> str:
+        """Convert text to a filesystem-safe slug."""
+        # Normalize unicode
+        text = unicodedata.normalize("NFKD", text)
+        # Keep only alphanumeric, spaces, hyphens, underscores, and CJK characters
+        cleaned = []
+        for ch in text:
+            if ch.isalnum() or ch in (" ", "-", "_"):
+                cleaned.append(ch)
+            elif unicodedata.category(ch).startswith("Lo"):
+                # Keep CJK and other letter characters
+                cleaned.append(ch)
+        slug = "".join(cleaned).strip()
+        # Replace whitespace runs with hyphens
+        slug = re.sub(r"[\s]+", "-", slug)
+        # Collapse multiple hyphens
+        slug = re.sub(r"-{2,}", "-", slug)
+        # Truncate
+        if len(slug) > max_length:
+            slug = slug[:max_length].rstrip("-")
+        return slug.lower() if slug else ""
+
+    def _detect_caption(
+        self, text_blocks: list, img_y1: float, img_x0: float, img_x1: float, tolerance: float = 30.0
+    ) -> Optional[str]:
+        """Detect caption text below an image by scanning nearby text blocks.
+
+        Args:
+            text_blocks: All blocks from page.get_text("blocks"), filtered to type==0.
+            img_y1: Bottom y-coordinate of the image.
+            img_x0: Left x-coordinate of the image.
+            img_x1: Right x-coordinate of the image.
+            tolerance: Maximum vertical distance to consider a block as caption.
+
+        Returns:
+            Caption string if found, else None.
+        """
+        best_caption = None
+        best_distance = tolerance + 1
+
+        for block in text_blocks:
+            if block[6] != 0:
+                continue
+            block_y0 = block[1]
+            block_text = block[4].strip() if block[4] else ""
+            if not block_text:
+                continue
+
+            # Block must be below the image and within tolerance
+            vertical_distance = block_y0 - img_y1
+            if vertical_distance < -5 or vertical_distance > tolerance:
+                continue
+
+            # Block should horizontally overlap with the image
+            block_x0, block_x1 = block[0], block[2]
+            overlap = min(block_x1, img_x1) - max(block_x0, img_x0)
+            if overlap <= 0:
+                continue
+
+            # Check if text matches caption patterns
+            first_line = block_text.split("\n")[0].strip()
+            for pattern in _CAPTION_PATTERNS:
+                if pattern.match(first_line):
+                    if vertical_distance < best_distance:
+                        best_distance = vertical_distance
+                        # Clean up the caption: take the first line, merge line breaks
+                        best_caption = re.sub(r"\n+", " ", block_text).strip()
+                        # Limit caption length for filename use
+                        if len(best_caption) > 120:
+                            best_caption = best_caption[:120]
+                    break
+
+        return best_caption
+
+    def _generate_image_name(
+        self,
+        page_num: int,
+        img_index: int,
+        xref_name: str = "",
+        caption: Optional[str] = None,
+        nearby_text: str = "",
+        pdf_name: str = "",
+    ) -> str:
+        """Generate a meaningful filename for an extracted image.
+
+        Priority:
+        1. Caption text (e.g., "Figure 1: Architecture Diagram")
+        2. PDF internal name from xref metadata
+        3. Nearby text context
+        4. Fallback: pdf_name + page + index
+        """
+        # 1. Try caption
+        if caption:
+            slug = self._slugify(caption)
+            if slug and len(slug) >= 3:
+                return slug
+
+        # 2. Try PDF internal image name
+        if xref_name and xref_name not in ("Im", "Image", "X", "img"):
+            slug = self._slugify(xref_name)
+            if slug and len(slug) >= 2:
+                return f"p{page_num + 1}-{slug}"
+
+        # 3. Try nearby text context (first 5 words)
+        if nearby_text:
+            words = nearby_text.split()[:5]
+            context = " ".join(words)
+            slug = self._slugify(context)
+            if slug and len(slug) >= 3:
+                return f"p{page_num + 1}-{slug}"
+
+        # 4. Fallback
+        base = self._slugify(pdf_name) if pdf_name else "img"
+        if not base:
+            base = "img"
+        return f"{base}-p{page_num + 1}-{img_index + 1}"
 
     async def extract_images_from_pdf_page(
         self, pdf_document, page_num: int, image_format: str = "png"
@@ -122,52 +250,66 @@ class EnhancedPDFProcessor:
                     xref = img_info[0]
                     pix = fitz.Pixmap(pdf_document, xref)
 
-                    # Skip CMYK images (not supported by some formats)
-                    if pix.n - pix.alpha < 4:
-                        # Generate image ID and filename
-                        img_id = self._generate_asset_id("img", page_num, img_index)
-                        filename = f"{img_id}.{image_format}"
-                        local_path = self.output_dir / filename
+                    # Convert CMYK to RGB instead of skipping
+                    if pix.n - pix.alpha >= 4:
+                        pix = fitz.Pixmap(fitz.csRGB, pix)
 
-                        # Save image to local file
-                        if image_format.lower() == "png":
-                            pix.save(str(local_path))
-                        else:
-                            # Convert to other formats if needed
-                            pix.tobytes(image_format.upper())
-                            with open(local_path, "wb") as f:
-                                f.write(pix.tobytes(image_format.upper()))
+                    # Generate image ID and filename
+                    img_id = self._generate_asset_id("img", page_num, img_index)
+                    filename = f"{img_id}.{image_format}"
+                    local_path = self.output_dir / filename
 
-                        # Get image dimensions
-                        width, height = pix.width, pix.height
+                    # Save image to local file
+                    if image_format.lower() == "png":
+                        pix.save(str(local_path))
+                    else:
+                        with open(local_path, "wb") as f:
+                            f.write(pix.tobytes(image_format.upper()))
 
-                        # Get base64 data for embedding
-                        b64_data = base64.b64encode(
-                            pix.tobytes(image_format.upper())
-                        ).decode("ascii")
+                    # Get image dimensions
+                    width, height = pix.width, pix.height
 
-                        # Create ExtractedImage object
-                        extracted_image = ExtractedImage(
-                            id=img_id,
-                            filename=filename,
-                            local_path=str(local_path),
-                            base64_data=b64_data,
-                            mime_type=f"image/{image_format}",
-                            width=width,
-                            height=height,
-                            page_number=page_num,
-                            position={
-                                "x0": img_info[1] if len(img_info) > 1 else 0,
-                                "y0": img_info[2] if len(img_info) > 2 else 0,
-                                "x1": img_info[3] if len(img_info) > 3 else width,
-                                "y1": img_info[4] if len(img_info) > 4 else height,
-                            },
-                        )
+                    # Get base64 data for embedding
+                    b64_data = base64.b64encode(
+                        pix.tobytes(image_format.upper())
+                    ).decode("ascii")
 
-                        images.append(extracted_image)
-                        self.logger.info(
-                            f"Extracted image {img_id} from page {page_num}"
-                        )
+                    # Get real position using get_image_rects
+                    position = None
+                    try:
+                        rects = page.get_image_rects(xref)
+                        if rects:
+                            rect = rects[0]
+                            position = {
+                                "x0": rect.x0,
+                                "y0": rect.y0,
+                                "x1": rect.x1,
+                                "y1": rect.y1,
+                            }
+                    except Exception:
+                        pass
+
+                    # Get PDF internal image name
+                    xref_name = img_info[7] if len(img_info) > 7 else ""
+
+                    # Create ExtractedImage object
+                    extracted_image = ExtractedImage(
+                        id=img_id,
+                        filename=filename,
+                        local_path=str(local_path),
+                        base64_data=b64_data,
+                        mime_type=f"image/{image_format}",
+                        width=width,
+                        height=height,
+                        page_number=page_num,
+                        position=position,
+                        xref=xref,
+                    )
+
+                    images.append(extracted_image)
+                    self.logger.info(
+                        f"Extracted image {img_id} from page {page_num}"
+                    )
 
                     pix = None  # Free memory
 
@@ -183,6 +325,265 @@ class EnhancedPDFProcessor:
             self.logger.error(f"Error extracting images from page {page_num}: {str(e)}")
 
         return images
+
+    async def extract_images_with_positions(
+        self,
+        pdf_document,
+        page_num: int,
+        text_blocks: list,
+        image_format: str = "png",
+        pdf_name: str = "",
+    ) -> Dict[int, ExtractedImage]:
+        """Extract images and build block_no -> ExtractedImage mapping.
+
+        This method correlates image xrefs with their visual block positions
+        on the page so that images can be inlined at the correct text position.
+
+        Args:
+            pdf_document: PyMuPDF document object
+            page_num: Page number (0-indexed)
+            text_blocks: All blocks from page.get_text("blocks")
+            image_format: Output image format
+            pdf_name: Original PDF filename (for naming)
+
+        Returns:
+            Dict mapping block_no (int) to ExtractedImage
+        """
+        block_to_image: Dict[int, ExtractedImage] = {}
+
+        try:
+            if fitz is None:
+                raise ImportError("PyMuPDF (fitz) is not available")
+
+            page = pdf_document[page_num]
+            image_list = page.get_images(full=True)
+
+            if not image_list:
+                return block_to_image
+
+            # Build xref -> rect mapping
+            xref_rects: Dict[int, Any] = {}
+            for img_info in image_list:
+                xref = img_info[0]
+                try:
+                    rects = page.get_image_rects(xref)
+                    if rects:
+                        xref_rects[xref] = rects[0]
+                except Exception:
+                    continue
+
+            # Collect image blocks (block[6] == 1)
+            image_blocks = [b for b in text_blocks if b[6] == 1]
+            # Collect text-only blocks for caption detection
+            text_only_blocks = [b for b in text_blocks if b[6] == 0]
+
+            # For each image block, find the best matching xref
+            matched_xrefs: set = set()
+            for block in image_blocks:
+                b_x0, b_y0, b_x1, b_y1 = block[0], block[1], block[2], block[3]
+                block_no = block[5]
+                b_cx = (b_x0 + b_x1) / 2
+                b_cy = (b_y0 + b_y1) / 2
+
+                best_xref = None
+                best_overlap = -1
+
+                for xref, rect in xref_rects.items():
+                    if xref in matched_xrefs:
+                        continue
+                    # Calculate IoU-like overlap
+                    overlap_x0 = max(b_x0, rect.x0)
+                    overlap_y0 = max(b_y0, rect.y0)
+                    overlap_x1 = min(b_x1, rect.x1)
+                    overlap_y1 = min(b_y1, rect.y1)
+
+                    if overlap_x1 > overlap_x0 and overlap_y1 > overlap_y0:
+                        overlap_area = (overlap_x1 - overlap_x0) * (overlap_y1 - overlap_y0)
+                        if overlap_area > best_overlap:
+                            best_overlap = overlap_area
+                            best_xref = xref
+                    else:
+                        # Fallback: check if center of block is inside rect (with tolerance)
+                        margin = 20
+                        if (rect.x0 - margin <= b_cx <= rect.x1 + margin and
+                                rect.y0 - margin <= b_cy <= rect.y1 + margin):
+                            # Use a small pseudo-overlap so actual overlaps take priority
+                            if best_overlap < 0:
+                                best_xref = xref
+
+                if best_xref is None:
+                    continue
+
+                matched_xrefs.add(best_xref)
+
+                # Find img_info for this xref
+                img_info = None
+                img_index = 0
+                for idx, info in enumerate(image_list):
+                    if info[0] == best_xref:
+                        img_info = info
+                        img_index = idx
+                        break
+
+                if img_info is None:
+                    continue
+
+                try:
+                    pix = fitz.Pixmap(pdf_document, best_xref)
+
+                    # Convert CMYK to RGB
+                    if pix.n - pix.alpha >= 4:
+                        pix = fitz.Pixmap(fitz.csRGB, pix)
+
+                    width, height = pix.width, pix.height
+
+                    # Detect caption from nearby text
+                    rect = xref_rects[best_xref]
+                    caption = self._detect_caption(
+                        text_only_blocks, rect.y1, rect.x0, rect.x1
+                    )
+
+                    # Get xref internal name
+                    xref_name = img_info[7] if len(img_info) > 7 else ""
+
+                    # Find nearest text block for context (before the image)
+                    nearby_text = ""
+                    for tb in sorted(text_only_blocks, key=lambda b: b[1]):
+                        if tb[1] < b_y0 and tb[4]:
+                            nearby_text = tb[4].strip()
+
+                    # Generate semantic name
+                    name_slug = self._generate_image_name(
+                        page_num, img_index, xref_name, caption, nearby_text, pdf_name
+                    )
+                    filename = f"{name_slug}.{image_format}"
+
+                    # Avoid filename collisions
+                    local_path = self.output_dir / filename
+                    counter = 1
+                    while local_path.exists():
+                        filename = f"{name_slug}-{counter}.{image_format}"
+                        local_path = self.output_dir / filename
+                        counter += 1
+
+                    # Save image
+                    if image_format.lower() == "png":
+                        pix.save(str(local_path))
+                    else:
+                        with open(local_path, "wb") as f:
+                            f.write(pix.tobytes(image_format.upper()))
+
+                    b64_data = base64.b64encode(
+                        pix.tobytes(image_format.upper())
+                    ).decode("ascii")
+
+                    extracted_image = ExtractedImage(
+                        id=f"img_{page_num}_{img_index}",
+                        filename=filename,
+                        local_path=str(local_path),
+                        base64_data=b64_data,
+                        mime_type=f"image/{image_format}",
+                        width=width,
+                        height=height,
+                        page_number=page_num,
+                        position={
+                            "x0": rect.x0,
+                            "y0": rect.y0,
+                            "x1": rect.x1,
+                            "y1": rect.y1,
+                        },
+                        caption=caption,
+                        xref=best_xref,
+                    )
+
+                    block_to_image[block_no] = extracted_image
+                    self.images.append(extracted_image)
+                    self.logger.info(
+                        f"Extracted image '{filename}' from page {page_num} (block {block_no})"
+                    )
+
+                    pix = None
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to extract image for block {block_no} on page {page_num}: {str(e)}"
+                    )
+                    continue
+
+            # Handle xrefs that weren't matched to any block (rare edge case)
+            for img_index, img_info in enumerate(image_list):
+                xref = img_info[0]
+                if xref in matched_xrefs:
+                    continue
+
+                try:
+                    pix = fitz.Pixmap(pdf_document, xref)
+                    if pix.n - pix.alpha >= 4:
+                        pix = fitz.Pixmap(fitz.csRGB, pix)
+
+                    width, height = pix.width, pix.height
+                    xref_name = img_info[7] if len(img_info) > 7 else ""
+
+                    # Get position if available
+                    position = None
+                    if xref in xref_rects:
+                        rect = xref_rects[xref]
+                        position = {"x0": rect.x0, "y0": rect.y0, "x1": rect.x1, "y1": rect.y1}
+
+                    name_slug = self._generate_image_name(
+                        page_num, img_index, xref_name, None, "", pdf_name
+                    )
+                    filename = f"{name_slug}.{image_format}"
+                    local_path = self.output_dir / filename
+                    counter = 1
+                    while local_path.exists():
+                        filename = f"{name_slug}-{counter}.{image_format}"
+                        local_path = self.output_dir / filename
+                        counter += 1
+
+                    if image_format.lower() == "png":
+                        pix.save(str(local_path))
+                    else:
+                        with open(local_path, "wb") as f:
+                            f.write(pix.tobytes(image_format.upper()))
+
+                    b64_data = base64.b64encode(
+                        pix.tobytes(image_format.upper())
+                    ).decode("ascii")
+
+                    extracted_image = ExtractedImage(
+                        id=f"img_{page_num}_{img_index}",
+                        filename=filename,
+                        local_path=str(local_path),
+                        base64_data=b64_data,
+                        mime_type=f"image/{image_format}",
+                        width=width,
+                        height=height,
+                        page_number=page_num,
+                        position=position,
+                        xref=xref,
+                    )
+                    self.images.append(extracted_image)
+                    self.logger.info(
+                        f"Extracted unmatched image '{filename}' from page {page_num}"
+                    )
+
+                    pix = None
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to extract unmatched image xref={xref} on page {page_num}: {str(e)}"
+                    )
+                    continue
+
+        except ImportError:
+            self.logger.error("PyMuPDF (fitz) is required for image extraction")
+        except Exception as e:
+            self.logger.error(
+                f"Error in extract_images_with_positions for page {page_num}: {str(e)}"
+            )
+
+        return block_to_image
 
     def extract_tables_from_text(
         self, text: str, page_num: int
@@ -355,9 +756,6 @@ class EnhancedPDFProcessor:
 
     def _has_multiple_space_separators(self, line: str) -> bool:
         """Check if a line has multiple space separators (more than 2 spaces between words)."""
-        # Look for 2+ consecutive spaces
-        import re
-
         return bool(re.search(r" {2,}", line)) and len(line.split()) >= 3
 
     def _convert_to_markdown_table(self, table_lines: List[str]) -> str:
@@ -453,8 +851,11 @@ class EnhancedPDFProcessor:
         """
         Enhance Markdown content with extracted images, tables, and formulas.
 
+        Images that were already placed inline (their filename appears in the markdown)
+        are skipped. Only unplaced images are appended at the end as a fallback.
+
         Args:
-            original_markdown: Original Markdown content
+            original_markdown: Original Markdown content (may already contain inline images)
             embed_images: Whether to embed images as base64
             image_size: Optional resize dimensions (width, height)
 
@@ -464,16 +865,21 @@ class EnhancedPDFProcessor:
         enhanced_content = original_markdown
 
         try:
-            # Add images section if any images were extracted
-            if self.images:
+            # Determine which images are already inline in the markdown
+            unplaced_images = []
+            for img in self.images:
+                if img.filename in original_markdown:
+                    continue
+                unplaced_images.append(img)
+
+            # Only add images section for unplaced images
+            if unplaced_images:
                 enhanced_content += "\n\n## Extracted Images\n\n"
 
-                for img in self.images:
+                for img in unplaced_images:
                     if embed_images and img.base64_data:
-                        # Embed as base64 data URI
                         enhanced_content += f"![{img.caption or img.filename}](data:{img.mime_type};base64,{img.base64_data})\n\n"
                     else:
-                        # Reference local file
                         enhanced_content += (
                             f"![{img.caption or img.filename}]({img.filename})\n\n"
                         )
@@ -481,7 +887,7 @@ class EnhancedPDFProcessor:
                     # Add image metadata
                     if img.width and img.height:
                         enhanced_content += (
-                            f"*Dimensions: {img.width}×{img.height}px*\n"
+                            f"*Dimensions: {img.width}\u00d7{img.height}px*\n"
                         )
                     if img.page_number is not None:
                         enhanced_content += f"*Source: Page {img.page_number + 1}*\n"
@@ -499,7 +905,7 @@ class EnhancedPDFProcessor:
 
                     # Add table metadata
                     enhanced_content += (
-                        f"*Table: {table.rows} rows × {table.columns} columns*\n"
+                        f"*Table: {table.rows} rows \u00d7 {table.columns} columns*\n"
                     )
                     if table.page_number is not None:
                         enhanced_content += f"*Source: Page {table.page_number + 1}*\n"
