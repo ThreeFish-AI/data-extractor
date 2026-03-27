@@ -1,3 +1,0 @@
-本文件已废弃。
-
-代码审查工作流已切换到 `anthropics/claude-code-action@v1`，审查提示词直接内嵌在 `.github/workflows/review.yml` 中维护。
