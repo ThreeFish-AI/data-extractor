@@ -19,6 +19,7 @@ from unittest.mock import patch, AsyncMock
 
 from extractor.server import app
 from extractor.config import settings
+from tests.integration.tooling import get_tool_map
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +125,7 @@ class TestMarkdownPipeline:
     ):
         """Test the complete markdown conversion pipeline from scraping to formatting."""
         # Get the convert_webpage_to_markdown tool
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Mock the web scraping
@@ -195,7 +196,7 @@ class TestMarkdownPipeline:
     @pytest.mark.asyncio
     async def test_batch_conversion_with_mixed_results(self):
         """Test batch conversion with a mix of successful and failed results."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         batch_tool = tools["batch_convert_webpages_to_markdown"]
 
         # Create mixed results - some success, some failures
@@ -242,7 +243,7 @@ class TestMarkdownPipeline:
     @pytest.mark.asyncio
     async def test_data_integrity_throughout_pipeline(self):
         """Test that data integrity is maintained throughout the processing pipeline."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test with content that could be corrupted during processing
@@ -305,7 +306,7 @@ class TestMarkdownPipeline:
     @pytest.mark.asyncio
     async def test_edge_cases_and_boundary_conditions(self):
         """Test various edge cases and boundary conditions."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test edge cases
@@ -376,7 +377,7 @@ class TestMarkdownPipeline:
     @pytest.mark.asyncio
     async def test_configuration_flexibility(self):
         """Test that various configuration combinations work correctly."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         convert_tool = tools["convert_webpage_to_markdown"]
 
         sample_result = {
@@ -445,7 +446,7 @@ class TestErrorResilience:
     @pytest.mark.asyncio
     async def test_error_resilience_and_recovery(self):
         """Test system resilience when various components fail."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test with invalid URL that should cause an error
@@ -477,7 +478,7 @@ class TestErrorResilience:
     @pytest.mark.asyncio
     async def test_error_logging_and_handling(self):
         """Test that errors are properly logged and handled."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Simulate various error conditions
@@ -505,7 +506,7 @@ class TestErrorResilience:
     async def test_invalid_input_handling(self):
         """测试无效输入处理"""
         # 所有工具都应该存在并能处理基本的验证
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
 
         critical_tools = [
             "scrape_webpage",
@@ -540,7 +541,7 @@ class TestPerformanceAndLoad:
     @pytest.mark.asyncio
     async def test_performance_under_load(self):
         """Test system performance under simulated load."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         batch_tool = tools["batch_convert_webpages_to_markdown"]
 
         # Create a large number of mock results
@@ -588,7 +589,7 @@ class TestPerformanceAndLoad:
     @pytest.mark.asyncio
     async def test_concurrent_requests_handling(self):
         """Test handling of multiple concurrent requests."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         convert_tool = tools["convert_webpage_to_markdown"]
 
         mock_result = {
@@ -639,7 +640,7 @@ class TestPerformanceAndLoad:
         initial_memory = process.memory_info().rss
 
         # 执行一系列操作
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
 
         # 访问所有工具
         for tool_name in tools.keys():
@@ -664,7 +665,7 @@ class TestSystemHealth:
     @pytest.mark.asyncio
     async def test_metrics_collection_integration(self):
         """Test that metrics are collected properly during operations."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         metrics_tool = tools["get_server_metrics"]
         convert_tool = tools["convert_webpage_to_markdown"]
 
@@ -705,7 +706,7 @@ class TestSystemHealth:
     @pytest.mark.asyncio
     async def test_cache_integration(self):
         """Test cache functionality integration."""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         clear_cache_tool = tools["clear_cache"]
 
         # Clear cache
@@ -725,7 +726,7 @@ class TestSystemHealth:
         assert settings.browser_timeout > 0
 
         # 验证工具能够使用这些配置
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
         assert len(tools) == 14
 
 
@@ -795,7 +796,7 @@ class TestBackwardCompatibility:
             "convert_pdf_to_markdown",
         ]
 
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
 
         for tool_name in expected_core_tools:
             assert tool_name in tools, f"核心工具 {tool_name} 缺失，可能破坏向后兼容性"
@@ -803,7 +804,7 @@ class TestBackwardCompatibility:
     @pytest.mark.asyncio
     async def test_tool_interface_stability(self):
         """测试工具接口稳定性"""
-        tools = {t.name: t for t in await app.list_tools()}
+        tools = await get_tool_map()
 
         # 验证所有工具都有稳定的接口
         for tool_name, tool in tools.items():
