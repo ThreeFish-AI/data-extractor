@@ -12,7 +12,7 @@
 from unittest.mock import AsyncMock, Mock, MagicMock
 from bs4 import BeautifulSoup
 
-from extractor.content_extraction import (
+from negentropy.perceives.content_extraction import (
     extract_default_content,
     extract_with_bs4_config,
     extract_with_selenium_config,

@@ -23,24 +23,24 @@ tags:
 
 ```bash
 # 启动 MCP 服务器（主要启动命令）
-uv run document-reader
+uv run negentropy-perceives
 
 # 以 Python 模块方式运行服务器
-uv run python -m extractor.server
+uv run python -m negentropy.perceives.server
 ```
 
-兼容入口 `mcp-data-extractor` 与 `data-extractor` 仍可使用，但已不再推荐。
+命令入口统一为 `negentropy-perceives`。
 
 ### 开发模式启动
 
 ```bash
 # 启用调试级别日志输出
-uv run --env DATA_EXTRACTOR_LOG_LEVEL=DEBUG document-reader
+uv run --env NEGENTROPY_PERCEIVES_LOG_LEVEL=DEBUG negentropy-perceives
 
 # 启用完整功能特性的开发配置
-uv run --env DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true \
-          --env DATA_EXTRACTOR_USE_RANDOM_USER_AGENT=true \
-          document-reader
+uv run --env NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT=true \
+          --env NEGENTROPY_PERCEIVES_USE_RANDOM_USER_AGENT=true \
+          negentropy-perceives
 ```
 
 > 全部环境变量配置项见 [配置系统](./4-Configuration.md)
@@ -56,10 +56,10 @@ uv run --env DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true \
 uv run ruff rule --all
 
 # MyPy 显示详细的错误代码信息
-uv run mypy extractor/ --show-error-codes
+uv run mypy negentropy/perceives/ --show-error-codes
 
 # MyPy 生成 HTML 格式的类型检查报告
-uv run mypy extractor/ --html-report mypy-report
+uv run mypy negentropy/perceives/ --html-report mypy-report
 ```
 
 ## 测试执行
@@ -105,9 +105,9 @@ uv pip show <package-name>
 ### 版本号查询
 
 ```bash
-# 版本号在 pyproject.toml 中维护，运行时由 extractor/__init__.py 动态读取
+# 版本号在 pyproject.toml 中维护，运行时由 negentropy/perceives/__init__.py 动态读取
 # 查看当前项目版本号
-uv run python -c "from extractor import __version__; print(__version__)"
+uv run python -c "from negentropy.perceives import __version__; print(__version__)"
 ```
 
 ### 缓存清理
@@ -131,15 +131,15 @@ find . -type f -name "*.pyc" -delete
 ## 系统调试与诊断
 
 ```bash
-# 检查 Data Extractor 相关的环境变量
+# 检查 Negentropy Perceives 相关的环境变量
 printenv | grep DATA_EXTRACTOR
 
 # 验证配置文件的正确性
-uv run python -c "from extractor.config import settings; print(settings.model_dump())"
+uv run python -c "from negentropy.perceives.config import settings; print(settings.model_dump())"
 
 # 测试项目模块导入是否正常
-uv run python -c "import extractor; print('Import successful')"
+uv run python -c "import negentropy.perceives; print('Import successful')"
 
 # 检查 MCP 服务器可用的工具列表
-uv run python -c "from extractor.server import app; print([tool.name for tool in app.tools])"
+uv run python -c "from negentropy.perceives.server import app; print([tool.name for tool in app.tools])"
 ```

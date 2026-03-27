@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from extractor.pdf.math_formula import (
+from negentropy.perceives.pdf.math_formula import (
     FormulaReconstructor,
     MathRegion,
     has_math_unicode,
@@ -161,7 +161,7 @@ class TestFullPDFProcessingPipeline:
     @pytest.mark.asyncio
     async def test_process_pdf_with_formula_extraction(self) -> None:
         """完整处理 PDF 应提取到公式。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True)
         try:
@@ -188,7 +188,7 @@ class TestFullPDFProcessingPipeline:
     @pytest.mark.asyncio
     async def test_enhanced_assets_contain_formulas(self) -> None:
         """增强资产摘要应报告提取到的公式数量。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True)
         try:
@@ -211,7 +211,7 @@ class TestFullPDFProcessingPipeline:
     @pytest.mark.asyncio
     async def test_formulas_disabled_no_overhead(self) -> None:
         """extract_formulas=False 时应跳过公式处理。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True)
         try:

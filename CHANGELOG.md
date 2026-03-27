@@ -1,12 +1,12 @@
 # Changelog
 
-All notable changes to the Data Extractor project will be documented in this file.
+All notable changes to the Negentropy Perceives project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## **v0.1.7 (2026/03/22)** - 梳理清减：正交分解与死代码消除
 
-- **正交分解**: `markdown_converter.py`（1,116 行）拆分为 `extractor/markdown/` 子包，按转换编排、格式化管线、HTML 预处理、图片嵌入四个维度解耦
+- **正交分解**: `markdown_converter.py`（1,116 行）拆分为 `negentropy/perceives/markdown/` 子包，按转换编排、格式化管线、HTML 预处理、图片嵌入四个维度解耦
 - **死代码清理**: 移除 `WebScrapingSpider`、`ScrapyWrapper`（~137 行）及 `_split_text_into_paragraphs` 等三个内部死方法（~125 行）
 - **逻辑去重**: 提取 `scraping_utils.py` 共享函数，消除 `scraper.py` / `anti_detection.py` 中的数据提取重复代码
 - **命名规范化**: `SimpleScraper` → `HttpScraper`（保留向后兼容别名），`content_data` → `page_content`
@@ -43,7 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## v0.1.1 (2025-09-05)
 
-- **核心重构**: 包名从 `scrapy_mcp` 重构为 `extractor`，项目入口命令统一为 `data-extractor`，提升项目结构清晰度
+- **核心重构**: 包结构从 `scrapy_mcp` 演进为 `negentropy/perceives`，项目入口命令统一为 `negentropy-perceives`，提升项目结构清晰度
 
 ## v0.1.0 (2025-08-26)
 

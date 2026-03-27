@@ -1,4 +1,4 @@
-"""Data Extractor MCP Server - A robust web scraping MCP server."""
+"""Negentropy Perceives MCP Server - A robust web scraping MCP server."""
 
 import importlib.metadata
 import re
@@ -9,7 +9,7 @@ def _get_version_from_pyproject():
     """从 pyproject.toml 动态读取版本号"""
     try:
         # 从当前文件位置向上查找项目根目录
-        pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
+        pyproject_path = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
 
         if pyproject_path.exists():
             content = pyproject_path.read_text(encoding="utf-8")
@@ -23,7 +23,7 @@ def _get_version_from_pyproject():
         pass
 
     # 最后的备用方案：从已安装的包中获取版本
-    for package_name in ("document-reader", "mcp-data-extractor"):
+    for package_name in ("negentropy-perceives",):
         try:
             return importlib.metadata.version(package_name)
         except importlib.metadata.PackageNotFoundError:
@@ -33,7 +33,7 @@ def _get_version_from_pyproject():
 
 
 __version__ = _get_version_from_pyproject()
-__app_name__ = "document-reader"
+__app_name__ = "negentropy-perceives"
 __author__ = "Aurelius"
 __email__ = "aureliusshu@gmail.com"
 

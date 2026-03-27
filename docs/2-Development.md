@@ -13,7 +13,7 @@ tags:
   - Workflow
 ---
 
-Data Extractor 采用现代化的 Python 开发工具链，基于 uv 包管理器构建高效的开发环境。本文档提供开发环境配置、项目结构总览、MCP 工具开发规范与编码最佳实践。
+Negentropy Perceives 采用现代化的 Python 开发工具链，基于 uv 包管理器构建高效的开发环境。本文档提供开发环境配置、项目结构总览、MCP 工具开发规范与编码最佳实践。
 
 ## 环境配置
 
@@ -43,7 +43,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 克隆项目
 git clone <repository-url>
-cd data-extractor
+cd negentropy-perceives
 
 # 同步依赖
 uv sync
@@ -61,10 +61,10 @@ uv run playwright install chromium
 ## 项目结构
 
 ```
-data-extractor/
-├── extractor/                    # 核心包
+negentropy-perceives/
+├── negentropy/perceives/                    # 核心包
 │   ├── server.py                 # MCP 服务器入口（re-export + main()）
-│   ├── config.py                 # 配置系统 + 配置验证（DataExtractorSettings, ConfigValidator）
+│   ├── config.py                 # 配置系统 + 配置验证（NegentropyPerceivesSettings, ConfigValidator）
 │   ├── schemas.py                # 响应模型 + 数据传输对象（Pydantic BaseModel, ScrapingResult）
 │   │
 │   ├── scraper.py                # 网页抓取引擎（WebScraper）
@@ -136,11 +136,11 @@ server.py                   re-export 所有工具（向后兼容）
 
 ### 开发新工具步骤
 
-以 `check_robots_txt`（[tools/utility.py](../extractor/tools/utility.py)）为例，这是项目中最简单的 MCP 工具：
+以 `check_robots_txt`（[tools/utility.py](../negentropy/perceives/tools/utility.py)）为例，这是项目中最简单的 MCP 工具：
 
 #### 1. 定义响应模型
 
-在 [schemas.py](../extractor/schemas.py) 中添加 Pydantic 响应模型：
+在 [schemas.py](../negentropy/perceives/schemas.py) 中添加 Pydantic 响应模型：
 
 ```python
 class RobotsResponse(BaseModel):
@@ -188,17 +188,17 @@ async def check_robots_txt(url: str) -> RobotsResponse:
 
 #### 3. 注册触发
 
-在 [tools/\_\_init\_\_.py](../extractor/tools/__init__.py) 中导入新模块：
+在 [tools/\_\_init\_\_.py](../negentropy/perceives/tools/__init__.py) 中导入新模块：
 
 ```python
 from . import utility  # noqa: F401  # 触发 @app.tool() 注册
 ```
 
-如需向后兼容，还需在 [server.py](../extractor/server.py) 中 re-export。
+如需向后兼容，还需在 [server.py](../negentropy/perceives/server.py) 中 re-export。
 
 ### 参数设计模式
 
-推荐使用 **Annotated Field 模式**，直接在函数签名中定义参数描述，无需额外的请求模型类。以 [tools/scraping.py](../extractor/tools/scraping.py) 中的 `scrape_webpage` 为例：
+推荐使用 **Annotated Field 模式**，直接在函数签名中定义参数描述，无需额外的请求模型类。以 [tools/scraping.py](../negentropy/perceives/tools/scraping.py) 中的 `scrape_webpage` 为例：
 
 ```python
 @app.tool()
@@ -294,7 +294,7 @@ asyncio.run(debug_async_function())
 @pytest.mark.requires_browser
 async def test_with_browser_debugging():
     """启用浏览器调试的测试"""
-    from extractor.anti_detection import AntiDetectionScraper
+    from negentropy.perceives.anti_detection import AntiDetectionScraper
 
     scraper = AntiDetectionScraper()
     options = {
@@ -328,10 +328,10 @@ uv run pytest -m "not slow" --timeout=300
 
 ```bash
 # 逐步修复类型问题
-uv run mypy extractor/ --ignore-missing-imports
+uv run mypy negentropy/perceives/ --ignore-missing-imports
 
 # 或使用宽松模式
-uv run mypy extractor/ --disable-error-code=var-annotated
+uv run mypy negentropy/perceives/ --disable-error-code=var-annotated
 ```
 
 更多调试命令详见 [常用指令](./5-Commands.md)，测试故障排除详见 [测试指南](./3-Testing.md#故障排除)。

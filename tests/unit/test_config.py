@@ -1,6 +1,6 @@
 """
 单元测试：配置管理模块
-测试 extractor.config 模块的配置加载、验证和使用
+测试 negentropy.perceives.config 模块的配置加载、验证和使用
 """
 
 import os
@@ -9,18 +9,18 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from extractor.config import DataExtractorSettings, settings
+from negentropy.perceives.config import NegentropyPerceivesSettings, settings
 
 
-class TestDataExtractorSettings:
+class TestNegentropyPerceivesSettings:
     """测试配置设置类"""
 
     def test_default_settings(self):
         """测试默认配置值"""
-        config = DataExtractorSettings()
+        config = NegentropyPerceivesSettings()
 
         # 测试默认值（考虑环境变量覆盖）
-        assert config.server_name == "document-reader"
+        assert config.server_name == "negentropy-perceives"
         assert config.server_version == "0.1.6.1"
         assert config.enable_javascript is False
         assert config.concurrent_requests == 16
@@ -35,17 +35,17 @@ class TestDataExtractorSettings:
     def test_environment_variable_loading(self):
         """测试环境变量加载"""
         env_vars = {
-            "DATA_EXTRACTOR_SERVER_NAME": "Custom Server",
-            "DATA_EXTRACTOR_ENABLE_JAVASCRIPT": "true",
-            "DATA_EXTRACTOR_CONCURRENT_REQUESTS": "32",
-            "DATA_EXTRACTOR_REQUEST_TIMEOUT": "60.0",
-            "DATA_EXTRACTOR_RATE_LIMIT_REQUESTS_PER_MINUTE": "120",
-            "DATA_EXTRACTOR_MAX_RETRIES": "5",
-            "DATA_EXTRACTOR_BROWSER_HEADLESS": "false",
+            "NEGENTROPY_PERCEIVES_SERVER_NAME": "Custom Server",
+            "NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT": "true",
+            "NEGENTROPY_PERCEIVES_CONCURRENT_REQUESTS": "32",
+            "NEGENTROPY_PERCEIVES_REQUEST_TIMEOUT": "60.0",
+            "NEGENTROPY_PERCEIVES_RATE_LIMIT_REQUESTS_PER_MINUTE": "120",
+            "NEGENTROPY_PERCEIVES_MAX_RETRIES": "5",
+            "NEGENTROPY_PERCEIVES_BROWSER_HEADLESS": "false",
         }
 
         with patch.dict(os.environ, env_vars):
-            config = DataExtractorSettings()
+            config = NegentropyPerceivesSettings()
 
             assert config.server_name == "Custom Server"
             assert config.enable_javascript is True
@@ -73,9 +73,9 @@ class TestDataExtractorSettings:
 
         for env_value, expected_value in boolean_test_cases:
             with patch.dict(
-                os.environ, {"DATA_EXTRACTOR_ENABLE_JAVASCRIPT": env_value}
+                os.environ, {"NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT": env_value}
             ):
-                config = DataExtractorSettings()
+                config = NegentropyPerceivesSettings()
                 assert config.enable_javascript is expected_value, (
                     f"Failed for {env_value}"
                 )
@@ -94,7 +94,7 @@ class TestDataExtractorSettings:
         ]
 
         for config_data in valid_configs:
-            config = DataExtractorSettings(**config_data)
+            config = NegentropyPerceivesSettings(**config_data)
             assert config is not None
 
         # 测试无效的数值
@@ -108,31 +108,31 @@ class TestDataExtractorSettings:
 
         for config_data in invalid_configs:
             with pytest.raises(ValidationError):
-                DataExtractorSettings(**config_data)
+                NegentropyPerceivesSettings(**config_data)
 
     def test_proxy_configuration(self):
         """测试代理配置"""
         # 无代理配置
-        config = DataExtractorSettings(use_proxy=False)
+        config = NegentropyPerceivesSettings(use_proxy=False)
         assert config.use_proxy is False
         assert config.proxy_url is None
 
         # 有代理配置
         proxy_url = "http://proxy.example.com:8080"
-        config = DataExtractorSettings(use_proxy=True, proxy_url=proxy_url)
+        config = NegentropyPerceivesSettings(use_proxy=True, proxy_url=proxy_url)
         assert config.use_proxy is True
         assert config.proxy_url == proxy_url
 
     def test_user_agent_configuration(self):
         """测试User-Agent配置"""
         # 随机User-Agent
-        config = DataExtractorSettings(use_random_user_agent=True)
+        config = NegentropyPerceivesSettings(use_random_user_agent=True)
         assert config.use_random_user_agent is True
         assert config.default_user_agent is not None
 
         # 固定User-Agent
         custom_ua = "Custom Bot 1.0"
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             use_random_user_agent=False, default_user_agent=custom_ua
         )
         assert config.use_random_user_agent is False
@@ -140,7 +140,7 @@ class TestDataExtractorSettings:
 
     def test_cache_configuration(self):
         """测试缓存配置"""
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             enable_caching=True, cache_ttl_hours=48, cache_max_size=200
         )
 
@@ -150,7 +150,7 @@ class TestDataExtractorSettings:
 
     def test_logging_configuration(self):
         """测试日志配置"""
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             log_level="DEBUG", log_requests=True, log_responses=False
         )
 
@@ -160,7 +160,7 @@ class TestDataExtractorSettings:
 
     def test_browser_configuration(self):
         """测试浏览器配置"""
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             browser_timeout=60, browser_headless=False, browser_window_size="1920x1080"
         )
 
@@ -175,7 +175,7 @@ class TestGlobalSettings:
     def test_global_settings_instance(self):
         """测试全局settings实例"""
         assert settings is not None
-        assert isinstance(settings, DataExtractorSettings)
+        assert isinstance(settings, NegentropyPerceivesSettings)
         assert settings.server_name is not None
         assert settings.server_version is not None
 
@@ -190,17 +190,17 @@ class TestGlobalSettings:
         # 验证值没有被修改
         assert settings.server_name == original_name
 
-    @patch.dict(os.environ, {"DATA_EXTRACTOR_SERVER_NAME": "Test Server"})
+    @patch.dict(os.environ, {"NEGENTROPY_PERCEIVES_SERVER_NAME": "Test Server"})
     def test_settings_environment_override(self):
         """测试环境变量覆盖设置"""
         # 重新导入以获取新的设置
         from importlib import reload
 
-        import extractor.config
+        import negentropy.perceives.config
 
-        reload(extractor.config)
+        reload(negentropy.perceives.config)
 
-        assert extractor.config.settings.server_name == "Test Server"
+        assert negentropy.perceives.config.settings.server_name == "Test Server"
 
 
 class TestConfigurationValidation:
@@ -211,61 +211,61 @@ class TestConfigurationValidation:
         # 有效超时配置
         valid_timeouts = [0.1, 1.0, 30.0, 300.0]
         for timeout in valid_timeouts:
-            config = DataExtractorSettings(
+            config = NegentropyPerceivesSettings(
                 request_timeout=timeout, browser_timeout=int(timeout)
             )
             assert config.request_timeout == timeout
 
         # 无效超时配置
         with pytest.raises(ValidationError):
-            DataExtractorSettings(request_timeout=-1.0)
+            NegentropyPerceivesSettings(request_timeout=-1.0)
 
         with pytest.raises(ValidationError):
-            DataExtractorSettings(browser_timeout=-1)
+            NegentropyPerceivesSettings(browser_timeout=-1)
 
     def test_concurrency_validation(self):
         """测试并发配置验证"""
         # 有效并发配置
         valid_values = [1, 8, 16, 32, 64]
         for value in valid_values:
-            config = DataExtractorSettings(concurrent_requests=value)
+            config = NegentropyPerceivesSettings(concurrent_requests=value)
             assert config.concurrent_requests == value
 
         # 无效并发配置
         invalid_values = [0, -1, -10]
         for value in invalid_values:
             with pytest.raises(ValidationError):
-                DataExtractorSettings(concurrent_requests=value)
+                NegentropyPerceivesSettings(concurrent_requests=value)
 
     def test_rate_limit_validation(self):
         """测试速率限制配置验证"""
         # 有效速率限制
         valid_rates = [1, 60, 120, 1000]
         for rate in valid_rates:
-            config = DataExtractorSettings(rate_limit_requests_per_minute=rate)
+            config = NegentropyPerceivesSettings(rate_limit_requests_per_minute=rate)
             assert config.rate_limit_requests_per_minute == rate
 
         # 无效速率限制
         with pytest.raises(ValidationError):
-            DataExtractorSettings(rate_limit_requests_per_minute=-1)
+            NegentropyPerceivesSettings(rate_limit_requests_per_minute=-1)
 
     def test_retry_configuration_validation(self):
         """测试重试配置验证"""
         # 有效重试配置
-        config = DataExtractorSettings(max_retries=5, retry_delay=2.0)
+        config = NegentropyPerceivesSettings(max_retries=5, retry_delay=2.0)
         assert config.max_retries == 5
         assert config.retry_delay == 2.0
 
         # 边界情况
-        config = DataExtractorSettings(max_retries=0)  # 0次重试应该有效
+        config = NegentropyPerceivesSettings(max_retries=0)  # 0次重试应该有效
         assert config.max_retries == 0
 
         # 无效重试配置
         with pytest.raises(ValidationError):
-            DataExtractorSettings(max_retries=-1)
+            NegentropyPerceivesSettings(max_retries=-1)
 
         with pytest.raises(ValidationError):
-            DataExtractorSettings(retry_delay=-1.0)
+            NegentropyPerceivesSettings(retry_delay=-1.0)
 
 
 class TestConfigurationIntegration:
@@ -273,7 +273,7 @@ class TestConfigurationIntegration:
 
     def test_scrapy_settings_generation(self):
         """测试Scrapy设置生成"""
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             concurrent_requests=32,
             request_timeout=60.0,
             use_random_user_agent=True,
@@ -287,7 +287,7 @@ class TestConfigurationIntegration:
 
     def test_browser_settings_generation(self):
         """测试浏览器设置生成"""
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             browser_timeout=45, browser_headless=True, browser_window_size="1366x768"
         )
 
@@ -298,7 +298,7 @@ class TestConfigurationIntegration:
 
     def test_proxy_settings_integration(self):
         """测试代理设置集成"""
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             use_proxy=True, proxy_url="http://proxy.example.com:8080"
         )
 
@@ -308,7 +308,7 @@ class TestConfigurationIntegration:
 
     def test_cache_settings_integration(self):
         """测试缓存设置集成"""
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             enable_caching=True, cache_ttl_hours=12, cache_max_size=150
         )
 
@@ -321,7 +321,7 @@ class TestConfigurationIntegration:
         valid_log_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
         for level in valid_log_levels:
-            config = DataExtractorSettings(
+            config = NegentropyPerceivesSettings(
                 log_level=level, log_requests=True, log_responses=True
             )
             assert config.log_level == level
@@ -336,35 +336,35 @@ class TestConfigurationEdgeCases:
         """测试环境变量缺失时的处理"""
         # 清空相关环境变量
         env_vars_to_clear = [
-            "DATA_EXTRACTOR_SERVER_NAME",
-            "DATA_EXTRACTOR_ENABLE_JAVASCRIPT",
-            "DATA_EXTRACTOR_CONCURRENT_REQUESTS",
+            "NEGENTROPY_PERCEIVES_SERVER_NAME",
+            "NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT",
+            "NEGENTROPY_PERCEIVES_CONCURRENT_REQUESTS",
         ]
 
         with patch.dict(os.environ, {}, clear=True):
-            config = DataExtractorSettings()
+            config = NegentropyPerceivesSettings()
             # 应该使用默认值
-            assert config.server_name == "document-reader"
+            assert config.server_name == "negentropy-perceives"
             assert config.enable_javascript is False
             assert config.concurrent_requests == 16
 
     def test_invalid_environment_variable_types(self):
         """测试无效环境变量类型处理"""
         invalid_env_vars = {
-            "DATA_EXTRACTOR_CONCURRENT_REQUESTS": "not-a-number",
-            "DATA_EXTRACTOR_REQUEST_TIMEOUT": "invalid-float",
-            "DATA_EXTRACTOR_ENABLE_JAVASCRIPT": "maybe",
+            "NEGENTROPY_PERCEIVES_CONCURRENT_REQUESTS": "not-a-number",
+            "NEGENTROPY_PERCEIVES_REQUEST_TIMEOUT": "invalid-float",
+            "NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT": "maybe",
         }
 
         with patch.dict(os.environ, invalid_env_vars):
             # 应该处理无效值并使用默认值或抛出异常
             with pytest.raises((ValidationError, ValueError)):
-                DataExtractorSettings()
+                NegentropyPerceivesSettings()
 
     def test_extreme_configuration_values(self):
         """测试极端配置值"""
         # 最小值
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             concurrent_requests=1,
             request_timeout=0.1,
             rate_limit_requests_per_minute=1,
@@ -374,7 +374,7 @@ class TestConfigurationEdgeCases:
         assert config is not None
 
         # 大值（但合理）
-        config = DataExtractorSettings(
+        config = NegentropyPerceivesSettings(
             concurrent_requests=1000,
             request_timeout=3600.0,
             rate_limit_requests_per_minute=10000,

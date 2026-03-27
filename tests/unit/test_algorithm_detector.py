@@ -15,14 +15,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from extractor.markdown.algorithm_detector import (
+from negentropy.perceives.markdown.algorithm_detector import (
     is_algorithm_block,
     detect_algorithm_regions,
     wrap_as_code_fence,
     _compute_algorithm_score,
 )
-from extractor.markdown.formatter import MarkdownFormatter
-from extractor.pdf.processor import PDFProcessor
+from negentropy.perceives.markdown.formatter import MarkdownFormatter
+from negentropy.perceives.pdf.processor import PDFProcessor
 
 
 # ---------------------------------------------------------------------------
@@ -390,7 +390,7 @@ class TestPDFProcessorAlgorithmIntegration:
         proc.cleanup()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_algorithm_block_preserves_lines(self, mock_import_fitz, processor):
         """PyMuPDF 提取时算法块保留行结构。"""
         mock_fitz = Mock()
@@ -438,7 +438,7 @@ class TestPDFProcessorAlgorithmIntegration:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_regular_block_still_merges_lines(self, mock_import_fitz, processor):
         """非算法块仍然正常合并行内换行。"""
         mock_fitz = Mock()

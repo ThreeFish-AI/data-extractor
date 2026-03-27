@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Data Extractor 测试运行脚本
+# Negentropy Perceives 测试运行脚本
 # 通用执行器 + 数据驱动路由模式
 
 set -e
@@ -52,7 +52,7 @@ run_pytest() {
     echo -e "${BLUE}======================================${NC}"
 
     run_with_timeout "$SUITE_TIMEOUT" uv run pytest "$test_path" \
-        --cov=extractor \
+        --cov=negentropy.perceives \
         --cov-report=term-missing \
         --html="tests/reports/${report_prefix}-report.html" \
         --self-contained-html \
@@ -91,7 +91,7 @@ generate_coverage_report() {
 
 # --- 帮助信息 ---
 show_help() {
-    echo "Data Extractor 测试运行脚本"
+    echo "Negentropy Perceives 测试运行脚本"
     echo ""
     echo "用法: $0 [选项]"
     echo ""

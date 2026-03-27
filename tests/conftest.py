@@ -4,17 +4,17 @@ import pytest
 import tempfile
 from unittest.mock import Mock, AsyncMock
 
-from extractor.config import DataExtractorSettings
-from extractor.scraper import WebScraper
-from extractor.anti_detection import AntiDetectionScraper
-from extractor.form_handler import FormHandler
+from negentropy.perceives.config import NegentropyPerceivesSettings
+from negentropy.perceives.scraper import WebScraper
+from negentropy.perceives.anti_detection import AntiDetectionScraper
+from negentropy.perceives.form_handler import FormHandler
 
 
 @pytest.fixture
 def test_config():
     """Test configuration with safe defaults."""
-    return DataExtractorSettings(
-        server_name="Test Data Extractor",
+    return NegentropyPerceivesSettings(
+        server_name="Test Negentropy Perceives",
         server_version="1.0.0-test",
         enable_javascript=False,
         use_random_user_agent=False,

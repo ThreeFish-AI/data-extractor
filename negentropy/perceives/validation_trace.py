@@ -1,4 +1,4 @@
-"""Shared validation trace hooks for extractor."""
+"""Shared validation trace hooks for negentropy.perceives."""
 
 from __future__ import annotations
 

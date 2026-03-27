@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-from extractor.pdf.enhanced import (
+from negentropy.perceives.pdf.enhanced import (
     EnhancedPDFProcessor,
     ExtractedImage,
     ExtractedTable,
@@ -49,7 +49,7 @@ class TestGeometricTableExtraction:
         ]
         return table
 
-    @patch("extractor.pdf.enhanced.fitz")
+    @patch("negentropy.perceives.pdf.enhanced.fitz")
     def test_lines_strategy_finds_bordered_table(self, mock_fitz, processor):
         """Test that 'lines' strategy detects tables with visible borders."""
         mock_doc = Mock()
@@ -72,7 +72,7 @@ class TestGeometricTableExtraction:
         assert "| H0 | H1 |" in tables[0].markdown
         assert tables[0].bbox in bbox_map
 
-    @patch("extractor.pdf.enhanced.fitz")
+    @patch("negentropy.perceives.pdf.enhanced.fitz")
     def test_text_strategy_fallback_for_borderless_tables(
         self, mock_fitz, processor
     ):
@@ -103,7 +103,7 @@ class TestGeometricTableExtraction:
         assert mock_page.find_tables.call_count == 2
         mock_page.find_tables.assert_any_call(strategy="text")
 
-    @patch("extractor.pdf.enhanced.fitz")
+    @patch("negentropy.perceives.pdf.enhanced.fitz")
     def test_small_table_filtered_out(self, mock_fitz, processor):
         """Test that single-row or single-column tables are filtered."""
         mock_doc = Mock()
@@ -121,7 +121,7 @@ class TestGeometricTableExtraction:
         )
         assert len(tables) == 0
 
-    @patch("extractor.pdf.enhanced.fitz")
+    @patch("negentropy.perceives.pdf.enhanced.fitz")
     def test_empty_extract_filtered_out(self, mock_fitz, processor):
         """Test that tables producing empty extract() data are filtered."""
         mock_doc = Mock()
@@ -139,7 +139,7 @@ class TestGeometricTableExtraction:
         )
         assert len(tables) == 0
 
-    @patch("extractor.pdf.enhanced.fitz")
+    @patch("negentropy.perceives.pdf.enhanced.fitz")
     def test_multiple_tables_on_same_page(self, mock_fitz, processor):
         """Test extraction of multiple tables from one page."""
         mock_doc = Mock()
@@ -210,7 +210,7 @@ class TestInlineTablePlacement:
 
     @pytest.fixture
     def pdf_processor(self):
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor()
         yield proc
@@ -373,7 +373,7 @@ class TestMarkdownTablePreservation:
 
     @pytest.fixture
     def pdf_processor(self):
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor()
         yield proc
@@ -420,7 +420,7 @@ class TestWebFallbackTablePreservation:
 
     def test_fallback_preserves_table_structure(self):
         """Test that fallback_html_conversion preserves HTML tables."""
-        from extractor.markdown.html_preprocessor import fallback_html_conversion
+        from negentropy.perceives.markdown.html_preprocessor import fallback_html_conversion
 
         html = """
         <html><body>
@@ -442,7 +442,7 @@ class TestWebFallbackTablePreservation:
 
     def test_fallback_handles_single_row_table(self):
         """Tables with only a header row should be skipped gracefully."""
-        from extractor.markdown.html_preprocessor import fallback_html_conversion
+        from negentropy.perceives.markdown.html_preprocessor import fallback_html_conversion
 
         html = """
         <html><body>
@@ -456,7 +456,7 @@ class TestWebFallbackTablePreservation:
     def test_html_table_to_markdown_helper(self):
         """Test the _html_table_to_markdown helper function."""
         from bs4 import BeautifulSoup
-        from extractor.markdown.html_preprocessor import _html_table_to_markdown
+        from negentropy.perceives.markdown.html_preprocessor import _html_table_to_markdown
 
         html = """
         <table>
@@ -476,7 +476,7 @@ class TestWebFallbackTablePreservation:
     def test_html_table_pipe_escaping(self):
         """Test that pipe characters in cell content are escaped."""
         from bs4 import BeautifulSoup
-        from extractor.markdown.html_preprocessor import _html_table_to_markdown
+        from negentropy.perceives.markdown.html_preprocessor import _html_table_to_markdown
 
         html = """
         <table>
@@ -601,7 +601,7 @@ class TestRealPDFTableExtraction:
     @pytest.mark.asyncio
     async def test_end_to_end_pdf_table_extraction(self):
         """End-to-end: process PDF and verify Table 9 appears inline."""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor()
         try:

@@ -3,8 +3,8 @@
 
 import pytest
 import tempfile
-from extractor.scraper import WebScraper
-from extractor.markdown.converter import MarkdownConverter
+from negentropy.perceives.scraper import WebScraper
+from negentropy.perceives.markdown.converter import MarkdownConverter
 
 
 @pytest.mark.asyncio

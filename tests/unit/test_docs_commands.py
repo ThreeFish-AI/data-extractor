@@ -59,13 +59,13 @@ class TestRelativeLinks:
 class TestEnvVarAccuracy:
     """文档中环境变量与 config.py 一致性验证。"""
 
-    ENV_VAR_PATTERN = re.compile(r"DATA_EXTRACTOR_(\w+)")
+    ENV_VAR_PATTERN = re.compile(r"NEGENTROPY_PERCEIVES_(\w+)")
 
     def test_no_nonexistent_env_vars(self, doc_content: str):
-        """文档 bash 代码块中引用的 DATA_EXTRACTOR_ 变量在 config.py 中有对应字段。"""
-        from extractor.config import DataExtractorSettings
+        """文档 bash 代码块中引用的 NEGENTROPY_PERCEIVES_ 变量在 config.py 中有对应字段。"""
+        from negentropy.perceives.config import NegentropyPerceivesSettings
 
-        valid_fields = {name.upper() for name in DataExtractorSettings.model_fields}
+        valid_fields = {name.upper() for name in NegentropyPerceivesSettings.model_fields}
 
         bash_blocks = _extract_bash_blocks(doc_content)
         doc_vars: set[str] = set()
@@ -73,7 +73,7 @@ class TestEnvVarAccuracy:
             doc_vars.update(self.ENV_VAR_PATTERN.findall(block))
 
         invalid = [
-            f"DATA_EXTRACTOR_{var}" for var in doc_vars if var not in valid_fields
+            f"NEGENTROPY_PERCEIVES_{var}" for var in doc_vars if var not in valid_fields
         ]
 
         assert invalid == [], f"以下环境变量在 config.py 中不存在: {invalid}"

@@ -7,7 +7,7 @@
 import pytest
 import pytest_asyncio
 
-from extractor.server import (
+from negentropy.perceives.server import (
     app,
     create_pdf_processor,
 )

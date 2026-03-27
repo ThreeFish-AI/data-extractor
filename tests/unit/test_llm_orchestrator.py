@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from extractor.pdf.llm_client import LLMClient, LLMResponse
-from extractor.pdf.llm_orchestrator import (
+from negentropy.perceives.pdf.llm_client import LLMClient, LLMResponse
+from negentropy.perceives.pdf.llm_orchestrator import (
     EngineResult,
     EngineTask,
     LLMOrchestrator,
@@ -151,7 +151,7 @@ class TestQuickScan:
         mock_doc.page_count = 5
         mock_doc.__getitem__ = lambda self, idx: mock_page
 
-        with patch("extractor.pdf.llm_orchestrator._import_fitz") as mock_fitz:
+        with patch("negentropy.perceives.pdf.llm_orchestrator._import_fitz") as mock_fitz:
             mock_fitz.return_value.open.return_value = mock_doc
             chars = orchestrator._quick_scan(Path("/fake/test.pdf"), None)
 
@@ -414,7 +414,7 @@ class TestPDFProcessorSmartMethod:
 
     def test_smart_in_supported_methods(self) -> None:
         """验证 smart 在支持的方法列表中。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=False)
         assert "smart" in processor.supported_methods
@@ -422,12 +422,12 @@ class TestPDFProcessorSmartMethod:
     @pytest.mark.asyncio
     async def test_smart_fallback_to_auto_when_litellm_missing(self) -> None:
         """LiteLLM 未安装时降级到 auto。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=False)
 
         with patch(
-            "extractor.pdf.llm_client.LLMClient.is_available", return_value=False
+            "negentropy.perceives.pdf.llm_client.LLMClient.is_available", return_value=False
         ):
             # 应降级到 auto，然后因为没有真实 PDF 而报错
             result = await processor.process_pdf(

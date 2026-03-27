@@ -1,4 +1,4 @@
-"""FastMCP Server entry point and backward-compatible re-exports."""
+"""FastMCP server entry point for Negentropy Perceives."""
 
 from pathlib import Path
 import sys
@@ -27,13 +27,10 @@ from .tools.markdown import (
 from .tools.pdf import convert_pdf_to_markdown, batch_convert_pdfs_to_markdown  # noqa: F401
 from .tools.service import get_server_metrics, clear_cache  # noqa: F401
 
-DEPRECATED_CLI_NAMES = {"data-extractor", "mcp-data-extractor"}
-
-
 def _active_cli_name() -> str:
     """Return the current CLI executable name for user-facing diagnostics."""
-    argv0 = sys.argv[0] if sys.argv else "document-reader"
-    return Path(argv0).name or "document-reader"
+    argv0 = sys.argv[0] if sys.argv else "negentropy-perceives"
+    return Path(argv0).name or "negentropy-perceives"
 
 
 def main() -> None:
@@ -56,12 +53,6 @@ def main() -> None:
         f"port={settings.http_port}, "
         f"path={settings.http_path}"
     )
-
-    if cli_name in DEPRECATED_CLI_NAMES:
-        print(
-            f"Warning: CLI '{cli_name}' is deprecated; "
-            "please migrate to 'document-reader'."
-        )
 
     if settings.transport_mode in ["http", "sse"]:
         transport_type = "HTTP" if settings.transport_mode == "http" else "SSE"

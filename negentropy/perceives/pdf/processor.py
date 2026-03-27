@@ -243,7 +243,7 @@ class PDFProcessor:
                 return {
                     "success": False,
                     "error": "Docling 引擎不可用，请安装 docling 可选依赖: "
-                    "uv pip install document-reader[docling]",
+                    "uv pip install negentropy-perceives[docling]",
                     "source": pdf_source,
                 }
 

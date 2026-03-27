@@ -11,10 +11,10 @@ import time
 import pytest
 from unittest.mock import patch
 
-from extractor.server import app, web_scraper, anti_detection_scraper
-from extractor.scraper import WebScraper
-from extractor.anti_detection import AntiDetectionScraper
-from extractor.markdown.converter import MarkdownConverter
+from negentropy.perceives.server import app, web_scraper, anti_detection_scraper
+from negentropy.perceives.scraper import WebScraper
+from negentropy.perceives.anti_detection import AntiDetectionScraper
+from negentropy.perceives.markdown.converter import MarkdownConverter
 
 
 # ---------------------------------------------------------------------------
@@ -356,7 +356,7 @@ class TestPDFToolIntegration:
     async def test_pdf_tools_resource_cleanup(self):
         """Test that PDF tools properly clean up resources."""
         # Verify that PDF processor has cleanup capabilities
-        from extractor.server import create_pdf_processor
+        from negentropy.perceives.server import create_pdf_processor
 
         pdf_processor = create_pdf_processor()
 
@@ -403,9 +403,9 @@ class TestMCPToolWorkflows:
     async def test_scrape_to_markdown_workflow(self, sample_scrape_result):
         """测试爬取到Markdown的完整工作流"""
         with (
-            patch("extractor.scraper.WebScraper.scrape_url") as mock_scrape,
+            patch("negentropy.perceives.scraper.WebScraper.scrape_url") as mock_scrape,
             patch(
-                "extractor.markdown.converter.MarkdownConverter.convert_webpage_to_markdown"
+                "negentropy.perceives.markdown.converter.MarkdownConverter.convert_webpage_to_markdown"
             ) as mock_convert,
         ):
             mock_scrape.return_value = sample_scrape_result
@@ -428,10 +428,10 @@ class TestMCPToolWorkflows:
         """测试批量处理工作流"""
         with (
             patch(
-                "extractor.scraper.WebScraper.scrape_multiple_urls"
+                "negentropy.perceives.scraper.WebScraper.scrape_multiple_urls"
             ) as mock_batch_scrape,
             patch(
-                "extractor.markdown.converter.MarkdownConverter.batch_convert_to_markdown"
+                "negentropy.perceives.markdown.converter.MarkdownConverter.batch_convert_to_markdown"
             ) as mock_batch_convert,
         ):
             mock_batch_scrape.return_value = {
@@ -470,7 +470,7 @@ class TestMCPToolWorkflows:
     async def test_stealth_to_structured_data_workflow(self):
         """测试隐身爬取到结构化数据提取工作流"""
         with patch(
-            "extractor.anti_detection.AntiDetectionScraper.scrape_with_stealth"
+            "negentropy.perceives.anti_detection.AntiDetectionScraper.scrape_with_stealth"
         ) as mock_stealth:
             mock_stealth.return_value = {
                 "url": "https://ecommerce-example.com",
@@ -491,7 +491,7 @@ class TestMCPToolWorkflows:
     async def test_pdf_processing_workflow(self):
         """测试PDF处理工作流"""
         with patch(
-            "extractor.pdf.processor.PDFProcessor.process_pdf"
+            "negentropy.perceives.pdf.processor.PDFProcessor.process_pdf"
         ) as mock_pdf_process:
             mock_pdf_process.return_value = {
                 "success": True,
@@ -535,7 +535,7 @@ class TestMCPToolRobustness:
     @pytest.mark.asyncio
     async def test_tools_handle_network_errors(self):
         """测试工具处理网络错误的能力"""
-        with patch("extractor.scraper.WebScraper.scrape_url") as mock_scrape:
+        with patch("negentropy.perceives.scraper.WebScraper.scrape_url") as mock_scrape:
             # 模拟网络错误
             mock_scrape.side_effect = Exception("Network timeout")
 

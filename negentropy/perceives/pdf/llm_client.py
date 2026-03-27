@@ -104,7 +104,7 @@ class LLMClient:
         if not self.is_available():
             raise RuntimeError(
                 "litellm 未安装，请安装 llm 可选依赖: "
-                "uv pip install document-reader[llm]"
+                "uv pip install negentropy-perceives[llm]"
             )
 
         import litellm

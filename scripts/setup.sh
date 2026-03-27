@@ -1,9 +1,9 @@
 #!/bin/bash
-# Setup script for Data Extractor with uv
+# Setup script for Negentropy Perceives with uv
 
 set -e
 
-echo "🚀 Setting up Data Extractor with uv..."
+echo "🚀 Setting up Negentropy Perceives with uv..."
 
 # Check Python version
 PYTHON_VERSION=$(python --version 2>&1 | awk '{print $2}')
@@ -53,9 +53,9 @@ echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
 echo "1. Edit .env file with your configuration"
-echo "2. Run: uv run data-extractor"
+echo "2. Run: uv run negentropy-perceives"
 echo ""
 echo "For development:"
-echo "- Format code: uv run ruff format extractor/ examples/ tests/"
+echo "- Format code: uv run ruff format negentropy/perceives/ examples/ tests/"
 echo "- Run tests: uv run pytest"
-echo "- Type check: uv run mypy extractor/"
+echo "- Type check: uv run mypy negentropy/perceives/"

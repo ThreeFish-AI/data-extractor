@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from extractor.config import DataExtractorSettings
+from negentropy.perceives.config import NegentropyPerceivesSettings
 from tests.unit.doc_contracts import (
     assert_doc_exists,
     assert_relative_links_resolve,
@@ -14,13 +14,13 @@ from tests.unit.doc_contracts import (
 
 CONFIG_DOC = "4-Configuration.md"
 
-# DataExtractorSettings 中非配置元字段（model_config 等不映射为环境变量）
+# NegentropyPerceivesSettings 中非配置元字段（model_config 等不映射为环境变量）
 _EXCLUDED_FIELDS = {"model_config"}
 
-# 从 DataExtractorSettings 的 model_fields 中推导 DATA_EXTRACTOR_* 环境变量名
+# 从 NegentropyPerceivesSettings 的 model_fields 中推导 NEGENTROPY_PERCEIVES_* 环境变量名
 _SETTINGS_ENV_VARS: set[str] = {
-    f"DATA_EXTRACTOR_{name.upper()}"
-    for name in DataExtractorSettings.model_fields
+    f"NEGENTROPY_PERCEIVES_{name.upper()}"
+    for name in NegentropyPerceivesSettings.model_fields
     if name not in _EXCLUDED_FIELDS
 }
 
@@ -60,7 +60,7 @@ class TestRelativeLinks:
 class TestEnvVarConsistency:
     """文档中环境变量与代码实现的一致性验证。"""
 
-    ENV_VAR_PATTERN = re.compile(r"`(DATA_EXTRACTOR_\w+)`")
+    ENV_VAR_PATTERN = re.compile(r"`(NEGENTROPY_PERCEIVES_\w+)`")
 
     def test_doc_covers_all_code_env_vars(self, doc_content: str):
         """文档覆盖 config.py 中所有配置字段对应的环境变量。"""
@@ -83,7 +83,7 @@ class TestConfigGroupCompleteness:
     """文档表格对 config.py 字段的覆盖完整性验证。"""
 
     TABLE_ROW_PATTERN = re.compile(
-        r"^\| `DATA_EXTRACTOR_(\w+)` \|", re.MULTILINE
+        r"^\| `NEGENTROPY_PERCEIVES_(\w+)` \|", re.MULTILINE
     )
 
     def test_all_fields_in_tables(self, doc_content: str):
@@ -92,7 +92,7 @@ class TestConfigGroupCompleteness:
             match.lower() for match in self.TABLE_ROW_PATTERN.findall(doc_content)
         }
         code_fields = {
-            name for name in DataExtractorSettings.model_fields
+            name for name in NegentropyPerceivesSettings.model_fields
             if name not in _EXCLUDED_FIELDS
         }
         missing = code_fields - table_fields

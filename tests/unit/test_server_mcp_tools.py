@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-import extractor.server as server_module
+import negentropy.perceives.server as server_module
 
 # BaseModel request classes have been removed - tools now use individual parameters with Annotated Field
 
@@ -34,7 +34,7 @@ class TestMCPToolsScraping:
     @pytest.mark.asyncio
     async def test_scrape_webpage_success(self):
         """测试单页面抓取成功"""
-        with patch("extractor.tools.scraping.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.scraping.web_scraper") as mock_scraper:
             mock_result = {
                 "url": "https://example.com",
                 "status_code": 200,
@@ -72,7 +72,7 @@ class TestMCPToolsScraping:
     @pytest.mark.asyncio
     async def test_scrape_multiple_webpages_success(self):
         """测试批量抓取成功"""
-        with patch("extractor.tools.scraping.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.scraping.web_scraper") as mock_scraper:
             mock_results = [
                 {"url": "https://example.com/1", "status_code": 200},
                 {"url": "https://example.com/2", "status_code": 200},
@@ -103,7 +103,7 @@ class TestMCPToolsScraping:
     @pytest.mark.asyncio
     async def test_extract_links_success(self):
         """测试链接提取成功"""
-        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {
                 "content": {
                     "links": [
@@ -132,7 +132,7 @@ class TestMCPToolsScraping:
     @pytest.mark.asyncio
     async def test_extract_links_domain_filtering(self):
         """测试域名过滤功能"""
-        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {
                 "content": {
                     "links": [
@@ -164,7 +164,7 @@ class TestMCPToolsInformation:
     @pytest.mark.asyncio
     async def test_get_page_info_success(self):
         """测试页面信息获取成功"""
-        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {
                 "url": "https://example.com",
                 "status_code": 200,
@@ -183,7 +183,7 @@ class TestMCPToolsInformation:
     @pytest.mark.asyncio
     async def test_check_robots_txt_success(self):
         """测试robots.txt检查成功"""
-        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.extraction.web_scraper") as mock_scraper:
             mock_result = {"content": {"text": "User-agent: *\nDisallow: /admin/"}}
             mock_scraper.http_scraper.scrape = AsyncMock(return_value=mock_result)
 
@@ -197,7 +197,7 @@ class TestMCPToolsInformation:
     @pytest.mark.asyncio
     async def test_check_robots_txt_not_found(self):
         """测试robots.txt不存在"""
-        with patch("extractor.tools.extraction.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.extraction.web_scraper") as mock_scraper:
             mock_scraper.http_scraper.scrape = AsyncMock(
                 return_value={"error": "404 Not Found"}
             )
@@ -216,10 +216,10 @@ class TestMCPToolsAdvanced:
     async def test_scrape_with_stealth_success(self):
         """测试反检测抓取成功"""
         with (
-            patch("extractor.tools.stealth.anti_detection_scraper"),
-            patch("extractor.tools.stealth.rate_limiter") as mock_limiter,
-            patch("extractor.tools.stealth.cache_manager") as mock_cache,
-            patch("extractor.tools.stealth.retry_manager") as mock_retry,
+            patch("negentropy.perceives.tools.stealth.anti_detection_scraper"),
+            patch("negentropy.perceives.tools.stealth.rate_limiter") as mock_limiter,
+            patch("negentropy.perceives.tools.stealth.cache_manager") as mock_cache,
+            patch("negentropy.perceives.tools.stealth.retry_manager") as mock_retry,
         ):
             mock_limiter.wait = AsyncMock()
             mock_cache.get.return_value = None
@@ -245,11 +245,11 @@ class TestMCPToolsAdvanced:
     @pytest.mark.asyncio
     async def test_scrape_with_stealth_cache_returns_response(self):
         """缓存命中时应返回 ScrapeResponse 而非 raw dict（步骤 6 新增）。"""
-        from extractor.schemas import ScrapeResponse
+        from negentropy.perceives.schemas import ScrapeResponse
 
         with (
-            patch("extractor.tools.stealth.rate_limiter") as mock_limiter,
-            patch("extractor.tools.stealth.cache_manager") as mock_cache,
+            patch("negentropy.perceives.tools.stealth.rate_limiter") as mock_limiter,
+            patch("negentropy.perceives.tools.stealth.cache_manager") as mock_cache,
         ):
             mock_limiter.wait = AsyncMock()
             cached_data = {
@@ -278,11 +278,11 @@ class TestMCPToolsAdvanced:
         mock_driver.title = "Form Page"
 
         with (
-            patch("extractor.tools.form.rate_limiter") as mock_limiter,
+            patch("negentropy.perceives.tools.form.rate_limiter") as mock_limiter,
             patch(
-                "extractor.tools.form.selenium_session",
+                "negentropy.perceives.tools.form.selenium_session",
             ) as mock_session,
-            patch("extractor.tools.form.FormHandler") as mock_handler_cls,
+            patch("negentropy.perceives.tools.form.FormHandler") as mock_handler_cls,
         ):
             mock_limiter.wait = AsyncMock()
             mock_session.return_value.__enter__ = Mock(return_value=mock_driver)
@@ -307,8 +307,8 @@ class TestMCPToolsAdvanced:
     async def test_extract_structured_data_success(self):
         """测试结构化数据提取成功"""
         with (
-            patch("extractor.tools.extraction.web_scraper") as mock_scraper,
-            patch("extractor.tools.extraction.rate_limiter") as mock_limiter,
+            patch("negentropy.perceives.tools.extraction.web_scraper") as mock_scraper,
+            patch("negentropy.perceives.tools.extraction.rate_limiter") as mock_limiter,
         ):
             mock_limiter.wait = AsyncMock()
             mock_result = {
@@ -341,8 +341,8 @@ class TestMCPToolsServer:
     async def test_get_server_metrics_success(self):
         """测试服务器指标获取成功"""
         with (
-            patch("extractor.tools.service.metrics_collector") as mock_metrics,
-            patch("extractor.tools.service.cache_manager") as mock_cache,
+            patch("negentropy.perceives.tools.service.metrics_collector") as mock_metrics,
+            patch("negentropy.perceives.tools.service.cache_manager") as mock_cache,
         ):
             mock_metrics.get_stats.return_value = {
                 "total_requests": 100,
@@ -361,7 +361,7 @@ class TestMCPToolsServer:
     @pytest.mark.asyncio
     async def test_clear_cache_success(self):
         """测试缓存清理成功"""
-        with patch("extractor.tools.service.cache_manager") as mock_cache:
+        with patch("negentropy.perceives.tools.service.cache_manager") as mock_cache:
             mock_cache.clear.return_value = 5
             mock_cache.size.return_value = 5
 
@@ -379,9 +379,9 @@ class TestMCPToolsMarkdown:
     async def test_convert_webpage_to_markdown_success(self):
         """测试单页面Markdown转换成功"""
         with (
-            patch("extractor.tools.markdown.web_scraper") as mock_scraper,
-            patch("extractor.tools.markdown.markdown_converter") as mock_converter,
-            patch("extractor.tools.markdown.rate_limiter") as mock_limiter,
+            patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper,
+            patch("negentropy.perceives.tools.markdown.markdown_converter") as mock_converter,
+            patch("negentropy.perceives.tools.markdown.rate_limiter") as mock_limiter,
         ):
             mock_limiter.wait = AsyncMock()
 
@@ -420,8 +420,8 @@ class TestMCPToolsMarkdown:
     async def test_batch_convert_webpages_to_markdown_success(self):
         """测试批量Markdown转换成功"""
         with (
-            patch("extractor.tools.markdown.web_scraper") as mock_scraper,
-            patch("extractor.tools.markdown.markdown_converter") as mock_converter,
+            patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper,
+            patch("negentropy.perceives.tools.markdown.markdown_converter") as mock_converter,
         ):
             mock_scrape_results = [
                 {
@@ -470,8 +470,8 @@ class TestMCPToolsPDF:
     async def test_convert_pdf_to_markdown_success(self):
         """测试PDF转Markdown成功"""
         with (
-            patch("extractor.tools.pdf.create_pdf_processor") as mock_get_processor,
-            patch("extractor.tools.pdf.rate_limiter") as mock_limiter,
+            patch("negentropy.perceives.tools.pdf.create_pdf_processor") as mock_get_processor,
+            patch("negentropy.perceives.tools.pdf.rate_limiter") as mock_limiter,
         ):
             mock_limiter.wait = AsyncMock()
 
@@ -505,8 +505,8 @@ class TestMCPToolsPDF:
     async def test_batch_convert_pdfs_to_markdown_success(self):
         """测试批量PDF转换成功"""
         with (
-            patch("extractor.tools.pdf.create_pdf_processor") as mock_get_processor,
-            patch("extractor.tools.pdf.rate_limiter") as mock_limiter,
+            patch("negentropy.perceives.tools.pdf.create_pdf_processor") as mock_get_processor,
+            patch("negentropy.perceives.tools.pdf.rate_limiter") as mock_limiter,
         ):
             mock_limiter.wait = AsyncMock()
 

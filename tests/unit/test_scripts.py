@@ -130,8 +130,8 @@ class TestVersionManagement:
         )
 
     def test_dynamic_version_reads_from_pyproject(self):
-        """extractor.__version__ 与 pyproject.toml 中的版本号一致。"""
-        from extractor import __version__
+        """negentropy.perceives.__version__ 与 pyproject.toml 中的版本号一致。"""
+        from negentropy.perceives import __version__
 
         pyproject_path = PROJECT_ROOT / "pyproject.toml"
         content = pyproject_path.read_text(encoding="utf-8")
@@ -151,11 +151,9 @@ class TestVersionManagement:
                 f"{doc_file.name} 中仍引用已删除的 update_version.py"
             )
 
-    def test_pyproject_contains_cli_aliases(self):
-        """pyproject.toml 暴露新的主命令与兼容别名。"""
+    def test_pyproject_contains_primary_cli(self):
+        """pyproject.toml 暴露新的主命令。"""
         pyproject_path = PROJECT_ROOT / "pyproject.toml"
         content = pyproject_path.read_text(encoding="utf-8")
 
-        assert 'document-reader = "extractor.server:main"' in content
-        assert 'mcp-data-extractor = "extractor.server:main"' in content
-        assert 'data-extractor = "extractor.server:main"' in content
+        assert 'negentropy-perceives = "negentropy.perceives.server:main"' in content

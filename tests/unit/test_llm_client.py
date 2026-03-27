@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from extractor.pdf.llm_client import LLMClient, LLMResponse
+from negentropy.perceives.pdf.llm_client import LLMClient, LLMResponse
 
 
 # ============================================================
@@ -53,7 +53,7 @@ class TestLLMClientAvailability:
         with patch.dict("sys.modules", {"litellm": None}):
             # 清除可能的缓存
             import importlib
-            from extractor.pdf import llm_client as mod
+            from negentropy.perceives.pdf import llm_client as mod
 
             importlib.reload(mod)
             assert mod.LLMClient.is_available() is False

@@ -29,7 +29,7 @@ jobs:
         run: uv run pytest -v --tb=short -n auto
         timeout-minutes: 5
         env:
-          DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
+          NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
 
   lint:
     name: Lint & Type Check
@@ -98,7 +98,7 @@ jobs:
       - name: Test installation from wheel
         run: |
           uv pip install dist/*.whl
-          uv run python -c "import extractor; print(f'Successfully imported extractor v{extractor.__version__}')" || uv run python -c "import extractor; print('Successfully imported extractor')"
+          uv run python -c "import negentropy.perceives; print(f'Successfully imported extractor v{negentropy.perceives.__version__}')" || uv run python -c "import negentropy.perceives; print('Successfully imported extractor')"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -121,7 +121,7 @@ jobs:
         run: uv run pytest --cov=extractor --cov-report=xml --cov-report=html --cov-report=term -n auto
         timeout-minutes: 5
         env:
-          DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
+          NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v7

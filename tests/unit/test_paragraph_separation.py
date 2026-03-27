@@ -16,8 +16,8 @@ import tempfile
 from unittest.mock import Mock, patch
 from pathlib import Path
 
-from extractor.pdf.processor import PDFProcessor
-from extractor.markdown.html_preprocessor import (
+from negentropy.perceives.pdf.processor import PDFProcessor
+from negentropy.perceives.markdown.html_preprocessor import (
     build_html_from_text,
     _heuristic_split_paragraphs,
 )
@@ -38,7 +38,7 @@ class TestPyMuPDFBlockExtraction:
     """验证 PyMuPDF block 级提取产生正确的段落分隔。"""
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_blocks_produce_double_newlines(self, mock_import_fitz, processor):
         """多个 text blocks 应以 \\n\\n 分隔。"""
         mock_fitz = Mock()
@@ -78,7 +78,7 @@ class TestPyMuPDFBlockExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_image_blocks_excluded(self, mock_import_fitz, processor):
         """图片 blocks (block_type=1) 应被排除。"""
         mock_fitz = Mock()
@@ -112,7 +112,7 @@ class TestPyMuPDFBlockExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_blocks_sorted_by_position(self, mock_import_fitz, processor):
         """Blocks 应按 y0, x0 排序以保证阅读顺序。"""
         mock_fitz = Mock()
@@ -299,7 +299,7 @@ class TestAcademicPDFStructure:
             )
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_multi_line_block_merged(self, mock_import_fitz, processor):
         """Block 内多行应合并为空格分隔的连续文本。"""
         mock_fitz = Mock()

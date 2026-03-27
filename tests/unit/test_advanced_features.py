@@ -16,18 +16,18 @@ import pytest
 from contextlib import asynccontextmanager
 from unittest.mock import Mock, patch, AsyncMock
 
-from extractor.anti_detection import (
+from negentropy.perceives.anti_detection import (
     AntiDetectionScraper,
     _scroll_page_selenium,
     _scroll_page_playwright,
     _simulate_human_behavior_selenium,
     _simulate_human_behavior_playwright,
 )
-from extractor.content_extraction import (
+from negentropy.perceives.content_extraction import (
     extract_page_data_selenium,
     extract_page_data_playwright,
 )
-from extractor.form_handler import FormHandler
+from negentropy.perceives.form_handler import FormHandler
 
 
 class TestAntiDetectionScraper:
@@ -83,11 +83,11 @@ class TestSeleniumStealth:
     def setup_method(self):
         self.scraper = AntiDetectionScraper()
 
-    @patch("extractor.anti_detection.extract_page_data_selenium")
-    @patch("extractor.anti_detection._simulate_human_behavior_selenium")
-    @patch("extractor.anti_detection._scroll_page_selenium")
-    @patch("extractor.anti_detection._random_delay")
-    @patch("extractor.anti_detection.stealth_selenium_session")
+    @patch("negentropy.perceives.anti_detection.extract_page_data_selenium")
+    @patch("negentropy.perceives.anti_detection._simulate_human_behavior_selenium")
+    @patch("negentropy.perceives.anti_detection._scroll_page_selenium")
+    @patch("negentropy.perceives.anti_detection._random_delay")
+    @patch("negentropy.perceives.anti_detection.stealth_selenium_session")
     @pytest.mark.asyncio
     async def test_selenium_stealth_scraping_success(
         self, mock_session, mock_delay, mock_scroll, mock_simulate, mock_extract
@@ -123,11 +123,11 @@ class TestSeleniumStealth:
         mock_extract.assert_called_once_with(mock_driver, None)
         mock_scroll.assert_not_called()
 
-    @patch("extractor.anti_detection.extract_page_data_selenium")
-    @patch("extractor.anti_detection._simulate_human_behavior_selenium")
-    @patch("extractor.anti_detection._scroll_page_selenium")
-    @patch("extractor.anti_detection._random_delay")
-    @patch("extractor.anti_detection.stealth_selenium_session")
+    @patch("negentropy.perceives.anti_detection.extract_page_data_selenium")
+    @patch("negentropy.perceives.anti_detection._simulate_human_behavior_selenium")
+    @patch("negentropy.perceives.anti_detection._scroll_page_selenium")
+    @patch("negentropy.perceives.anti_detection._random_delay")
+    @patch("negentropy.perceives.anti_detection.stealth_selenium_session")
     @pytest.mark.asyncio
     async def test_selenium_stealth_with_scroll(
         self, mock_session, mock_delay, mock_scroll, mock_simulate, mock_extract
@@ -153,10 +153,10 @@ class TestSeleniumStealth:
 
         mock_scroll.assert_called_once_with(mock_driver)
 
-    @patch("extractor.anti_detection.extract_page_data_selenium")
-    @patch("extractor.anti_detection._simulate_human_behavior_selenium")
-    @patch("extractor.anti_detection._random_delay")
-    @patch("extractor.anti_detection.stealth_selenium_session")
+    @patch("negentropy.perceives.anti_detection.extract_page_data_selenium")
+    @patch("negentropy.perceives.anti_detection._simulate_human_behavior_selenium")
+    @patch("negentropy.perceives.anti_detection._random_delay")
+    @patch("negentropy.perceives.anti_detection.stealth_selenium_session")
     @pytest.mark.asyncio
     async def test_selenium_wait_for_element(
         self, mock_session, mock_delay, mock_simulate, mock_extract
@@ -181,8 +181,8 @@ class TestSeleniumStealth:
             scroll_page=False,
         )
 
-    @patch("extractor.anti_detection.random.randint")
-    @patch("extractor.anti_detection.random.uniform")
+    @patch("negentropy.perceives.anti_detection.random.randint")
+    @patch("negentropy.perceives.anti_detection.random.uniform")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_selenium_page_scrolling(
@@ -206,9 +206,9 @@ class TestSeleniumStealth:
         assert mock_driver.execute_script.call_count >= 2
         mock_sleep.assert_called()
 
-    @patch("extractor.anti_detection.ActionChains")
-    @patch("extractor.anti_detection.random.randint")
-    @patch("extractor.anti_detection.random.uniform")
+    @patch("negentropy.perceives.anti_detection.ActionChains")
+    @patch("negentropy.perceives.anti_detection.random.randint")
+    @patch("negentropy.perceives.anti_detection.random.uniform")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_selenium_human_behavior_simulation(
@@ -235,11 +235,11 @@ class TestPlaywrightStealth:
     def setup_method(self):
         self.scraper = AntiDetectionScraper()
 
-    @patch("extractor.anti_detection.extract_page_data_playwright")
-    @patch("extractor.anti_detection._simulate_human_behavior_playwright")
-    @patch("extractor.anti_detection._scroll_page_playwright")
-    @patch("extractor.anti_detection._random_delay")
-    @patch("extractor.anti_detection.stealth_playwright_session")
+    @patch("negentropy.perceives.anti_detection.extract_page_data_playwright")
+    @patch("negentropy.perceives.anti_detection._simulate_human_behavior_playwright")
+    @patch("negentropy.perceives.anti_detection._scroll_page_playwright")
+    @patch("negentropy.perceives.anti_detection._random_delay")
+    @patch("negentropy.perceives.anti_detection.stealth_playwright_session")
     @pytest.mark.asyncio
     async def test_playwright_stealth_scraping_success(
         self, mock_session, mock_delay, mock_scroll, mock_simulate, mock_extract
@@ -273,10 +273,10 @@ class TestPlaywrightStealth:
         mock_extract.assert_called_once_with(mock_page, None)
         mock_scroll.assert_not_called()
 
-    @patch("extractor.anti_detection.extract_page_data_playwright")
-    @patch("extractor.anti_detection._simulate_human_behavior_playwright")
-    @patch("extractor.anti_detection._random_delay")
-    @patch("extractor.anti_detection.stealth_playwright_session")
+    @patch("negentropy.perceives.anti_detection.extract_page_data_playwright")
+    @patch("negentropy.perceives.anti_detection._simulate_human_behavior_playwright")
+    @patch("negentropy.perceives.anti_detection._random_delay")
+    @patch("negentropy.perceives.anti_detection.stealth_playwright_session")
     @pytest.mark.asyncio
     async def test_playwright_wait_for_element(
         self, mock_session, mock_delay, mock_simulate, mock_extract
@@ -314,8 +314,8 @@ class TestPlaywrightStealth:
         assert "scrollBy" in js_code
         assert "Promise" in js_code
 
-    @patch("extractor.anti_detection.random.randint")
-    @patch("extractor.anti_detection.random.uniform")
+    @patch("negentropy.perceives.anti_detection.random.randint")
+    @patch("negentropy.perceives.anti_detection.random.uniform")
     @patch("asyncio.sleep")
     @pytest.mark.asyncio
     async def test_playwright_human_behavior_simulation(
@@ -338,7 +338,7 @@ class TestPlaywrightStealth:
 class TestDataExtraction:
     """测试整页数据提取门面（函数已迁至 content_extraction.py）。"""
 
-    @patch("extractor.content_extraction.BeautifulSoup")
+    @patch("negentropy.perceives.content_extraction.BeautifulSoup")
     @pytest.mark.asyncio
     async def test_selenium_data_extraction_default(self, mock_beautifulsoup):
         """测试 Selenium 默认数据提取。"""
@@ -363,7 +363,7 @@ class TestDataExtraction:
         assert result["content"]["text"] == "Test content"
         assert result["content"]["links"] == []
 
-    @patch("extractor.content_extraction.BeautifulSoup")
+    @patch("negentropy.perceives.content_extraction.BeautifulSoup")
     @pytest.mark.asyncio
     async def test_selenium_data_extraction_with_config(self, mock_beautifulsoup):
         """测试 Selenium 配置化数据提取。"""
@@ -553,7 +553,7 @@ class TestFormHandler:
 class TestSeleniumFormHandling:
     """测试Selenium表单处理"""
 
-    @patch("extractor.form_handler.Select")
+    @patch("negentropy.perceives.form_handler.Select")
     @pytest.mark.asyncio
     async def test_selenium_fill_select_field(self, mock_select):
         """测试Selenium填充选择框"""

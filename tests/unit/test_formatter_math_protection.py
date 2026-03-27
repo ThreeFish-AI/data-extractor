@@ -1,8 +1,8 @@
-"""extractor/markdown/formatter.py 数学内容保护的单元测试。"""
+"""negentropy/perceives/markdown/formatter.py 数学内容保护的单元测试。"""
 
 import pytest
 
-from extractor.markdown.formatter import MarkdownFormatter
+from negentropy.perceives.markdown.formatter import MarkdownFormatter
 
 
 class TestFormatterMathProtection:

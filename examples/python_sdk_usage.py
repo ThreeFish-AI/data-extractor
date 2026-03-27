@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""document-reader Python SDK usage examples."""
+"""negentropy-perceives Python SDK usage examples."""
 
 import asyncio
 import json
 
-from extractor.sdk import DocumentReaderClient
+from negentropy.perceives.sdk import NegentropyPerceivesClient
 
 
 async def main() -> None:
     """Demonstrate the project SDK against a local HTTP endpoint."""
-    async with DocumentReaderClient("http://127.0.0.1:8081/mcp") as client:
+    async with NegentropyPerceivesClient("http://127.0.0.1:8081/mcp") as client:
         tools = await client.list_tools()
         print(f"Registered tools: {len(tools)}")
 
