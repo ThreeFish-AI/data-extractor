@@ -54,7 +54,7 @@ __all__ = [
 
 ScrapeMethod = Literal["auto", "simple", "scrapy", "selenium"]
 BrowserMethod = Literal["selenium", "playwright"]
-PDFMethod = Literal["auto", "pymupdf", "pypdf"]
+PDFMethod = Literal["auto", "pymupdf", "pypdf", "docling"]
 PDFOutputFormat = Literal["markdown", "text"]
 StructuredDataType = Literal[
     "all", "contact", "social", "content", "products", "addresses"

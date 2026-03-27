@@ -39,8 +39,9 @@ async def convert_pdf_to_markdown(
         Field(
             default="auto",
             description="""PDF 提取方法：
-                "auto"（自动选择最佳引擎）、
-                "pymupdf"（PyMuPDF引擎，适合复杂布局）、
+                "auto"（自动选择最佳引擎，优先 Docling）、
+                "docling"（Docling 引擎，AI 布局分析 + TableFormer 表格 + 代码检测，适合复杂文档）、
+                "pymupdf"（PyMuPDF引擎，快速处理）、
                 "pypdf"（PyPDF引擎，适合简单文本）""",
         ),
     ],

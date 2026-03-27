@@ -25,6 +25,7 @@ from .math_formula import (
     unicode_to_latex,
     has_math_unicode,
 )
+from .docling_engine import DoclingEngine, DoclingConversionResult
 
 
 # 延迟导入 PDF 处理库，避免启动时的 SWIG 警告
@@ -55,7 +56,10 @@ class PDFProcessor:
     """PDF processor for extracting text and converting to Markdown."""
 
     def __init__(
-        self, enable_enhanced_features: bool = True, output_dir: Optional[str] = None
+        self,
+        enable_enhanced_features: bool = True,
+        output_dir: Optional[str] = None,
+        prefer_docling: bool = True,
     ):
         """
         Initialize the PDF processor.
@@ -63,16 +67,23 @@ class PDFProcessor:
         Args:
             enable_enhanced_features: Whether to enable enhanced extraction features
             output_dir: Directory to save extracted images and assets
+            prefer_docling: Whether to prefer Docling engine when available (default: True)
         """
-        self.supported_methods = ["pymupdf", "pypdf", "auto"]
+        self.supported_methods = ["pymupdf", "pypdf", "auto", "docling"]
         self.temp_dir = tempfile.mkdtemp(prefix="pdf_extractor_")
         self.enable_enhanced_features = enable_enhanced_features
+        self.prefer_docling = prefer_docling
 
         # Initialize enhanced processor for images, tables, and formulas
         if self.enable_enhanced_features:
             self.enhanced_processor = EnhancedPDFProcessor(output_dir)
         else:
             self.enhanced_processor = None
+
+        # Docling 引擎（延迟初始化，仅当 prefer_docling=True 且已安装时）
+        self._docling_engine: Optional[DoclingEngine] = None
+        if prefer_docling and DoclingEngine.is_available():
+            self._docling_engine = DoclingEngine(output_dir=output_dir)
 
         # Page-level image maps populated during enhanced extraction,
         # consumed during text extraction for inline image placement.
@@ -155,7 +166,42 @@ class PDFProcessor:
             # Derive PDF basename for image naming
             pdf_name = Path(pdf_source).stem if pdf_source else ""
 
-            # ── NEW ORDER ──
+            # ── Docling 主路径 ──
+            # 当 Docling 可用且 method 为 auto/docling 时，优先使用 Docling 引擎
+            if self._docling_engine and method in ("auto", "docling"):
+                try:
+                    logger.info("使用 Docling 引擎转换 PDF: %s", pdf_source)
+                    page_range_tuple = page_range if page_range else None
+                    docling_result = self._docling_engine.convert(
+                        str(pdf_path),
+                        page_range=page_range_tuple,
+                    )
+                    if docling_result and docling_result.markdown:
+                        return self._build_result_from_docling(
+                            docling_result,
+                            pdf_source=pdf_source,
+                            include_metadata=include_metadata,
+                            output_format=output_format,
+                        )
+                    else:
+                        logger.warning(
+                            "Docling 返回空结果，降级至 PyMuPDF 路径"
+                        )
+                except Exception as e:
+                    logger.warning(
+                        "Docling 转换失败，降级至 PyMuPDF 路径: %s", e
+                    )
+
+            # 若显式指定 docling 但不可用，返回错误
+            if method == "docling" and not self._docling_engine:
+                return {
+                    "success": False,
+                    "error": "Docling 引擎不可用，请安装 docling 可选依赖: "
+                    "uv pip install mcp-data-extractor[docling]",
+                    "source": pdf_source,
+                }
+
+            # ── PyMuPDF/PyPDF 降级路径 ──
             # 1. Extract enhanced assets (images with positions) FIRST
             #    This populates self._page_image_maps for inline placement
             enhanced_assets = None
@@ -1082,6 +1128,90 @@ class PDFProcessor:
                     description="Docling CodeFormula",
                 )
                 self.enhanced_processor.formulas.append(formula)
+
+    def _build_result_from_docling(
+        self,
+        docling_result: DoclingConversionResult,
+        pdf_source: str,
+        include_metadata: bool,
+        output_format: str,
+    ) -> Dict[str, Any]:
+        """将 DoclingConversionResult 转换为项目标准输出格式。"""
+        content = docling_result.markdown
+        text = content
+
+        # 构建 enhanced_assets 摘要
+        enhanced_assets: Dict[str, Any] = {}
+
+        if docling_result.images:
+            enhanced_assets["images"] = {
+                "count": len(docling_result.images),
+                "items": [
+                    {
+                        "caption": img.caption or "",
+                        "page": img.page_number,
+                        "classification": img.classification,
+                    }
+                    for img in docling_result.images
+                ],
+            }
+
+        if docling_result.tables:
+            enhanced_assets["tables"] = {
+                "count": len(docling_result.tables),
+                "items": [
+                    {
+                        "rows": t.rows,
+                        "columns": t.columns,
+                        "caption": t.caption or "",
+                        "page": t.page_number,
+                    }
+                    for t in docling_result.tables
+                ],
+            }
+
+        if docling_result.formulas:
+            enhanced_assets["formulas"] = {
+                "count": len(docling_result.formulas),
+                "block_count": sum(
+                    1 for f in docling_result.formulas if f.formula_type == "block"
+                ),
+                "inline_count": sum(
+                    1 for f in docling_result.formulas if f.formula_type == "inline"
+                ),
+            }
+
+        if docling_result.code_blocks:
+            enhanced_assets["code_blocks"] = {
+                "count": len(docling_result.code_blocks),
+                "languages": list(
+                    {
+                        cb.language
+                        for cb in docling_result.code_blocks
+                        if cb.language
+                    }
+                ),
+            }
+
+        result: Dict[str, Any] = {
+            "success": True,
+            "text": text,
+            "source": pdf_source,
+            "method_used": "docling",
+            "output_format": output_format,
+            "pages_processed": docling_result.page_count,
+            "word_count": len(text.split()),
+            "character_count": len(text),
+            "enhanced_assets": enhanced_assets,
+        }
+
+        if output_format == "markdown":
+            result["markdown"] = content
+
+        if include_metadata:
+            result["metadata"] = docling_result.metadata
+
+        return result
 
     def cleanup(self):
         """Clean up temporary files and directories."""
