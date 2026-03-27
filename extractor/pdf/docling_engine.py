@@ -111,6 +111,8 @@ class DoclingEngine:
         enable_ocr: bool = False,
         images_scale: float = 2.0,
         output_dir: Optional[str] = None,
+        device: Optional[str] = None,
+        num_threads: int = 4,
     ) -> None:
         self._enable_table_structure = enable_table_structure
         self._table_mode = table_mode
@@ -120,6 +122,9 @@ class DoclingEngine:
         self._enable_ocr = enable_ocr
         self._images_scale = images_scale
         self._output_dir = Path(output_dir) if output_dir else None
+        self._device = device
+        self._num_threads = num_threads
+        self._device_config: Optional[Any] = None
 
     # ------------------------------------------------------------------
     # 可用性检测
@@ -136,17 +141,43 @@ class DoclingEngine:
             return False
 
     # ------------------------------------------------------------------
+    # 设备感知配置解析
+    # ------------------------------------------------------------------
+
+    def _resolve_device_config(self) -> Any:
+        """延迟解析设备感知配置。
+
+        首次调用时触发硬件检测并根据设备类型应用限制降级，
+        后续调用返回缓存结果。
+        """
+        if self._device_config is None:
+            from .device_config import resolve_device_config
+
+            self._device_config = resolve_device_config(
+                device_preference=self._device,
+                num_threads=self._num_threads,
+                enable_formula=self._enable_formula_enrichment,
+                enable_table=self._enable_table_structure,
+                table_mode=self._table_mode,
+            )
+            # 回写降级后的配置以保持一致性
+            self._enable_formula_enrichment = self._device_config.do_formula_enrichment
+        return self._device_config
+
+    # ------------------------------------------------------------------
     # 配置签名（用于 converter 缓存键）
     # ------------------------------------------------------------------
 
     def _config_key(self) -> str:
+        device_cfg = self._resolve_device_config()
         return (
             f"tbl={self._enable_table_structure}:{self._table_mode}"
             f"|code={self._enable_code_enrichment}"
-            f"|formula={self._enable_formula_enrichment}"
+            f"|formula={device_cfg.do_formula_enrichment}"
             f"|pic={self._enable_picture_images}"
             f"|ocr={self._enable_ocr}"
             f"|scale={self._images_scale}"
+            f"|{device_cfg.cache_key_segment}"
         )
 
     # ------------------------------------------------------------------
@@ -154,7 +185,7 @@ class DoclingEngine:
     # ------------------------------------------------------------------
 
     def _get_converter(self) -> Any:
-        """延迟初始化并返回 DocumentConverter 实例。"""
+        """延迟初始化并返回 DocumentConverter 实例（含硬件加速）。"""
         key = self._config_key()
         if key in DoclingEngine._converters:
             return DoclingEngine._converters[key]
@@ -168,16 +199,30 @@ class DoclingEngine:
             PdfFormatOption,
         )
 
+        device_cfg = self._resolve_device_config()
+
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_table_structure = self._enable_table_structure
         pipeline_options.do_code_enrichment = self._enable_code_enrichment
-        pipeline_options.do_formula_enrichment = self._enable_formula_enrichment
+        pipeline_options.do_formula_enrichment = device_cfg.do_formula_enrichment
         pipeline_options.generate_picture_images = self._enable_picture_images
         pipeline_options.images_scale = self._images_scale
         pipeline_options.do_ocr = self._enable_ocr
 
         # 禁用非必要的页面图像生成以节省内存
         pipeline_options.generate_page_images = False
+
+        # 硬件加速配置
+        from docling.datamodel.accelerator_options import (  # type: ignore[import-untyped]
+            AcceleratorDevice,
+            AcceleratorOptions,
+        )
+
+        accelerator_options = AcceleratorOptions(
+            device=AcceleratorDevice(device_cfg.device),
+            num_threads=device_cfg.num_threads,
+        )
+        pipeline_options.accelerator_options = accelerator_options
 
         if self._enable_table_structure:
             from docling.datamodel.pipeline_options import (  # type: ignore[import-untyped]
@@ -203,7 +248,11 @@ class DoclingEngine:
             }
         )
         DoclingEngine._converters[key] = converter
-        logger.info("Docling DocumentConverter 初始化完成 (config=%s)", key)
+        logger.info(
+            "Docling DocumentConverter 初始化完成 (config=%s, device=%s)",
+            key,
+            device_cfg.device,
+        )
         return converter
 
     # ------------------------------------------------------------------
