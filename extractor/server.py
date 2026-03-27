@@ -1,5 +1,8 @@
 """FastMCP Server entry point and backward-compatible re-exports."""
 
+from pathlib import Path
+import sys
+
 from .config import settings
 
 # Re-export from tools package for backward compatibility
@@ -24,10 +27,20 @@ from .tools.markdown import (
 from .tools.pdf import convert_pdf_to_markdown, batch_convert_pdfs_to_markdown  # noqa: F401
 from .tools.service import get_server_metrics, clear_cache  # noqa: F401
 
+DEPRECATED_CLI_NAMES = {"data-extractor", "mcp-data-extractor"}
+
+
+def _active_cli_name() -> str:
+    """Return the current CLI executable name for user-facing diagnostics."""
+    argv0 = sys.argv[0] if sys.argv else "document-reader"
+    return Path(argv0).name or "document-reader"
+
 
 def main() -> None:
     """Run the MCP server."""
+    cli_name = _active_cli_name()
     print(f"Starting {settings.server_name} v{settings.server_version}")
+    print(f"CLI entrypoint: {cli_name}")
     print(f"Transport mode: {settings.transport_mode}")
     print(
         f"JavaScript support: {'Enabled' if settings.enable_javascript else 'Disabled'}"
@@ -36,6 +49,19 @@ def main() -> None:
         f"Random User-Agent: {'Enabled' if settings.use_random_user_agent else 'Disabled'}"
     )
     print(f"Proxy: {'Enabled' if settings.use_proxy else 'Disabled'}")
+    print(
+        "Resolved settings: "
+        f"server_name={settings.server_name}, "
+        f"host={settings.http_host}, "
+        f"port={settings.http_port}, "
+        f"path={settings.http_path}"
+    )
+
+    if cli_name in DEPRECATED_CLI_NAMES:
+        print(
+            f"Warning: CLI '{cli_name}' is deprecated; "
+            "please migrate to 'document-reader'."
+        )
 
     if settings.transport_mode in ["http", "sse"]:
         transport_type = "HTTP" if settings.transport_mode == "http" else "SSE"

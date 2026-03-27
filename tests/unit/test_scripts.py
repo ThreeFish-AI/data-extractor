@@ -150,3 +150,12 @@ class TestVersionManagement:
             assert "update_version.py" not in content, (
                 f"{doc_file.name} 中仍引用已删除的 update_version.py"
             )
+
+    def test_pyproject_contains_cli_aliases(self):
+        """pyproject.toml 暴露新的主命令与兼容别名。"""
+        pyproject_path = PROJECT_ROOT / "pyproject.toml"
+        content = pyproject_path.read_text(encoding="utf-8")
+
+        assert 'document-reader = "extractor.server:main"' in content
+        assert 'mcp-data-extractor = "extractor.server:main"' in content
+        assert 'data-extractor = "extractor.server:main"' in content

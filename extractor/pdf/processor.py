@@ -243,7 +243,7 @@ class PDFProcessor:
                 return {
                     "success": False,
                     "error": "Docling 引擎不可用，请安装 docling 可选依赖: "
-                    "uv pip install mcp-data-extractor[docling]",
+                    "uv pip install document-reader[docling]",
                     "source": pdf_source,
                 }
 

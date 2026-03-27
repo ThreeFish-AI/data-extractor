@@ -8,7 +8,7 @@ include = ["extractor*"]
 exclude = ["tests*", "reports*", "htmlcov*", "scripts*"]
 
 [project]
-name = "mcp-data-extractor"
+name = "document-reader"
 version = "0.1.6.1"
 description = "A commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments."
 readme = "README.md"
@@ -65,7 +65,9 @@ all = [
 ]
 
 [project.scripts]
+document-reader = "extractor.server:main"
 mcp-data-extractor = "extractor.server:main"
+data-extractor = "extractor.server:main"
 
 [tool.pytest.ini_options]
 minversion = "9.0"
