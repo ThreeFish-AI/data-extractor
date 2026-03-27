@@ -85,8 +85,8 @@ class TestNoRedundancy:
     def test_no_setup_sh_execution(self, doc_content: str):
         """环境设置命令应由 Development.md 覆盖。"""
         for block in _extract_bash_blocks(doc_content):
-            assert "./scripts/setup.sh" not in block, (
-                "文档不应包含 ./scripts/setup.sh 执行命令（已由 2-Development.md 覆盖）"
+            assert "./scripts/dev/setup.sh" not in block, (
+                "文档不应包含 ./scripts/dev/setup.sh 执行命令（已由 2-Development.md 覆盖）"
             )
 
     def test_no_pytest_commands(self, doc_content: str):

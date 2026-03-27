@@ -80,16 +80,16 @@ tests/
 
 ### 快速开始
 
-项目提供测试运行脚本 [`scripts/run-tests.sh`](../scripts/run-tests.sh)：
+项目提供测试运行脚本 [`scripts/test/run-tests.sh`](../scripts/test/run-tests.sh)：
 
 ```bash
-./scripts/run-tests.sh              # 完整测试套件（默认）
-./scripts/run-tests.sh unit         # 单元测试
-./scripts/run-tests.sh integration  # 集成测试
-./scripts/run-tests.sh quick        # 快速测试（排除慢速测试）
-./scripts/run-tests.sh performance  # 性能测试
-./scripts/run-tests.sh coverage     # 仅生成覆盖率报告
-./scripts/run-tests.sh clean        # 清理测试结果
+./scripts/test/run-tests.sh              # 完整测试套件（默认）
+./scripts/test/run-tests.sh unit         # 单元测试
+./scripts/test/run-tests.sh integration  # 集成测试
+./scripts/test/run-tests.sh quick        # 快速测试（排除慢速测试）
+./scripts/test/run-tests.sh performance  # 性能测试
+./scripts/test/run-tests.sh coverage     # 仅生成覆盖率报告
+./scripts/test/run-tests.sh clean        # 清理测试结果
 ```
 
 ### pytest 常用命令

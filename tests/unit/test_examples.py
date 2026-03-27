@@ -5,7 +5,7 @@
 
 import pytest
 
-from examples.extraction_configs import (
+from examples.configs.extraction_configs import (
     ACADEMIC_PAPER_CONFIG,
     CONTACT_PAGE_CONFIG,
     ECOMMERCE_CONFIG,
@@ -139,7 +139,7 @@ class TestBasicUsageExamples:
 
     @pytest.mark.asyncio
     async def test_mock_mcp_call_returns_success(self):
-        from examples.basic_usage import mock_mcp_call
+        from examples.mcp.basic_usage import mock_mcp_call
 
         result = await mock_mcp_call("test_tool", {"key": "value"})
         assert result["success"] is True
@@ -147,7 +147,7 @@ class TestBasicUsageExamples:
         assert "duration_ms" in result
 
     def test_examples_list_has_10_entries(self):
-        from examples.basic_usage import EXAMPLES
+        from examples.mcp.basic_usage import EXAMPLES
 
         assert len(EXAMPLES) == 10
 
@@ -155,10 +155,10 @@ class TestBasicUsageExamples:
         from pathlib import Path
 
         example_path = Path(__file__).resolve().parent.parent.parent / "examples"
-        assert (example_path / "python_sdk_usage.py").exists()
+        assert (example_path / "sdk" / "python_sdk_usage.py").exists()
 
     def test_each_example_is_valid_triple(self):
-        from examples.basic_usage import EXAMPLES
+        from examples.mcp.basic_usage import EXAMPLES
 
         for item in EXAMPLES:
             assert len(item) == 3
@@ -169,6 +169,6 @@ class TestBasicUsageExamples:
 
     @pytest.mark.asyncio
     async def test_run_example_executes_without_error(self):
-        from examples.basic_usage import _run_example
+        from examples.mcp.basic_usage import _run_example
 
         await _run_example("Test Title", "test_tool", {"url": "https://example.com"})
