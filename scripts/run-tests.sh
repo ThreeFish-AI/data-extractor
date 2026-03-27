@@ -7,9 +7,24 @@ set -e
 
 # --- 颜色与输出 ---
 readonly RED='\033[0;31m' GREEN='\033[0;32m' BLUE='\033[0;34m' YELLOW='\033[1;33m' NC='\033[0m'
+readonly SUITE_TIMEOUT=300  # 全量测试套件超时（秒）
 
 log_info()  { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# --- 跨平台超时执行器 ---
+# 超时后先发 SIGTERM，10s 后 SIGKILL 强杀进程树
+run_with_timeout() {
+    local secs="$1"; shift
+    if command -v timeout >/dev/null 2>&1; then
+        timeout --signal=SIGTERM --kill-after=10 "$secs" "$@"
+    elif command -v gtimeout >/dev/null 2>&1; then
+        gtimeout --signal=SIGTERM --kill-after=10 "$secs" "$@"
+    else
+        log_info "未找到 timeout/gtimeout 命令，跳过套件级超时保护"
+        "$@"
+    fi
+}
 
 # --- 环境前置守卫 ---
 preflight() {
@@ -33,16 +48,23 @@ run_pytest() {
     shift 2
 
     echo -e "${BLUE}======================================${NC}"
-    echo -e "${BLUE}运行测试: ${report_prefix}${NC}"
+    echo -e "${BLUE}运行测试: ${report_prefix} (超时=${SUITE_TIMEOUT}s)${NC}"
     echo -e "${BLUE}======================================${NC}"
 
-    uv run pytest "$test_path" \
+    run_with_timeout "$SUITE_TIMEOUT" uv run pytest "$test_path" \
         --cov=extractor \
         --cov-report=term-missing \
         --html="tests/reports/${report_prefix}-report.html" \
+        --self-contained-html \
+        --json-report \
         --json-report-file="tests/reports/${report_prefix}-results.json" \
-        --tb=short -v \
         "$@"
+    local exit_code=$?
+    if [ "$exit_code" -eq 124 ]; then
+        log_error "测试套件超时 (${SUITE_TIMEOUT}s)，已终止进程"
+        return 1
+    fi
+    return "$exit_code"
 }
 
 # --- 覆盖率报告生成 ---
@@ -108,15 +130,16 @@ main() {
     # 数据驱动路由：mode -> (test_path, report_prefix, extra_args...)
     case "$mode" in
         unit)        run_pytest "tests/unit/" "unit-test" \
-                         -m "unit or not integration" ;;
+                         -n auto -m "unit or not integration" ;;
         integration) run_pytest "tests/integration/" "integration-test" \
-                         --cov-append -m "integration or not unit" ;;
+                         -n auto --cov-append -m "integration or not unit" ;;
         full)        run_pytest "tests/" "full-test" \
+                         -n auto \
                          --cov-report=html:tests/reports/htmlcov \
                          --cov-report=xml:tests/reports/coverage.xml \
                          --cov-report=json:tests/reports/coverage.json ;;
         quick)       run_pytest "tests/" "quick-test" \
-                         -m "not slow" -x ;;
+                         -n auto -m "not slow" -x ;;
         performance) run_pytest "tests/integration/test_comprehensive_integration.py::TestPerformanceAndLoad" \
                          "performance-test" ;;
         *)           log_error "未知选项: $mode"
