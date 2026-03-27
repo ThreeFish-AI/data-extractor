@@ -23,22 +23,24 @@ tags:
 
 ```bash
 # 启动 MCP 服务器（主要启动命令）
-uv run mcp-data-extractor
+uv run document-reader
 
 # 以 Python 模块方式运行服务器
 uv run python -m extractor.server
 ```
 
+兼容入口 `mcp-data-extractor` 与 `data-extractor` 仍可使用，但已不再推荐。
+
 ### 开发模式启动
 
 ```bash
 # 启用调试级别日志输出
-uv run --env DATA_EXTRACTOR_LOG_LEVEL=DEBUG data-extractor
+uv run --env DATA_EXTRACTOR_LOG_LEVEL=DEBUG document-reader
 
 # 启用完整功能特性的开发配置
 uv run --env DATA_EXTRACTOR_ENABLE_JAVASCRIPT=true \
           --env DATA_EXTRACTOR_USE_RANDOM_USER_AGENT=true \
-          data-extractor
+          document-reader
 ```
 
 > 全部环境变量配置项见 [配置系统](./4-Configuration.md)

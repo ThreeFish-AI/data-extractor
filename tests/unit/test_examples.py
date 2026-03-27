@@ -151,6 +151,12 @@ class TestBasicUsageExamples:
 
         assert len(EXAMPLES) == 10
 
+    def test_python_sdk_example_exists(self):
+        from pathlib import Path
+
+        example_path = Path(__file__).resolve().parent.parent.parent / "examples"
+        assert (example_path / "python_sdk_usage.py").exists()
+
     def test_each_example_is_valid_triple(self):
         from examples.basic_usage import EXAMPLES
 

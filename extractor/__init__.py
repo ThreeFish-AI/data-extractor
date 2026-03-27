@@ -1,5 +1,6 @@
 """Data Extractor MCP Server - A robust web scraping MCP server."""
 
+import importlib.metadata
 import re
 from pathlib import Path
 
@@ -22,16 +23,21 @@ def _get_version_from_pyproject():
         pass
 
     # 最后的备用方案：从已安装的包中获取版本
-    try:
-        import importlib.metadata
-
-        return importlib.metadata.version("mcp-data-extractor")
-    except (importlib.metadata.PackageNotFoundError, ImportError):
-        pass
+    for package_name in ("document-reader", "mcp-data-extractor"):
+        try:
+            return importlib.metadata.version(package_name)
+        except importlib.metadata.PackageNotFoundError:
+            continue
 
     return "0.0.0"
 
 
 __version__ = _get_version_from_pyproject()
+__app_name__ = "document-reader"
 __author__ = "Aurelius"
 __email__ = "aureliusshu@gmail.com"
+
+__all__ = [
+    "__version__",
+    "__app_name__",
+]

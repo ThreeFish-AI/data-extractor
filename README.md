@@ -1,4 +1,4 @@
-Data Extractor is a commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments.
+Document Reader is a commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments.
 
 ## 🛠️ MCP Server Core Tools (14)
 

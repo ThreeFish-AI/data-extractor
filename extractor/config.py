@@ -11,7 +11,7 @@ class DataExtractorSettings(BaseSettings):
     """Settings for the Data Extractor MCP Server."""
 
     # Server settings
-    server_name: str = Field(default="data-extractor")
+    server_name: str = Field(default="document-reader")
     server_version: str = Field(default=__version__)
 
     # HTTP transport settings

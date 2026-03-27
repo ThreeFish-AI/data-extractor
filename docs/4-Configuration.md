@@ -29,7 +29,7 @@ Data Extractor 采用基于 [pydantic-settings](https://docs.pydantic.dev/latest
 
 | 环境变量 | 类型 | 默认值 | 约束 | 说明 |
 | --- | --- | --- | --- | --- |
-| `DATA_EXTRACTOR_SERVER_NAME` | `str` | `data-extractor` | - | 服务器标识名称 |
+| `DATA_EXTRACTOR_SERVER_NAME` | `str` | `document-reader` | - | 服务器标识名称 |
 | `DATA_EXTRACTOR_SERVER_VERSION` | `str` | 自动读取 | - | 版本号（从 `pyproject.toml` 自动获取） |
 
 ### 传输层
@@ -204,7 +204,7 @@ env | grep DATA_EXTRACTOR_
 cat .env
 ```
 
-**常见问题**：环境变量未生效（检查 `DATA_EXTRACTOR_` 前缀）、类型转换错误（确认数值/布尔值格式）、配置验证失败（查看错误信息中的约束提示）。
+**常见问题**：环境变量未生效时，先确认执行的是 `document-reader` 而不是旧入口残留；再检查 `.env` 是否位于当前工作目录，并使用 `uv run python -c "from extractor.config import settings; print(settings.model_dump())"` 验证最终配置。
 
 ---
 
