@@ -72,6 +72,27 @@ class DataExtractorSettings(BaseSettings):
     # Request settings
     request_timeout: float = Field(default=30.0, gt=0.0)
 
+    # LLM orchestration settings
+    llm_api_key: Optional[str] = Field(
+        default=None, description="LLM API Key (ZhipuAI)"
+    )
+    llm_model: str = Field(
+        default="zhipu/glm-5-plus-250414",
+        description="LiteLLM 模型标识（如 zhipu/glm-5-plus-250414）",
+    )
+    llm_temperature: float = Field(
+        default=0.1, ge=0.0, le=2.0, description="LLM 温度参数"
+    )
+    llm_max_tokens: int = Field(
+        default=4096, gt=0, description="LLM 最大输出 token"
+    )
+    llm_timeout: float = Field(
+        default=60.0, gt=0.0, description="LLM API 超时（秒）"
+    )
+    llm_max_retries: int = Field(
+        default=2, ge=0, description="LLM API 重试次数"
+    )
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

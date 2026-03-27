@@ -112,6 +112,19 @@ Data Extractor 采用基于 [pydantic-settings](https://docs.pydantic.dev/latest
 | --- | --- | --- | --- | --- |
 | `DATA_EXTRACTOR_REQUEST_TIMEOUT` | `float` | `30.0` | `> 0` | HTTP 请求超时（秒） |
 
+### LLM 编排（Smart 模式）
+
+`method="smart"` 使用 LLM 编排多引擎并行处理 PDF。需安装可选依赖 `litellm`（`uv pip install litellm`）。
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_LLM_API_KEY` | `str?` | `null` | - | LLM API Key（ZhipuAI），也可通过 `ZHIPU_API_KEY` 设置 |
+| `DATA_EXTRACTOR_LLM_MODEL` | `str` | `zhipu/glm-5-plus-250414` | - | LiteLLM 模型标识 |
+| `DATA_EXTRACTOR_LLM_TEMPERATURE` | `float` | `0.1` | `0.0 ~ 2.0` | LLM 温度参数 |
+| `DATA_EXTRACTOR_LLM_MAX_TOKENS` | `int` | `4096` | `> 0` | LLM 最大输出 token |
+| `DATA_EXTRACTOR_LLM_TIMEOUT` | `float` | `60.0` | `> 0` | LLM API 超时（秒） |
+| `DATA_EXTRACTOR_LLM_MAX_RETRIES` | `int` | `2` | `>= 0` | LLM API 重试次数 |
+
 ## 配置验证规则
 
 ### 字段验证器

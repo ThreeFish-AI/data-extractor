@@ -819,7 +819,7 @@ transport = StreamableHttpTransport(
 **标准功能:**
 
 - **多源支持**: 支持 PDF URL 和本地文件路径
-- **多引擎支持**: PyMuPDF (fitz) 和 PyPDF2 双引擎自动选择
+- **多引擎支持**: PyMuPDF (fitz)、PyPDF、Docling 和 LLM 智能编排四种引擎
 - **部分提取**: 支持指定页面范围的部分提取
 - **元数据提取**: 包含标题、作者、创建日期等完整元数据
 - **智能转换**: 自动检测标题层级和格式化
@@ -834,7 +834,7 @@ transport = StreamableHttpTransport(
 **参数:**
 
 - `pdf_source`: PDF URL 或本地文件路径
-- `method`: 提取方法 (auto/pymupdf/pypdf2，默认 auto)
+- `method`: 提取方法 (auto/pymupdf/pypdf/docling/smart，默认 auto)。`smart` 模式使用 LLM 编排多引擎并行处理并择优融合（需安装 `litellm` 并配置 API Key）
 - `include_metadata`: 是否包含 PDF 元数据 (默认 true)
 - `page_range`: 页面范围 [start, end] 用于部分提取 (可选)
 - `output_format`: 输出格式 (markdown/text，默认 markdown)
@@ -1468,6 +1468,29 @@ async def academic_paper_processing():
     )
 
     return results
+```
+
+### 5. LLM 智能编排（Smart 模式）
+
+使用 `method="smart"` 启用 LLM 编排多引擎并行处理，自动择优融合最佳输出。适用于含公式、表格、代码、图像的复杂学术文档。
+
+**前置条件**：安装 `litellm`（`uv pip install litellm`），并配置 `ZHIPU_API_KEY` 或 `DATA_EXTRACTOR_LLM_API_KEY` 环境变量。
+
+```python
+async def smart_pdf_processing():
+    result = await convert_pdf_to_markdown(
+        pdf_source="academic_paper.pdf",
+        method="smart",
+        extract_formulas=True,
+        extract_images=True,
+        extract_tables=True,
+    )
+
+    # smart 模式返回额外的编排信息
+    orch_info = result.get("orchestration_info", {})
+    print(f"使用引擎: {orch_info.get('engines_used')}")
+    print(f"融合策略: {orch_info.get('synthesis_strategy')}")
+    return result
 ```
 
 ### 5. 技术文档转换

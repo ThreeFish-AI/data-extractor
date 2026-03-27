@@ -69,7 +69,7 @@ class PDFProcessor:
             output_dir: Directory to save extracted images and assets
             prefer_docling: Whether to prefer Docling engine when available (default: True)
         """
-        self.supported_methods = ["pymupdf", "pypdf", "auto", "docling"]
+        self.supported_methods = ["pymupdf", "pypdf", "auto", "docling", "smart"]
         self.temp_dir = tempfile.mkdtemp(prefix="pdf_extractor_")
         self.enable_enhanced_features = enable_enhanced_features
         self.prefer_docling = prefer_docling
@@ -165,6 +165,50 @@ class PDFProcessor:
 
             # Derive PDF basename for image naming
             pdf_name = Path(pdf_source).stem if pdf_source else ""
+
+            # ── LLM 编排路径（smart 模式） ──
+            if method == "smart":
+                try:
+                    from .llm_client import LLMClient
+                    from .llm_orchestrator import LLMOrchestrator
+
+                    if not LLMClient.is_available():
+                        logger.warning("LiteLLM 未安装，降级至 auto 模式")
+                        method = "auto"
+                    else:
+                        from ..config import settings
+
+                        llm_client = LLMClient(
+                            model=settings.llm_model,
+                            api_key=settings.llm_api_key,
+                            temperature=settings.llm_temperature,
+                            max_tokens=settings.llm_max_tokens,
+                            timeout=settings.llm_timeout,
+                            max_retries=settings.llm_max_retries,
+                        )
+                        orchestrator = LLMOrchestrator(
+                            llm_client=llm_client,
+                            docling_engine=self._docling_engine,
+                            output_dir=self._output_dir
+                            if hasattr(self, "_output_dir")
+                            else None,
+                        )
+                        orch_result = await orchestrator.orchestrate(
+                            pdf_path=pdf_path,
+                            page_range=page_range,
+                            extract_images=extract_images,
+                            extract_tables=extract_tables,
+                            extract_formulas=extract_formulas,
+                        )
+                        return self._build_result_from_orchestration(
+                            orch_result,
+                            pdf_source=pdf_source,
+                            include_metadata=include_metadata,
+                            output_format=output_format,
+                        )
+                except Exception as e:
+                    logger.warning("LLM 编排失败，降级至 auto 模式: %s", e)
+                    method = "auto"
 
             # ── Docling 主路径 ──
             # 当 Docling 可用且 method 为 auto/docling 时，优先使用 Docling 引擎
@@ -1210,6 +1254,50 @@ class PDFProcessor:
 
         if include_metadata:
             result["metadata"] = docling_result.metadata
+
+        return result
+
+    def _build_result_from_orchestration(
+        self,
+        orch_result: Any,
+        pdf_source: str,
+        include_metadata: bool,
+        output_format: str,
+    ) -> Dict[str, Any]:
+        """将 OrchestrationResult 转换为项目标准输出格式。"""
+        content = orch_result.content
+        text = content
+
+        result: Dict[str, Any] = {
+            "success": bool(content),
+            "text": text,
+            "source": pdf_source,
+            "method_used": "smart",
+            "output_format": output_format,
+            "pages_processed": orch_result.page_count,
+            "word_count": len(text.split()) if text else 0,
+            "character_count": len(text) if text else 0,
+            "enhanced_assets": orch_result.enhanced_assets or {},
+            "orchestration_info": {
+                "engines_used": orch_result.engines_used,
+                "synthesis_strategy": (
+                    orch_result.plan.synthesis_strategy
+                    if orch_result.plan
+                    else "unknown"
+                ),
+                "synthesis_reasoning": orch_result.synthesis_reasoning,
+            },
+        }
+
+        if output_format == "markdown":
+            result["markdown"] = content
+
+        if include_metadata:
+            result["metadata"] = orch_result.metadata
+
+        if not content:
+            result["success"] = False
+            result["error"] = orch_result.synthesis_reasoning or "编排失败：所有引擎均无输出"
 
         return result
 

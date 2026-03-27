@@ -122,10 +122,42 @@ graph LR
 
 ### PDF 处理引擎
 
-[`extractor/pdf/`](../extractor/pdf/) 子包采用双引擎架构：
+[`extractor/pdf/`](../extractor/pdf/) 子包采用多引擎架构，支持 LLM 智能编排：
 
-- **[`PDFProcessor`](../extractor/pdf/processor.py)**：主处理器，优先使用 PyMuPDF（fitz），失败时回退到 pypdf。支持 URL 下载、页范围选择、元数据提取
+- **[`PDFProcessor`](../extractor/pdf/processor.py)**：主处理器，支持 `auto`/`pymupdf`/`pypdf`/`docling`/`smart` 五种方法。`auto` 模式优先使用 PyMuPDF，失败时回退到 pypdf。支持 URL 下载、页范围选择、元数据提取
+- **[`DoclingEngine`](../extractor/pdf/docling_engine.py)**：AI 布局分析引擎，基于 [Docling](https://github.com/DS4SD/docling)，提供 TableFormer 表格结构识别、代码检测和公式提取（可选依赖）
 - **[`EnhancedPDFProcessor`](../extractor/pdf/enhanced.py)**：增强处理器，提取图像（保存文件 + base64）、识别表格（管道符/制表符/空格分隔模式匹配）、检测 LaTeX 数学公式
+- **[`LLMOrchestrator`](../extractor/pdf/llm_orchestrator.py)**：LLM 编排中枢（`method="smart"`），三阶段流水线协调多引擎并行处理并择优融合（可选依赖 `litellm`）
+- **[`LLMClient`](../extractor/pdf/llm_client.py)**：LiteLLM 客户端封装，支持 ZhipuAI GLM-5 等模型
+
+#### Smart 模式编排流程
+
+`method="smart"` 启用 LLM 编排的三阶段流水线：
+
+```mermaid
+graph LR
+    subgraph "Phase 1: 分析"
+        A["PyMuPDF 预扫描"] --> B["LLM 生成调度计划"]
+    end
+    subgraph "Phase 2: 执行"
+        B --> C["Docling 引擎"]
+        B --> D["PyMuPDF 引擎"]
+    end
+    subgraph "Phase 3: 融合"
+        C --> E["LLM 评估质量信号"]
+        D --> E
+        E --> F["择优 + 补充合并"]
+    end
+
+    style A fill:#1e3a8a,stroke:#3b82f6,color:#ffffff
+    style B fill:#581c87,stroke:#9333ea,color:#ffffff
+    style C fill:#166534,stroke:#22c55e,color:#ffffff
+    style D fill:#166534,stroke:#22c55e,color:#ffffff
+    style E fill:#581c87,stroke:#9333ea,color:#ffffff
+    style F fill:#134e4a,stroke:#14b8a6,color:#ffffff
+```
+
+**降级保障**：LiteLLM 未安装或 LLM API 失败时，自动降级至 `method="auto"` 原有路径，确保功能可用性。
 
 ### Markdown 转换器
 

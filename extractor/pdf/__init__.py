@@ -23,3 +23,12 @@ from .docling_engine import (  # noqa: F401
     DoclingFormula,
     DoclingCodeBlock,
 )
+from .llm_client import LLMClient, LLMResponse  # noqa: F401
+from .llm_orchestrator import (  # noqa: F401
+    LLMOrchestrator,
+    OrchestrationResult,
+    OrchestrationPlan,
+    PDFCharacteristics,
+    EngineTask,
+    EngineResult,
+)

@@ -129,6 +129,10 @@ class PDFResponse(BaseModel):
     enhanced_assets: Optional[Dict[str, Any]] = Field(
         default=None, description="增强资源提取统计（图像、表格、公式）"
     )
+    orchestration_info: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="LLM 编排信息（仅 method=smart 时存在）",
+    )
     error: Optional[str] = Field(default=None, description="错误信息（如果有）")
 
 
