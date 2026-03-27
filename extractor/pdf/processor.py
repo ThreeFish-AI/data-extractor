@@ -6,16 +6,20 @@ import os
 import re
 from typing import Dict, List, Any, Optional
 from pathlib import Path
-from urllib.parse import urlparse
 import asyncio
 
-import aiohttp
-
-from .enhanced import EnhancedPDFProcessor, ExtractedImage, ExtractedTable, ExtractedFormula
+from ._imports import import_fitz, import_pypdf
+from ._sources import download_pdf_to_temp, is_pdf_url
+from .enhanced import (
+    EnhancedPDFProcessor,
+    ExtractedFormula,
+    ExtractedImage,
+    ExtractedTable,
+)
 from ..markdown.algorithm_detector import (
     _compute_algorithm_score,
-    is_algorithm_block,
     detect_algorithm_regions,
+    is_algorithm_block,
     wrap_as_code_fence,
 )
 from .math_formula import (
@@ -27,29 +31,17 @@ from .math_formula import (
 )
 from .docling_engine import DoclingEngine, DoclingConversionResult
 
+logger = logging.getLogger(__name__)
 
-# 延迟导入 PDF 处理库，避免启动时的 SWIG 警告
+
 def _import_fitz():
-    """延迟导入 PyMuPDF (fitz) 以避免启动时警告"""
-    try:
-        import fitz
-
-        return fitz
-    except ImportError as e:
-        raise ImportError(f"PyMuPDF (fitz) is required for PDF processing: {e}")
+    """兼容导出：延迟导入 PyMuPDF。"""
+    return import_fitz()
 
 
 def _import_pypdf():
-    """延迟导入 pypdf"""
-    try:
-        import pypdf
-
-        return pypdf
-    except ImportError as e:
-        raise ImportError(f"pypdf is required for PDF processing: {e}")
-
-
-logger = logging.getLogger(__name__)
+    """兼容导出：延迟导入 pypdf。"""
+    return import_pypdf()
 
 
 class PDFProcessor:
@@ -71,6 +63,7 @@ class PDFProcessor:
         """
         self.supported_methods = ["pymupdf", "pypdf", "auto", "docling", "smart"]
         self.temp_dir = tempfile.mkdtemp(prefix="pdf_extractor_")
+        self._output_dir = output_dir
         self.enable_enhanced_features = enable_enhanced_features
         self.prefer_docling = prefer_docling
 
@@ -434,34 +427,12 @@ class PDFProcessor:
         }
 
     def _is_url(self, source: str) -> bool:
-        """Check if source is a URL."""
-        try:
-            parsed = urlparse(source)
-            return parsed.scheme in ["http", "https"]
-        except Exception:
-            return False
+        """兼容导出：判断给定源是否为 URL。"""
+        return is_pdf_url(source)
 
     async def _download_pdf(self, url: str) -> Optional[Path]:
-        """Download PDF from URL to temporary file."""
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        # Create temporary file
-                        temp_file = tempfile.NamedTemporaryFile(
-                            suffix=".pdf", dir=self.temp_dir, delete=False
-                        )
-
-                        # Write PDF content
-                        content = await response.read()
-                        temp_file.write(content)
-                        temp_file.close()
-
-                        return Path(temp_file.name)
-            return None
-        except Exception as e:
-            logger.error(f"Error downloading PDF from {url}: {str(e)}")
-            return None
+        """兼容导出：下载 PDF 到当前处理器临时目录。"""
+        return await download_pdf_to_temp(url, self.temp_dir)
 
     async def _auto_extract(
         self,

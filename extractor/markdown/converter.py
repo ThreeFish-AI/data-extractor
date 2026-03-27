@@ -74,6 +74,93 @@ class MarkdownConverter:
 
         self._formatter = MarkdownFormatter(self.formatting_options)
 
+    def _build_html_input(
+        self, scrape_result: Dict[str, Any], extract_main_content: bool
+    ) -> tuple[str, str, str, Dict[str, Any]]:
+        """从抓取结果中构建 HTML 输入。"""
+        url = scrape_result.get("url", "")
+        title = scrape_result.get("title", "")
+        page_content = scrape_result.get("content", {})
+
+        html_content = page_content.get("html")
+        if not html_content and page_content.get("text"):
+            html_content = build_html_from_text(page_content["text"], title, page_content)
+        if not html_content:
+            raise ValueError("No content found in scrape result")
+        if extract_main_content:
+            html_content = extract_content_area(html_content)
+
+        return url, title, html_content, page_content
+
+    def _convert_html_with_formatting(
+        self,
+        html_content: str,
+        url: str,
+        custom_options: Optional[Dict[str, Any]],
+        formatting_options: Optional[Dict[str, bool]],
+    ) -> str:
+        """在可选格式化配置下执行 HTML 转 Markdown。"""
+        original_formatter = None
+        if formatting_options:
+            original_formatter = self._formatter
+            merged = dict(self.formatting_options)
+            merged.update(formatting_options)
+            self._formatter = MarkdownFormatter(merged)
+
+        try:
+            return self.html_to_markdown(html_content, url, custom_options)
+        finally:
+            if original_formatter:
+                self._formatter = original_formatter
+
+    def _embed_images_if_needed(
+        self,
+        markdown_content: str,
+        embed_images: bool,
+        embed_options: Optional[Dict[str, Any]],
+    ) -> tuple[str, Optional[Dict[str, Any]]]:
+        """按需嵌入图片，返回 markdown 与统计信息。"""
+        if not embed_images:
+            return markdown_content, None
+
+        opts = embed_options or {}
+        embed_result = embed_images_in_markdown(
+            markdown_content,
+            max_images=int(opts.get("max_images", 50)),
+            max_bytes_per_image=int(opts.get("max_bytes_per_image", 2_000_000)),
+            timeout_seconds=int(opts.get("timeout_seconds", 10)),
+        )
+        return (
+            embed_result.get("markdown", markdown_content),
+            embed_result.get("stats"),
+        )
+
+    def _build_webpage_metadata(
+        self,
+        *,
+        url: str,
+        title: str,
+        markdown_content: str,
+        scrape_result: Dict[str, Any],
+        page_content: Dict[str, Any],
+        embed_stats: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """构建网页 Markdown 转换元数据。"""
+        metadata = {
+            "title": title,
+            "meta_description": scrape_result.get("meta_description"),
+            "word_count": len(markdown_content.split()),
+            "character_count": len(markdown_content),
+            "domain": urlparse(url).netloc if url else None,
+        }
+        if "links" in page_content:
+            metadata["links_count"] = len(page_content["links"])
+        if "images" in page_content:
+            metadata["images_count"] = len(page_content["images"])
+        if embed_stats is not None:
+            metadata["image_embedding"] = embed_stats
+        return metadata
+
     def html_to_markdown(
         self,
         html_content: str,
@@ -281,56 +368,21 @@ class MarkdownConverter:
                     "url": scrape_result.get("url"),
                 }
 
-            url = scrape_result.get("url", "")
-            title = scrape_result.get("title", "")
-            page_content = scrape_result.get("content", {})
-
-            # Get HTML content
-            html_content = page_content.get("html")
-            if not html_content and page_content.get("text"):
-                html_content = build_html_from_text(
-                    page_content["text"], title, page_content
-                )
-
-            if not html_content:
-                return {
-                    "success": False,
-                    "error": "No content found in scrape result",
-                    "url": url,
-                }
-
-            # Extract main content area if requested
-            if extract_main_content:
-                html_content = extract_content_area(html_content)
-
-            # Update formatting options temporarily if provided
-            original_formatter = None
-            if formatting_options:
-                original_formatter = self._formatter
-                merged = dict(self.formatting_options)
-                merged.update(formatting_options)
-                self._formatter = MarkdownFormatter(merged)
-
-            try:
-                markdown_content = self.html_to_markdown(
-                    html_content, url, custom_options
-                )
-            finally:
-                if original_formatter:
-                    self._formatter = original_formatter
-
-            # Optionally embed images as data URIs
-            embed_stats = None
-            if embed_images:
-                opts = embed_options or {}
-                embed_result = embed_images_in_markdown(
-                    markdown_content,
-                    max_images=int(opts.get("max_images", 50)),
-                    max_bytes_per_image=int(opts.get("max_bytes_per_image", 2_000_000)),
-                    timeout_seconds=int(opts.get("timeout_seconds", 10)),
-                )
-                markdown_content = embed_result.get("markdown", markdown_content)
-                embed_stats = embed_result.get("stats")
+            url, title, html_content, page_content = self._build_html_input(
+                scrape_result,
+                extract_main_content,
+            )
+            markdown_content = self._convert_html_with_formatting(
+                html_content,
+                url,
+                custom_options,
+                formatting_options,
+            )
+            markdown_content, embed_stats = self._embed_images_if_needed(
+                markdown_content,
+                embed_images,
+                embed_options,
+            )
 
             # Prepare result
             result = {
@@ -349,23 +401,14 @@ class MarkdownConverter:
 
             # Include metadata if requested
             if include_metadata:
-                metadata = {
-                    "title": title,
-                    "meta_description": scrape_result.get("meta_description"),
-                    "word_count": len(markdown_content.split()),
-                    "character_count": len(markdown_content),
-                    "domain": urlparse(url).netloc if url else None,
-                }
-
-                if "links" in page_content:
-                    metadata["links_count"] = len(page_content["links"])
-                if "images" in page_content:
-                    metadata["images_count"] = len(page_content["images"])
-
-                if embed_stats is not None:
-                    metadata["image_embedding"] = embed_stats
-
-                result["metadata"] = metadata
+                result["metadata"] = self._build_webpage_metadata(
+                    url=url,
+                    title=title,
+                    markdown_content=markdown_content,
+                    scrape_result=scrape_result,
+                    page_content=page_content,
+                    embed_stats=embed_stats,
+                )
 
             return result
 
