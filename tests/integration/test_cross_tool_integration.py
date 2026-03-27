@@ -1,35 +1,46 @@
 """Cross-tool integration tests for combined functionality scenarios."""
 
 import pytest
-import pytest_asyncio
 import asyncio
 from unittest.mock import patch
 
 from extractor.server import (
-    app,
     web_scraper,
-    create_pdf_processor,
 )
+from tests.integration.tooling import build_pdf_tool_kwargs, select_tools
+
+
+@pytest.fixture
+def all_tools(e2e_tools):
+    """兼容旧测试签名，统一复用共享工具映射。"""
+    return e2e_tools
+
+
+@pytest.fixture
+def scenario_tools(e2e_tools):
+    """提供真实场景测试所需的工具子集。"""
+    return select_tools(
+        e2e_tools,
+        "scrape_webpage",
+        "scrape_multiple_webpages",
+        "convert_webpage_to_markdown",
+        "convert_pdf_to_markdown",
+        "batch_convert_pdfs_to_markdown",
+        "extract_links",
+        "get_server_metrics",
+        "clear_cache",
+    )
 
 
 class TestCrossToolIntegration:
     """Integration tests for scenarios involving multiple tools working together."""
 
-    @pytest.fixture
-    def pdf_processor(self):
-        """创建 PDF 处理器实例用于测试"""
-        return create_pdf_processor()
-
-    @pytest_asyncio.fixture
-    async def all_tools(self, pdf_processor):
-        """Get all MCP tools from the app."""
-        return {t.name: t for t in await app.list_tools()}
-
     @pytest.mark.asyncio
-    async def test_webpage_to_pdf_to_markdown_workflow(self, all_tools, pdf_processor):
+    async def test_webpage_to_pdf_to_markdown_workflow(self, e2e_tools, pdf_processor):
         """Test a complete workflow: scrape webpage, then process any PDFs found."""
-        scrape_tool = all_tools["scrape_webpage"]
-        convert_pdf_tool = all_tools["convert_pdf_to_markdown"]
+        tools = select_tools(e2e_tools, "scrape_webpage", "convert_pdf_to_markdown")
+        scrape_tool = tools["scrape_webpage"]
+        convert_pdf_tool = tools["convert_pdf_to_markdown"]
 
         # Mock webpage scraping that finds PDF links
         webpage_result = {
@@ -112,15 +123,7 @@ class TestCrossToolIntegration:
             first_pdf_url = pdf_links[0]
             pdf_response = await convert_pdf_tool.fn(
                 pdf_source=first_pdf_url,
-                method="auto",
-                include_metadata=True,
-                page_range=None,
-                output_format="markdown",
-                extract_images=True,
-                extract_tables=True,
-                extract_formulas=True,
-                embed_images=False,
-                enhanced_options=None,
+                **build_pdf_tool_kwargs(),
             )
 
             assert pdf_response.success is True
@@ -149,11 +152,16 @@ class TestCrossToolIntegration:
 
     @pytest.mark.asyncio
     async def test_batch_scraping_with_pdf_extraction_workflow(
-        self, all_tools, pdf_processor
+        self, e2e_tools, pdf_processor
     ):
         """Test batch webpage scraping followed by batch PDF processing."""
-        batch_scrape_tool = all_tools["scrape_multiple_webpages"]
-        batch_pdf_tool = all_tools["batch_convert_pdfs_to_markdown"]
+        tools = select_tools(
+            e2e_tools,
+            "scrape_multiple_webpages",
+            "batch_convert_pdfs_to_markdown",
+        )
+        batch_scrape_tool = tools["scrape_multiple_webpages"]
+        batch_pdf_tool = tools["batch_convert_pdfs_to_markdown"]
 
         # Mock batch scraping results with mixed content including PDFs
         batch_scrape_results = [
@@ -248,15 +256,7 @@ class TestCrossToolIntegration:
             # Step 2: Batch process all found PDFs
             pdf_response = await batch_pdf_tool.fn(
                 pdf_sources=all_pdf_links,
-                method="auto",
-                include_metadata=True,
-                page_range=None,
-                output_format="markdown",
-                extract_images=True,
-                extract_tables=True,
-                extract_formulas=True,
-                embed_images=False,
-                enhanced_options=None,
+                **build_pdf_tool_kwargs(),
             )
 
             assert pdf_response.success is True
@@ -579,26 +579,6 @@ class TestCrossToolIntegration:
 
 class TestRealWorldIntegrationScenarios:
     """Integration tests simulating real-world usage scenarios."""
-
-    @pytest.fixture
-    def pdf_processor(self):
-        """创建 PDF 处理器实例用于测试"""
-        return create_pdf_processor()
-
-    @pytest_asyncio.fixture
-    async def scenario_tools(self):
-        """Get tools commonly used together in real scenarios."""
-        tools = {t.name: t for t in await app.list_tools()}
-        return {
-            "scrape_webpage": tools["scrape_webpage"],
-            "scrape_multiple_webpages": tools["scrape_multiple_webpages"],
-            "convert_webpage_to_markdown": tools["convert_webpage_to_markdown"],
-            "convert_pdf_to_markdown": tools["convert_pdf_to_markdown"],
-            "batch_convert_pdfs_to_markdown": tools["batch_convert_pdfs_to_markdown"],
-            "extract_links": tools["extract_links"],
-            "get_server_metrics": tools["get_server_metrics"],
-            "clear_cache": tools["clear_cache"],
-        }
 
     @pytest.mark.asyncio
     async def test_research_paper_collection_scenario(

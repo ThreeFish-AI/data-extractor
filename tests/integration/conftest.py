@@ -11,6 +11,7 @@ from extractor.server import (
     app,
     create_pdf_processor,
 )
+from tests.integration.tooling import get_tool_map
 
 
 @pytest.fixture
@@ -22,4 +23,4 @@ def pdf_processor():
 @pytest_asyncio.fixture
 async def e2e_tools():
     """获取所有 MCP 工具的名称-工具映射字典，用于端到端测试。"""
-    return {t.name: t for t in await app.list_tools()}
+    return await get_tool_map()

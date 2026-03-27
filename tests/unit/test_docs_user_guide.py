@@ -1,22 +1,22 @@
-"""docs/6-User-Guide.md 文档完整性测试。
-
-验证用户指南文档的结构完整性、链接有效性和正交性约束。
-"""
+"""docs/6-User-Guide.md 文档完整性测试。"""
 
 import re
-from pathlib import Path
 
 import pytest
+from tests.unit.doc_contracts import (
+    assert_doc_exists,
+    assert_relative_links_resolve,
+    assert_required_frontmatter,
+    read_doc,
+)
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DOCS_DIR = PROJECT_ROOT / "docs"
-USER_GUIDE_DOC = DOCS_DIR / "6-User-Guide.md"
+USER_GUIDE_DOC = "6-User-Guide.md"
 
 
 @pytest.fixture(scope="module")
 def doc_content() -> str:
     """读取用户指南文档内容。"""
-    return USER_GUIDE_DOC.read_text(encoding="utf-8")
+    return read_doc(USER_GUIDE_DOC)
 
 
 class TestDocExists:
@@ -24,28 +24,15 @@ class TestDocExists:
 
     def test_user_guide_doc_exists(self):
         """6-User-Guide.md 文件存在。"""
-        assert USER_GUIDE_DOC.exists(), f"{USER_GUIDE_DOC} 不存在"
+        assert_doc_exists(USER_GUIDE_DOC)
 
 
 class TestFrontmatter:
     """Frontmatter 完整性验证。"""
 
-    REQUIRED_FIELDS = ["id", "title", "description", "last_update"]
-
     def test_has_frontmatter(self, doc_content: str):
         """文档包含 YAML frontmatter。"""
-        assert doc_content.startswith("---"), "文档缺少 frontmatter 起始标记"
-        second_marker = doc_content.index("---", 3)
-        assert second_marker > 3, "文档缺少 frontmatter 结束标记"
-
-    @pytest.mark.parametrize("field", REQUIRED_FIELDS)
-    def test_frontmatter_has_field(self, doc_content: str, field: str):
-        """Frontmatter 包含必需字段: {field}。"""
-        end = doc_content.index("---", 3)
-        frontmatter = doc_content[3:end]
-        assert (
-            f"{field}:" in frontmatter
-        ), f"frontmatter 缺少必需字段 '{field}'"
+        assert_required_frontmatter(doc_content)
 
 
 class TestRelativeLinks:
@@ -55,16 +42,7 @@ class TestRelativeLinks:
 
     def test_all_relative_links_resolve(self, doc_content: str):
         """所有相对路径链接指向的文件存在。"""
-        links = self.LINK_PATTERN.findall(doc_content)
-        assert len(links) > 0, "未找到任何相对路径链接"
-
-        broken = []
-        for link in links:
-            target = (DOCS_DIR / link).resolve()
-            if not target.exists():
-                broken.append(link)
-
-        assert broken == [], f"以下链接目标不存在: {broken}"
+        assert_relative_links_resolve(doc_content)
 
 
 class TestSectionStructure:

@@ -125,6 +125,22 @@ Data Extractor 采用基于 [pydantic-settings](https://docs.pydantic.dev/latest
 | `DATA_EXTRACTOR_LLM_TIMEOUT` | `float` | `60.0` | `> 0` | LLM API 超时（秒） |
 | `DATA_EXTRACTOR_LLM_MAX_RETRIES` | `int` | `2` | `>= 0` | LLM API 重试次数 |
 
+### 硬件加速
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_ACCELERATOR_DEVICE` | `str` | `auto` | `auto` / `cpu` / `cuda` / `mps` / `xpu` | 推理设备选择，按运行环境自动或显式指定 |
+| `DATA_EXTRACTOR_ACCELERATOR_NUM_THREADS` | `int` | `4` | `>= 1` | CPU 推理线程数 |
+
+### Docling PDF 引擎
+
+| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
+| --- | --- | --- | --- | --- |
+| `DATA_EXTRACTOR_DOCLING_ENABLED` | `bool` | `false` | - | 启用 Docling 作为可选 PDF 提取引擎 |
+| `DATA_EXTRACTOR_DOCLING_OCR_ENABLED` | `bool` | `true` | - | 为扫描版 PDF 启用 OCR |
+| `DATA_EXTRACTOR_DOCLING_TABLE_EXTRACTION_ENABLED` | `bool` | `true` | - | 启用 Docling 高级表格提取 |
+| `DATA_EXTRACTOR_DOCLING_FORMULA_EXTRACTION_ENABLED` | `bool` | `true` | - | 启用 Docling 数学公式提取 |
+
 ## 配置验证规则
 
 ### 字段验证器
