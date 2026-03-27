@@ -702,9 +702,22 @@ class DoclingFormulaEnricher:
         from docling.document_converter import DocumentConverter, PdfFormatOption  # type: ignore[import-untyped]
         from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore[import-untyped]
         from docling.datamodel.base_models import InputFormat  # type: ignore[import-untyped]
+        from docling.datamodel.accelerator_options import (  # type: ignore[import-untyped]
+            AcceleratorDevice,
+            AcceleratorOptions,
+        )
+        from .device_config import resolve_device_config
+
+        device_cfg = resolve_device_config(enable_formula=True)
 
         pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_formula_enrichment = True
+        pipeline_options.do_formula_enrichment = device_cfg.do_formula_enrichment
+
+        accelerator_options = AcceleratorOptions(
+            device=AcceleratorDevice(device_cfg.device),
+            num_threads=device_cfg.num_threads,
+        )
+        pipeline_options.accelerator_options = accelerator_options
 
         converter = DocumentConverter(
             format_options={

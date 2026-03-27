@@ -83,7 +83,16 @@ class PDFProcessor:
         # Docling 引擎（延迟初始化，仅当 prefer_docling=True 且已安装时）
         self._docling_engine: Optional[DoclingEngine] = None
         if prefer_docling and DoclingEngine.is_available():
-            self._docling_engine = DoclingEngine(output_dir=output_dir)
+            from ..config import settings
+
+            self._docling_engine = DoclingEngine(
+                output_dir=output_dir,
+                device=settings.accelerator_device,
+                num_threads=settings.accelerator_num_threads,
+                enable_formula_enrichment=settings.docling_formula_extraction_enabled,
+                enable_table_structure=settings.docling_table_extraction_enabled,
+                enable_ocr=settings.docling_ocr_enabled,
+            )
 
         # Page-level image maps populated during enhanced extraction,
         # consumed during text extraction for inline image placement.

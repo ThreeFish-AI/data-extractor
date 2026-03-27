@@ -15,9 +15,17 @@ from pathlib import Path
 
 import pytest
 
+from extractor.hardware import DeviceType, detect_device
 from extractor.pdf.docling_engine import DoclingEngine
 
 logger = logging.getLogger(__name__)
+
+# MPS 上 formula enrichment 被禁用以保持 GPU 加速，公式相关测试需跳过
+_is_mps = detect_device() == DeviceType.MPS
+skip_formula_on_mps = pytest.mark.skipif(
+    _is_mps,
+    reason="MPS 与 Docling formula enrichment 不兼容，公式测试跳过",
+)
 
 # 真实 PDF 文件路径
 ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
@@ -77,6 +85,7 @@ class TestDoclingCEPDFConversion:
         assert docling_result.page_count > 0, "页数为 0"
 
     @pytest.mark.integration
+    @skip_formula_on_mps
     def test_formulas_in_markdown(self, docling_result) -> None:
         """Markdown 中应包含 LaTeX 公式标记。"""
         md = docling_result.markdown
@@ -87,6 +96,7 @@ class TestDoclingCEPDFConversion:
         )
 
     @pytest.mark.integration
+    @skip_formula_on_mps
     def test_formulas_extracted(self, docling_result) -> None:
         """应提取到数学公式。"""
         assert len(docling_result.formulas) > 0, "未提取到任何公式"

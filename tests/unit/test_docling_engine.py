@@ -102,27 +102,47 @@ class TestDoclingEngineAvailability:
 class TestDoclingEngineConfigKey:
     """验证配置签名生成。"""
 
-    def test_default_config_key(self) -> None:
-        engine = DoclingEngine()
+    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    def test_default_config_key(self, _mock: object) -> None:
+        engine = DoclingEngine(device="cpu")
         key = engine._config_key()
         assert "tbl=True:accurate" in key
         assert "code=True" in key
         assert "formula=True" in key
+        assert "dev=cpu" in key
 
-    def test_custom_config_key(self) -> None:
+    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    def test_custom_config_key(self, _mock: object) -> None:
         engine = DoclingEngine(
             enable_table_structure=False,
             table_mode="fast",
             enable_code_enrichment=False,
+            device="cpu",
         )
         key = engine._config_key()
         assert "tbl=False:fast" in key
         assert "code=False" in key
 
-    def test_different_configs_produce_different_keys(self) -> None:
-        e1 = DoclingEngine(table_mode="accurate")
-        e2 = DoclingEngine(table_mode="fast")
+    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    def test_different_configs_produce_different_keys(self, _mock: object) -> None:
+        e1 = DoclingEngine(table_mode="accurate", device="cpu")
+        e2 = DoclingEngine(table_mode="fast", device="cpu")
         assert e1._config_key() != e2._config_key()
+
+    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    def test_config_key_includes_device(self, _mock: object) -> None:
+        """配置签名应包含设备信息。"""
+        engine = DoclingEngine(device="cpu")
+        key = engine._config_key()
+        assert "dev=cpu" in key
+        assert "threads=" in key
+
+    @patch("extractor.pdf.device_config.get_device_for_docling", side_effect=lambda d: d if d and d != "auto" else "cpu")
+    def test_different_devices_produce_different_cache_keys(self, _mock: object) -> None:
+        """不同设备的引擎应产生不同缓存键。"""
+        e_cpu = DoclingEngine(device="cpu")
+        e_mps = DoclingEngine(device="mps")
+        assert e_cpu._config_key() != e_mps._config_key()
 
 
 # ============================================================
