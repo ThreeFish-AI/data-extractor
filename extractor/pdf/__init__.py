@@ -15,3 +15,11 @@ from .math_formula import (  # noqa: F401
     protect_math_content,
 )
 from .processor import PDFProcessor  # noqa: F401
+from .docling_engine import (  # noqa: F401
+    DoclingEngine,
+    DoclingConversionResult,
+    DoclingTable,
+    DoclingImage,
+    DoclingFormula,
+    DoclingCodeBlock,
+)

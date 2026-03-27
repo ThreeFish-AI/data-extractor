@@ -81,12 +81,12 @@ class TestPDFProcessor:
         assert self.processor is not None
         assert hasattr(self.processor, "process_pdf")
         assert hasattr(self.processor, "batch_process_pdfs")
-        assert self.processor.supported_methods == ["pymupdf", "pypdf", "auto"]
+        assert self.processor.supported_methods == ["pymupdf", "pypdf", "auto", "docling"]
         assert os.path.exists(self.processor.temp_dir)
 
     def test_supported_methods(self):
         """测试支持的方法列表"""
-        expected_methods = ["pymupdf", "pypdf", "auto"]
+        expected_methods = ["pymupdf", "pypdf", "auto", "docling"]
         assert self.processor.supported_methods == expected_methods
 
     def test_url_detection(self):
