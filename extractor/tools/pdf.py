@@ -40,6 +40,7 @@ async def convert_pdf_to_markdown(
             default="auto",
             description="""PDF 提取方法：
                 "auto"（自动选择最佳引擎，优先 Docling）、
+                "smart"（LLM 编排多引擎并行处理 + 择优融合，最高质量，需配置 LLM API Key）、
                 "docling"（Docling 引擎，AI 布局分析 + TableFormer 表格 + 代码检测，适合复杂文档）、
                 "pymupdf"（PyMuPDF引擎，快速处理）、
                 "pypdf"（PyPDF引擎，适合简单文本）""",
@@ -181,6 +182,7 @@ async def convert_pdf_to_markdown(
                 word_count=result.get("word_count", 0),
                 conversion_time=timer.record_success() / 1000.0,
                 enhanced_assets=result.get("enhanced_assets"),
+                orchestration_info=result.get("orchestration_info"),
             )
         else:
             return PDFResponse(
