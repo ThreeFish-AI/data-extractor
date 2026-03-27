@@ -1,4 +1,4 @@
-"""Python SDK facade for the document-reader MCP service."""
+"""Python SDK facade for the Negentropy Perceives MCP service."""
 
 from __future__ import annotations
 
@@ -8,20 +8,20 @@ from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
 
-class DocumentReaderError(Exception):
+class NegentropyPerceivesError(Exception):
     """Base exception for Python SDK failures."""
 
 
-class DocumentReaderConnectionError(DocumentReaderError):
+class NegentropyPerceivesConnectionError(NegentropyPerceivesError):
     """Raised when the SDK cannot establish or maintain a client session."""
 
 
-class DocumentReaderToolError(DocumentReaderError):
+class NegentropyPerceivesToolError(NegentropyPerceivesError):
     """Raised when a tool invocation fails."""
 
 
-class DocumentReaderClient:
-    """High-level async SDK for calling the document-reader MCP service."""
+class NegentropyPerceivesClient:
+    """High-level async SDK for calling the negentropy-perceives MCP service."""
 
     def __init__(
         self,
@@ -30,7 +30,7 @@ class DocumentReaderClient:
         headers: dict[str, str] | None = None,
         auth: Any = None,
         timeout: float | int | None = None,
-        client_name: str = "document-reader-sdk",
+        client_name: str = "negentropy-perceives-sdk",
     ) -> None:
         self.base_url = base_url
         self._transport = StreamableHttpTransport(
@@ -45,7 +45,7 @@ class DocumentReaderClient:
         )
         self._connected = False
 
-    async def __aenter__(self) -> "DocumentReaderClient":
+    async def __aenter__(self) -> "NegentropyPerceivesClient":
         await self.connect()
         return self
 
@@ -60,8 +60,8 @@ class DocumentReaderClient:
             await self._client.__aenter__()
             self._connected = True
         except Exception as exc:  # pragma: no cover - delegated to FastMCP
-            raise DocumentReaderConnectionError(
-                f"Failed to connect to document-reader service at {self.base_url}"
+            raise NegentropyPerceivesConnectionError(
+                f"Failed to connect to negentropy-perceives service at {self.base_url}"
             ) from exc
 
     async def close(self) -> None:
@@ -79,8 +79,8 @@ class DocumentReaderClient:
         try:
             return await self._client.list_tools()
         except Exception as exc:  # pragma: no cover - delegated to FastMCP
-            raise DocumentReaderConnectionError(
-                "Failed to list tools from document-reader service"
+            raise NegentropyPerceivesConnectionError(
+                "Failed to list tools from negentropy-perceives service"
             ) from exc
 
     async def call_tool(
@@ -103,8 +103,8 @@ class DocumentReaderClient:
                 meta=meta,
             )
         except Exception as exc:  # pragma: no cover - delegated to FastMCP
-            raise DocumentReaderToolError(
-                f"Tool '{name}' failed on document-reader service"
+            raise NegentropyPerceivesToolError(
+                f"Tool '{name}' failed on negentropy-perceives service"
             ) from exc
 
     async def scrape_webpage(

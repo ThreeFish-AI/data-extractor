@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, AsyncMock
 
-from extractor.anti_detection import AntiDetectionScraper
+from negentropy.perceives.anti_detection import AntiDetectionScraper
 
 
 class TestAntiDetectionScraperInit:
@@ -93,13 +93,13 @@ class TestImportCompatibility:
 
     def test_import_from_anti_detection(self):
         """直接从 anti_detection 模块导入。"""
-        from extractor.anti_detection import AntiDetectionScraper
+        from negentropy.perceives.anti_detection import AntiDetectionScraper
 
         assert AntiDetectionScraper is not None
 
     def test_import_module_level_functions(self):
         """模块级函数可导入。"""
-        from extractor.anti_detection import (
+        from negentropy.perceives.anti_detection import (
             _random_delay,
             _scroll_page_selenium,
             _scroll_page_playwright,

@@ -15,7 +15,7 @@ tags:
 
 ## 项目概述
 
-Data Extractor 是基于 [FastMCP](https://github.com/jlowin/fastmcp) 框架构建的数据提取与转换 MCP Server，提供 14 个 MCP 工具，集成多种网页抓取引擎、PDF 双引擎处理和 Markdown 转换能力。
+Negentropy Perceives 是基于 [FastMCP](https://github.com/jlowin/fastmcp) 框架构建的数据提取与转换 MCP Server，提供 14 个 MCP 工具，集成多种网页抓取引擎、PDF 双引擎处理和 Markdown 转换能力。
 
 ### 设计原则
 
@@ -42,14 +42,14 @@ graph TD
 
 ### 模块化注册架构
 
-工具层采用领域拆分的模块化设计，所有工具注册于 [`extractor/tools/`](../extractor/tools/) 子包：
+工具层采用领域拆分的模块化设计，所有工具注册于 [`src/negentropy/perceives/tools/`](../src/negentropy/perceives/tools/) 子包：
 
-- **[`_registry.py`](../extractor/tools/_registry.py)**：中心枢纽，持有 FastMCP `app` 实例、共享服务单例（`web_scraper`、`anti_detection_scraper`、`markdown_converter`）、`create_pdf_processor()` 延迟加载工厂和公共辅助函数
+- **[`_registry.py`](../src/negentropy/perceives/tools/_registry.py)**：中心枢纽，持有 FastMCP `app` 实例、共享服务单例（`web_scraper`、`anti_detection_scraper`、`markdown_converter`）、`create_pdf_processor()` 延迟加载工厂和公共辅助函数
 - **领域模块**：各模块导入 `app` 并通过 `@app.tool()` 装饰器注册工具
 
 ```mermaid
 graph LR
-    subgraph "extractor/tools/"
+    subgraph "src/negentropy/perceives/tools/"
         R["_registry.py<br/>app · singletons · helpers"]
         S["scraping.py · 6"] & M["markdown.py · 2"] & P["pdf.py · 2"]
         F["form.py · 1"] & U["utility.py · 1"] & SV["service.py · 2"]
@@ -91,17 +91,17 @@ graph LR
 
 ### 响应模型层
 
-[`extractor/schemas.py`](../extractor/schemas.py) 定义 13 个 Pydantic 响应模型（`ScrapeResponse`、`BatchScrapeResponse`、`LinkItem`、`LinksResponse`、`PageInfoResponse`、`RobotsResponse`、`StructuredDataResponse`、`MarkdownResponse`、`BatchMarkdownResponse`、`PDFResponse`、`BatchPDFResponse`、`MetricsResponse`、`CacheOperationResponse`），构成工具层的 API 契约。
+[`src/negentropy/perceives/schemas.py`](../src/negentropy/perceives/schemas.py) 定义 13 个 Pydantic 响应模型（`ScrapeResponse`、`BatchScrapeResponse`、`LinkItem`、`LinksResponse`、`PageInfoResponse`、`RobotsResponse`、`StructuredDataResponse`、`MarkdownResponse`、`BatchMarkdownResponse`、`PDFResponse`、`BatchPDFResponse`、`MetricsResponse`、`CacheOperationResponse`），构成工具层的 API 契约。
 
 ### 传输模式
 
-[`server.py`](../extractor/server.py) 入口函数 `main()` 支持 **STDIO**（默认）、**HTTP**（可配置 host/port/path/CORS）和 **SSE** 三种传输模式。
+[`server.py`](../src/negentropy/perceives/server.py) 入口函数 `main()` 支持 **STDIO**（默认）、**HTTP**（可配置 host/port/path/CORS）和 **SSE** 三种传输模式。
 
 ## 处理引擎层
 
 ### 网页抓取引擎
 
-[`extractor/scraper.py`](../extractor/scraper.py) 中的 `WebScraper` 作为门面类，持有三个后端实例并通过 `if/elif` 方法分发进行路由：
+[`src/negentropy/perceives/scraper.py`](../src/negentropy/perceives/scraper.py) 中的 `WebScraper` 作为门面类，持有三个后端实例并通过 `if/elif` 方法分发进行路由：
 
 | 后端 | 类 | 技术栈 | 状态 |
 |------|------|--------|------|
@@ -113,7 +113,7 @@ graph LR
 
 ### 反检测抓取引擎
 
-[`extractor/anti_detection.py`](../extractor/anti_detection.py) 中的 `AntiDetectionScraper` 提供两种隐身后端：
+[`src/negentropy/perceives/anti_detection.py`](../src/negentropy/perceives/anti_detection.py) 中的 `AntiDetectionScraper` 提供两种隐身后端：
 
 - **Selenium 隐身**：基于 `undetected-chromedriver`，覆盖 `navigator.webdriver` 属性、伪装插件/语言信息
 - **Playwright 隐身**：注入 stealth 脚本，规避 Canvas/WebGL 指纹检测
@@ -122,13 +122,13 @@ graph LR
 
 ### PDF 处理引擎
 
-[`extractor/pdf/`](../extractor/pdf/) 子包采用多引擎架构，支持 LLM 智能编排：
+[`src/negentropy/perceives/pdf/`](../src/negentropy/perceives/pdf/) 子包采用多引擎架构，支持 LLM 智能编排：
 
-- **[`PDFProcessor`](../extractor/pdf/processor.py)**：主处理器，支持 `auto`/`pymupdf`/`pypdf`/`docling`/`smart` 五种方法。`auto` 模式优先使用 PyMuPDF，失败时回退到 pypdf。支持 URL 下载、页范围选择、元数据提取
-- **[`DoclingEngine`](../extractor/pdf/docling_engine.py)**：AI 布局分析引擎，基于 [Docling](https://github.com/DS4SD/docling)，提供 TableFormer 表格结构识别、代码检测和公式提取（可选依赖）
-- **[`EnhancedPDFProcessor`](../extractor/pdf/enhanced.py)**：增强处理器，提取图像（保存文件 + base64）、识别表格（管道符/制表符/空格分隔模式匹配）、检测 LaTeX 数学公式
-- **[`LLMOrchestrator`](../extractor/pdf/llm_orchestrator.py)**：LLM 编排中枢（`method="smart"`），三阶段流水线协调多引擎并行处理并择优融合（可选依赖 `litellm`）
-- **[`LLMClient`](../extractor/pdf/llm_client.py)**：LiteLLM 客户端封装，支持 ZhipuAI GLM-5 等模型
+- **[`PDFProcessor`](../src/negentropy/perceives/pdf/processor.py)**：主处理器，支持 `auto`/`pymupdf`/`pypdf`/`docling`/`smart` 五种方法。`auto` 模式优先使用 PyMuPDF，失败时回退到 pypdf。支持 URL 下载、页范围选择、元数据提取
+- **[`DoclingEngine`](../src/negentropy/perceives/pdf/docling_engine.py)**：AI 布局分析引擎，基于 [Docling](https://github.com/DS4SD/docling)，提供 TableFormer 表格结构识别、代码检测和公式提取（可选依赖）
+- **[`EnhancedPDFProcessor`](../src/negentropy/perceives/pdf/enhanced.py)**：增强处理器，提取图像（保存文件 + base64）、识别表格（管道符/制表符/空格分隔模式匹配）、检测 LaTeX 数学公式
+- **[`LLMOrchestrator`](../src/negentropy/perceives/pdf/llm_orchestrator.py)**：LLM 编排中枢（`method="smart"`），三阶段流水线协调多引擎并行处理并择优融合（可选依赖 `litellm`）
+- **[`LLMClient`](../src/negentropy/perceives/pdf/llm_client.py)**：LiteLLM 客户端封装，支持 ZhipuAI GLM-5 等模型
 
 #### Smart 模式编排流程
 
@@ -161,7 +161,7 @@ graph LR
 
 ### Markdown 转换器
 
-[`extractor/markdown/converter.py`](../extractor/markdown/converter.py) 中的 `MarkdownConverter` 包装 Microsoft [MarkItDown](https://github.com/microsoft/markitdown) 库，附加预处理和后处理流水线：
+[`src/negentropy/perceives/markdown/converter.py`](../src/negentropy/perceives/markdown/converter.py) 中的 `MarkdownConverter` 包装 Microsoft [MarkItDown](https://github.com/microsoft/markitdown) 库，附加预处理和后处理流水线：
 
 - **预处理**：移除导航栏/广告/脚本、解析相对 URL、提取主要内容区域
 - **后处理**：表格对齐、代码块语言检测、排版优化、图片 data URI 嵌入
@@ -169,7 +169,7 @@ graph LR
 
 ### 表单处理器
 
-[`extractor/form_handler.py`](../extractor/form_handler.py) 中的 `FormHandler` 支持 Selenium 和 Playwright 双后端（通过 `hasattr(driver_or_page, "fill")` 检测），处理文本输入、下拉选择、复选框/单选框、文件上传和表单提交。
+[`src/negentropy/perceives/form_handler.py`](../src/negentropy/perceives/form_handler.py) 中的 `FormHandler` 支持 Selenium 和 Playwright 双后端（通过 `hasattr(driver_or_page, "fill")` 检测），处理文本输入、下拉选择、复选框/单选框、文件上传和表单提交。
 
 ### 请求处理流程
 
@@ -195,11 +195,11 @@ sequenceDiagram
 
 | 组件 | 文件 | 实现方式 |
 |------|------|---------|
-| `RateLimiter` | [`rate_limiter.py`](../extractor/rate_limiter.py) | 时间间隔限速器：记录上次请求时间，间隔不足时 `asyncio.sleep` |
-| `RetryManager` | [`retry.py`](../extractor/retry.py) | 指数退避重试：`base_delay × backoff_factor^attempt`（全局配置：max=3, factor=2.0） |
-| `CacheManager` | [`cache.py`](../extractor/cache.py) | 内存 TTL 缓存：MD5 键、可配置过期时间，FIFO 淘汰策略（按时间戳淘汰最旧条目） |
-| `MetricsCollector` | [`metrics.py`](../extractor/metrics.py) | 计数器/累加器：统计总请求数、成功/失败数、累计耗时、方法使用分布、错误分类 |
-| `record_error()` | [`tools/_registry.py`](../extractor/tools/_registry.py) | 字符串匹配分类器：按关键字匹配为 timeout/connection/not_found/forbidden/anti_bot/unknown |
+| `RateLimiter` | [`rate_limiter.py`](../src/negentropy/perceives/rate_limiter.py) | 时间间隔限速器：记录上次请求时间，间隔不足时 `asyncio.sleep` |
+| `RetryManager` | [`retry.py`](../src/negentropy/perceives/retry.py) | 指数退避重试：`base_delay × backoff_factor^attempt`（全局配置：max=3, factor=2.0） |
+| `CacheManager` | [`cache.py`](../src/negentropy/perceives/cache.py) | 内存 TTL 缓存：MD5 键、可配置过期时间，FIFO 淘汰策略（按时间戳淘汰最旧条目） |
+| `MetricsCollector` | [`metrics.py`](../src/negentropy/perceives/metrics.py) | 计数器/累加器：统计总请求数、成功/失败数、累计耗时、方法使用分布、错误分类 |
+| `record_error()` | [`tools/_registry.py`](../src/negentropy/perceives/tools/_registry.py) | 字符串匹配分类器：按关键字匹配为 timeout/connection/not_found/forbidden/anti_bot/unknown |
 
 ### 缓存流程
 
@@ -224,9 +224,9 @@ graph TD
 
 ## 配置系统
 
-[`extractor/config.py`](../extractor/config.py) 基于 `pydantic-settings` 的 `BaseSettings` 实现：
+[`src/negentropy/perceives/config.py`](../src/negentropy/perceives/config.py) 基于 `pydantic-settings` 的 `BaseSettings` 实现：
 
-`DataExtractorSettings` 使用 `DATA_EXTRACTOR_` 前缀自动映射环境变量，支持 `.env` 文件，实例冻结（immutable）。配置层级（优先级递增）：代码默认值 → `.env` 文件 → 环境变量。
+`NegentropyPerceivesSettings` 使用 `NEGENTROPY_PERCEIVES_` 前缀自动映射环境变量，支持 `.env` 文件，实例冻结（immutable）。配置层级（优先级递增）：代码默认值 → `.env` 文件 → 环境变量。
 
 **主要配置组**：服务器、传输（STDIO/HTTP/SSE + host/port/path/CORS）、抓取、限速/重试/缓存、浏览器、User-Agent、代理、日志。详细配置项参见 [配置系统文档](./4-Configuration.md)。
 
@@ -236,20 +236,20 @@ graph TD
 
 | 模块 | 类/函数 | 功能 |
 |------|---------|------|
-| [`url_utils.py`](../extractor/url_utils.py) | `URLValidator` | URL 校验、规范化、域名提取 |
-| [`text_utils.py`](../extractor/text_utils.py) | `TextCleaner` | 文本清理、邮箱/电话提取、截断 |
-| [`config.py`](../extractor/config.py) | `ConfigValidator` | 提取配置字典校验（已合并至 config 模块） |
-| [`browser_utils.py`](../extractor/browser_utils.py) | `build_chrome_options()` | 共享 Chrome 选项构建器 |
+| [`url_utils.py`](../src/negentropy/perceives/url_utils.py) | `URLValidator` | URL 校验、规范化、域名提取 |
+| [`text_utils.py`](../src/negentropy/perceives/text_utils.py) | `TextCleaner` | 文本清理、邮箱/电话提取、截断 |
+| [`config.py`](../src/negentropy/perceives/config.py) | `ConfigValidator` | 提取配置字典校验（已合并至 config 模块） |
+| [`browser_utils.py`](../src/negentropy/perceives/browser_utils.py) | `build_chrome_options()` | 共享 Chrome 选项构建器 |
 
 ### 导入路径
 
 各模块均通过其实际所在路径直接导入：
 
-- PDF 处理：`from extractor.pdf.processor import PDFProcessor`
-- 增强 PDF：`from extractor.pdf.enhanced import EnhancedPDFProcessor`
-- Markdown 转换：`from extractor.markdown.converter import MarkdownConverter`
-- 反检测抓取：`from extractor.anti_detection import AntiDetectionScraper`
-- 表单处理：`from extractor.form_handler import FormHandler`
+- PDF 处理：`from negentropy.perceives.pdf.processor import PDFProcessor`
+- 增强 PDF：`from negentropy.perceives.pdf.enhanced import EnhancedPDFProcessor`
+- Markdown 转换：`from negentropy.perceives.markdown.converter import MarkdownConverter`
+- 反检测抓取：`from negentropy.perceives.anti_detection import AntiDetectionScraper`
+- 表单处理：`from negentropy.perceives.form_handler import FormHandler`
 
 ---
 

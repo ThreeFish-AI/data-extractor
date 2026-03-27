@@ -17,8 +17,8 @@ import asyncio
 import time
 from unittest.mock import patch, AsyncMock
 
-from extractor.server import app
-from extractor.config import settings
+from negentropy.perceives.server import app
+from negentropy.perceives.config import settings
 from tests.integration.tooling import get_tool_map
 
 
@@ -129,7 +129,7 @@ class TestMarkdownPipeline:
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Mock the web scraping
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(
                 return_value=mock_successful_scrape_result
             )
@@ -214,7 +214,7 @@ class TestMarkdownPipeline:
             },
         ]
 
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mixed_results)
 
             urls = ["https://site1.com", "https://site2.com", "https://site3.com"]
@@ -269,7 +269,7 @@ class TestMarkdownPipeline:
             "content": {"html": tricky_html},
         }
 
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=tricky_result)
 
             # Prepare request parameters
@@ -349,7 +349,7 @@ class TestMarkdownPipeline:
                 "content": {"html": edge_case["html"]},
             }
 
-            with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+            with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
                 mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
                 result = await convert_tool.fn(
@@ -416,7 +416,7 @@ class TestMarkdownPipeline:
             },
         ]
 
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=sample_result)
 
             for config in config_combinations:
@@ -450,7 +450,7 @@ class TestErrorResilience:
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Test with invalid URL that should cause an error
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             # Mock a scraping failure
             mock_scraper.scrape_url = AsyncMock(
                 side_effect=Exception("Network timeout error")
@@ -482,7 +482,7 @@ class TestErrorResilience:
         convert_tool = tools["convert_webpage_to_markdown"]
 
         # Simulate various error conditions
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             # Network error simulation
             mock_scraper.scrape_url = AsyncMock(side_effect=Exception("Network error"))
 
@@ -558,7 +558,7 @@ class TestPerformanceAndLoad:
                 }
             )
 
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_multiple_urls = AsyncMock(return_value=mock_results)
 
             start_time = time.time()
@@ -598,7 +598,7 @@ class TestPerformanceAndLoad:
             "content": {"html": "<html><body><h1>Concurrent</h1></body></html>"},
         }
 
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             # Create multiple concurrent requests
@@ -676,7 +676,7 @@ class TestSystemHealth:
             "content": {"html": "<html><body><h1>Test</h1></body></html>"},
         }
 
-        with patch("extractor.tools.markdown.web_scraper") as mock_scraper:
+        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
             mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
 
             # Perform several operations
@@ -747,7 +747,7 @@ class TestSecurityCompliance:
         }
 
         with patch(
-            "extractor.server.web_scraper.simple_scraper.scrape", new_callable=AsyncMock
+            "negentropy.perceives.server.web_scraper.simple_scraper.scrape", new_callable=AsyncMock
         ) as mock_scrape:
             # Mock the robots.txt scraping result - no error means success
             mock_scrape.return_value = {
@@ -756,7 +756,7 @@ class TestSecurityCompliance:
             }
 
             # Get the check_robots_txt tool from the FastMCP app
-            from extractor.server import check_robots_txt
+            from negentropy.perceives.server import check_robots_txt
 
             result = await check_robots_txt(url="https://example.com")
 

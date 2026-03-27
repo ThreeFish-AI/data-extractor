@@ -58,7 +58,7 @@ from pathlib import Path
 import tempfile
 import os
 
-from extractor.pdf.processor import PDFProcessor
+from negentropy.perceives.pdf.processor import PDFProcessor
 
 
 class TestPDFProcessor:
@@ -175,7 +175,7 @@ class TestPyMuPDFExtraction:
         self.processor.cleanup()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_pymupdf_extraction_success(self, mock_import_fitz):
         """测试PyMuPDF提取成功（block级提取）"""
         # 模拟fitz模块
@@ -229,7 +229,7 @@ class TestPyMuPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_pymupdf_with_page_range(self, mock_import_fitz):
         """测试PyMuPDF页面范围提取（block级）"""
         # 模拟fitz模块
@@ -279,7 +279,7 @@ class TestPyMuPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_pymupdf_extraction_with_inline_images(self, mock_import_fitz):
         """测试PyMuPDF提取中图片被内联到文本中"""
         mock_fitz = Mock()
@@ -301,7 +301,7 @@ class TestPyMuPDFExtraction:
         mock_doc.load_page.return_value = mock_page
 
         # 预填充 _page_image_maps（模拟 _extract_enhanced_assets 已运行）
-        from extractor.pdf.enhanced import ExtractedImage
+        from negentropy.perceives.pdf.enhanced import ExtractedImage
         self.processor._page_image_maps = {
             0: {
                 1: ExtractedImage(
@@ -341,7 +341,7 @@ class TestPyMuPDFExtraction:
             self.processor._page_image_maps.clear()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_fitz")
+    @patch("negentropy.perceives.pdf.processor._import_fitz")
     async def test_pymupdf_extraction_error(self, mock_import_fitz):
         """测试PyMuPDF提取错误"""
         # 模拟导入错误
@@ -373,7 +373,7 @@ class TestPyPDFExtraction:
         self.processor.cleanup()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_pypdf")
+    @patch("negentropy.perceives.pdf.processor._import_pypdf")
     @patch("builtins.open", create=True)
     async def test_pypdf_extraction_success(self, mock_open, mock_import_pypdf):
         """测试pypdf提取成功"""
@@ -421,7 +421,7 @@ class TestPyPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_pypdf")
+    @patch("negentropy.perceives.pdf.processor._import_pypdf")
     @patch("builtins.open", create=True)
     async def test_pypdf_with_page_range(self, mock_open, mock_import_pypdf):
         """测试pypdf页面范围提取"""
@@ -464,7 +464,7 @@ class TestPyPDFExtraction:
                 tmp_path.unlink()
 
     @pytest.mark.asyncio
-    @patch("extractor.pdf.processor._import_pypdf")
+    @patch("negentropy.perceives.pdf.processor._import_pypdf")
     async def test_pypdf_extraction_error(self, mock_import_pypdf):
         """测试pypdf提取错误"""
         mock_import_pypdf.side_effect = ImportError("pypdf not available")

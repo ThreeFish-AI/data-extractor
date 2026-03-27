@@ -817,7 +817,7 @@ wheels = [
 ]
 
 [[package]]
-name = "document-reader"
+name = "negentropy-perceives"
 version = "0.1.6.1"
 source = { editable = "." }
 dependencies = [

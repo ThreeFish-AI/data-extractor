@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from extractor.hardware import DeviceType
-from extractor.pdf.device_config import (
+from negentropy.perceives.hardware import DeviceType
+from negentropy.perceives.pdf.device_config import (
     DoclingDeviceConfig,
     _apply_cuda_optimizations,
     _apply_mps_constraints,
@@ -107,7 +107,7 @@ class TestMPSConstraints:
 class TestCUDAOptimizations:
     """验证 NVIDIA CUDA 优化处理。"""
 
-    @patch("extractor.pdf.device_config._check_flash_attention_available", return_value=True)
+    @patch("negentropy.perceives.pdf.device_config._check_flash_attention_available", return_value=True)
     def test_cuda_enables_flash_attention(self, _mock: object) -> None:
         """CUDA + flash_attn 已安装时应启用 FA2。"""
         config = DoclingDeviceConfig(device="cuda", device_type=DeviceType.CUDA)
@@ -115,7 +115,7 @@ class TestCUDAOptimizations:
         assert config.use_flash_attention is True
         assert "flash_attention" in config.adjustments
 
-    @patch("extractor.pdf.device_config._check_flash_attention_available", return_value=False)
+    @patch("negentropy.perceives.pdf.device_config._check_flash_attention_available", return_value=False)
     def test_cuda_no_flash_attention_when_missing(self, _mock: object) -> None:
         """CUDA + flash_attn 未安装时应跳过 FA2。"""
         config = DoclingDeviceConfig(device="cuda", device_type=DeviceType.CUDA)
@@ -141,7 +141,7 @@ class TestCUDAOptimizations:
 class TestResolveDeviceConfig:
     """验证 resolve_device_config 核心入口。"""
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
     def test_cpu_no_adjustments(self, _mock: object) -> None:
         """CPU 设备应无配置降级。"""
         config = resolve_device_config(device_preference="cpu")
@@ -149,7 +149,7 @@ class TestResolveDeviceConfig:
         assert config.do_formula_enrichment is True
         assert config.use_flash_attention is False
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="mps")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="mps")
     def test_mps_applies_constraints(self, _mock: object) -> None:
         """MPS 设备应自动应用限制。"""
         config = resolve_device_config(device_preference="mps", enable_formula=True)
@@ -158,8 +158,8 @@ class TestResolveDeviceConfig:
         assert config.do_formula_enrichment is False
         assert "formula_enrichment" in config.adjustments
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cuda")
-    @patch("extractor.pdf.device_config._check_flash_attention_available", return_value=True)
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cuda")
+    @patch("negentropy.perceives.pdf.device_config._check_flash_attention_available", return_value=True)
     def test_cuda_applies_optimizations(self, _mock_fa: object, _mock_dev: object) -> None:
         """CUDA 设备应启用优化。"""
         config = resolve_device_config(device_preference="cuda")
@@ -168,20 +168,20 @@ class TestResolveDeviceConfig:
         assert config.use_flash_attention is True
         assert config.do_formula_enrichment is True
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
     def test_explicit_cpu_preference(self, _mock: object) -> None:
         """显式指定 CPU 应跳过 GPU 优化。"""
         config = resolve_device_config(device_preference="cpu")
         assert config.device_type == DeviceType.CPU
         assert config.use_flash_attention is False
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="mps")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="mps")
     def test_custom_num_threads(self, _mock: object) -> None:
         """应正确传递自定义线程数。"""
         config = resolve_device_config(device_preference="mps", num_threads=8)
         assert config.num_threads == 8
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="xpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="xpu")
     def test_xpu_no_special_handling(self, _mock: object) -> None:
         """XPU 使用默认配置，无特殊调整。"""
         config = resolve_device_config(device_preference="xpu")

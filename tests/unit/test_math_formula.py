@@ -1,8 +1,8 @@
-"""extractor/pdf/math_formula.py 核心模块的单元测试。"""
+"""src/negentropy/perceives/pdf/math_formula.py 核心模块的单元测试。"""
 
 import pytest
 
-from extractor.pdf.math_formula import (
+from negentropy.perceives.pdf.math_formula import (
     UNICODE_TO_LATEX,
     DoclingFormulaEnricher,
     FormulaReconstructor,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Data Extractor MCP 服务器基础用法示例。
+Negentropy Perceives MCP 服务器基础用法示例。
 
 本脚本演示如何以编程方式使用各种抓取工具。
 注意：仅供演示使用。实际使用中，MCP 服务器将通过 MCP 客户端（如 Claude Desktop）调用。
@@ -136,7 +136,7 @@ async def _run_example(title: str, tool_name: str, params: dict[str, Any]) -> No
 
 async def main() -> None:
     """顺序运行所有示例。"""
-    print("Data Extractor MCP Server Usage Examples")
+    print("Negentropy Perceives MCP Server Usage Examples")
     print("=" * 50)
     print()
 

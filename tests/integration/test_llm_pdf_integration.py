@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from extractor.pdf.llm_client import LLMClient
+from negentropy.perceives.pdf.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ ARXIV_PDF = ASSETS_DIR / "2603.05344v3.pdf"
 _litellm_available = LLMClient.is_available()
 _has_api_key = bool(
     os.environ.get("ZHIPU_API_KEY")
-    or os.environ.get("DATA_EXTRACTOR_LLM_API_KEY")
+    or os.environ.get("NEGENTROPY_PERCEIVES_LLM_API_KEY")
 )
 
 skip_no_litellm = pytest.mark.skipif(
@@ -40,7 +40,7 @@ skip_no_litellm = pytest.mark.skipif(
 )
 skip_no_api_key = pytest.mark.skipif(
     not _has_api_key,
-    reason="需要配置 ZHIPU_API_KEY 或 DATA_EXTRACTOR_LLM_API_KEY 环境变量",
+    reason="需要配置 ZHIPU_API_KEY 或 NEGENTROPY_PERCEIVES_LLM_API_KEY 环境变量",
 )
 skip_no_ce_pdf = pytest.mark.skipif(
     not CE_PDF.exists(),
@@ -90,7 +90,7 @@ class TestSmartModeDegradation:
     @skip_no_ce_pdf
     async def test_smart_degrades_to_auto_when_litellm_missing(self) -> None:
         """LiteLLM 未安装时，smart 模式应降级到 auto 并成功完成。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=False)
         try:
@@ -110,7 +110,7 @@ class TestSmartModeDegradation:
     @skip_no_ce_pdf
     async def test_smart_degrades_on_orchestration_error(self) -> None:
         """编排过程异常时，smart 模式应降级到 auto。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=False)
         try:
@@ -131,7 +131,7 @@ class TestSmartModeDegradation:
     @pytest.mark.integration
     def test_smart_in_supported_methods(self) -> None:
         """smart 应在 PDFProcessor 的支持方法列表中。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=False)
         assert "smart" in processor.supported_methods
@@ -152,7 +152,7 @@ class TestSmartModeCEPDF:
     @pytest.fixture(scope="class")
     async def smart_result(self):
         """类级 fixture：执行一次 smart 模式转换。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True)
         try:
@@ -233,7 +233,7 @@ class TestSmartModeArxivPDF:
     @pytest.fixture(scope="class")
     async def smart_result(self):
         """类级 fixture：执行一次 smart 模式转换。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True)
         try:
@@ -287,8 +287,8 @@ class TestSmartVsDoclingComparison:
     @pytest.mark.asyncio
     async def test_compare_smart_vs_docling(self) -> None:
         """对比 smart 与 docling 的关键质量指标。"""
-        from extractor.pdf.llm_orchestrator import _extract_quality_signals
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.llm_orchestrator import _extract_quality_signals
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         # Smart 模式
         proc_smart = PDFProcessor(enable_enhanced_features=True)
@@ -377,7 +377,7 @@ class TestLLMOrchestratorDirectIntegration:
     @pytest.mark.asyncio
     async def test_orchestrator_full_pipeline(self) -> None:
         """完整三阶段编排流程。"""
-        from extractor.pdf.llm_orchestrator import (
+        from negentropy.perceives.pdf.llm_orchestrator import (
             LLMOrchestrator,
             OrchestrationResult,
         )
@@ -410,7 +410,7 @@ class TestLLMOrchestratorDirectIntegration:
     @pytest.mark.asyncio
     async def test_orchestrator_with_page_range(self) -> None:
         """指定页范围时编排应正常工作。"""
-        from extractor.pdf.llm_orchestrator import LLMOrchestrator
+        from negentropy.perceives.pdf.llm_orchestrator import LLMOrchestrator
 
         llm_client = LLMClient()
         orchestrator = LLMOrchestrator(llm_client=llm_client)

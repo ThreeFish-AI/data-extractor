@@ -1,4 +1,4 @@
-"""Configuration settings for the Data Extractor MCP Server."""
+"""Configuration settings for the Negentropy Perceives MCP Server."""
 
 from typing import Dict, Any, Optional, Union
 from pydantic import Field, field_validator
@@ -7,11 +7,11 @@ from pydantic_settings import BaseSettings
 from . import __version__
 
 
-class DataExtractorSettings(BaseSettings):
-    """Settings for the Data Extractor MCP Server."""
+class NegentropyPerceivesSettings(BaseSettings):
+    """Settings for the Negentropy Perceives MCP Server."""
 
     # Server settings
-    server_name: str = Field(default="document-reader")
+    server_name: str = Field(default="negentropy-perceives")
     server_version: str = Field(default=__version__)
 
     # HTTP transport settings
@@ -27,7 +27,7 @@ class DataExtractorSettings(BaseSettings):
         default="*", description="CORS origins for HTTP transport"
     )
 
-    # Data Extractor settings
+    # Negentropy Perceives settings
     concurrent_requests: int = Field(default=16, gt=0)
     download_delay: float = Field(default=1.0, ge=0.0)
     randomize_download_delay: bool = Field(default=True)
@@ -121,7 +121,7 @@ class DataExtractorSettings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "extra": "ignore",  # Allow extra environment variables
-        "env_prefix": "DATA_EXTRACTOR_",  # Automatically map env vars with this prefix
+        "env_prefix": "NEGENTROPY_PERCEIVES_",  # Automatically map env vars with this prefix
         "env_ignore_empty": True,  # Ignore empty environment variables
         "frozen": True,  # Make instances immutable
     }
@@ -188,4 +188,4 @@ class DataExtractorSettings(BaseSettings):
 
 
 # 创建全局设置实例
-settings = DataExtractorSettings()
+settings = NegentropyPerceivesSettings()

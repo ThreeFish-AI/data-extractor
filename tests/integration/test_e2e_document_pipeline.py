@@ -13,7 +13,7 @@ import asyncio
 import time
 from unittest.mock import patch
 
-from extractor.server import (
+from negentropy.perceives.server import (
     web_scraper,
 )
 
@@ -448,7 +448,7 @@ class TestDocumentPipeline:
         batch_pdf_tool = e2e_tools["batch_convert_pdfs_to_markdown"]
 
         with (
-            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
+            patch("negentropy.perceives.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(pdf_processor, "batch_process_pdfs") as mock_batch_pdf,
         ):
             async def mock_batch_process(

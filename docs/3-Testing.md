@@ -2,7 +2,7 @@
 id: testing
 sidebar_position: 3
 title: Testing
-description: Data Extractor 项目测试指南，涵盖测试体系、执行方法、Fixture 管理、调试排故与质量门禁。
+description: Negentropy Perceives 项目测试指南，涵盖测试体系、执行方法、Fixture 管理、调试排故与质量门禁。
 last_update:
   author: Aurelius
   date: 2025-11-23
@@ -102,8 +102,8 @@ uv run pytest tests/integration/                 # 集成测试目录
 uv run pytest tests/unit/test_config.py          # 特定文件
 
 # 按粒度
-uv run pytest tests/unit/test_config.py::TestDataExtractorSettings           # 测试类
-uv run pytest tests/unit/test_config.py::TestDataExtractorSettings::test_xxx # 测试方法
+uv run pytest tests/unit/test_config.py::TestNegentropyPerceivesSettings           # 测试类
+uv run pytest tests/unit/test_config.py::TestNegentropyPerceivesSettings::test_xxx # 测试方法
 
 # 执行控制
 uv run pytest -x                     # 首次失败即停
@@ -131,7 +131,7 @@ uv run pytest -m "not slow"          # 排除慢速测试
 
 | Fixture | 作用域 | 说明 |
 | ------- | ------ | ---- |
-| `test_config` | function | 安全的 `DataExtractorSettings` 测试实例 |
+| `test_config` | function | 安全的 `NegentropyPerceivesSettings` 测试实例 |
 | `mock_web_scraper` | function | `WebScraper` Mock（`spec=` 类型约束） |
 | `mock_anti_detection_scraper` | function | `AntiDetectionScraper` Mock |
 | `mock_form_handler` | function | `FormHandler` Mock |
@@ -162,9 +162,9 @@ uv run pytest -m "not slow"          # 排除慢速测试
 
 ```bash
 uv sync --group dev                                    # 安装开发依赖
-export DATA_EXTRACTOR_ENABLE_JAVASCRIPT=false           # 禁用 JS 渲染
-export DATA_EXTRACTOR_CONCURRENT_REQUESTS=1             # 单请求模式
-export DATA_EXTRACTOR_BROWSER_TIMEOUT=10                # 浏览器超时
+export NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT=false           # 禁用 JS 渲染
+export NEGENTROPY_PERCEIVES_CONCURRENT_REQUESTS=1             # 单请求模式
+export NEGENTROPY_PERCEIVES_BROWSER_TIMEOUT=10                # 浏览器超时
 ```
 
 ### 调试命令
@@ -188,7 +188,7 @@ def test_debug_example():
 
 | 问题类型 | 症状 | 解决方案 |
 | -------- | ---- | -------- |
-| **浏览器** | Selenium/Playwright 测试失败 | `export DATA_EXTRACTOR_ENABLE_JAVASCRIPT=false` 或 `uv run pytest -k "not requires_browser"` |
+| **浏览器** | Selenium/Playwright 测试失败 | `export NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT=false` 或 `uv run pytest -k "not requires_browser"` |
 | **网络** | 请求超时或连接失败 | `uv run pytest -k "not requires_network"` 或 `uv run pytest --timeout=30` |
 | **异步** | 异步测试挂起或超时 | 确认 `asyncio_mode = "auto"` 已配置；加 `--timeout=60` |
 | **资源** | 内存不足或执行缓慢 | `uv run pytest -n 1` 串行执行；`rm -rf .pytest_cache/` 清理缓存 |
@@ -200,7 +200,7 @@ def test_debug_example():
 ### 命名约定
 
 ```python
-# 文件：test_<模块名>.py，镜像 extractor/ 下的源码模块
+# 文件：test_<模块名>.py，镜像 src/negentropy/perceives/ 下的源码模块
 # 类：Test<功能区域>
 # 方法：test_<行为>_<条件>
 
@@ -216,9 +216,9 @@ class TestWebScraper:
 ```python
 def test_extract_data():
     # Arrange
-    config = DataExtractorSettings(enable_javascript=False)
+    config = NegentropyPerceivesSettings(enable_javascript=False)
     # Act
-    result = extractor.process(config)
+    result = negentropy.perceives.process(config)
     # Assert
     assert result["success"] is True
 ```
@@ -227,7 +227,7 @@ def test_extract_data():
 
 - **异步测试**：`asyncio_mode = "auto"` 已在 `pyproject.toml` 中配置，异步测试函数**无需**手动添加 `@pytest.mark.asyncio` 装饰器
 - **Mock 规范**：使用 `Mock(spec=TargetClass)` 而非裸 `Mock()`，确保 Mock 对象遵循目标类接口
-- **测试组织**：测试文件与 `extractor/` 下的源码模块一一镜像（如 `extractor/scraper.py` → `tests/unit/test_scraper.py`）
+- **测试组织**：测试文件与 `src/negentropy/perceives/` 下的源码模块一一镜像（如 `src/negentropy/perceives/scraper.py` → `tests/unit/test_scraper.py`）
 - **测试标记**：五种标记（`unit`、`integration`、`slow`、`requires_network`、`requires_browser`）已在 [`pyproject.toml`](../pyproject.toml) 中定义，按需在测试函数上标注
 
 ---

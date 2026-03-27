@@ -36,7 +36,7 @@ jobs:
         if: env.has_updates == 'true'
         run: uv run pytest -x --tb=short
         env:
-          DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
+          NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
 
       - name: Create Pull Request
         id: create_pr

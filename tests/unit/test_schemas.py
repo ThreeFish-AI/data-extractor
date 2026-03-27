@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from extractor.schemas import (
+from negentropy.perceives.schemas import (
     ScrapeResponse,
     BatchScrapeResponse,
     LinkItem,
@@ -332,7 +332,7 @@ class TestBackwardCompatibility:
 
     def test_all_models_importable(self):
         """所有 13 个模型均可正常导入。"""
-        from extractor.schemas import (
+        from negentropy.perceives.schemas import (
             ScrapeResponse,
             CacheOperationResponse,
         )

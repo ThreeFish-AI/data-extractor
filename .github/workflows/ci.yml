@@ -29,7 +29,7 @@ jobs:
         run: uv run pytest -v --tb=short -n auto
         timeout-minutes: 5
         env:
-          DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
+          NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
 
   lint:
     name: Lint & Type Check
@@ -42,13 +42,13 @@ jobs:
         uses: ./.github/actions/setup-python-uv
 
       - name: Run ruff linting
-        run: uv run ruff check extractor/
+        run: uv run ruff check src/negentropy/perceives/
 
       - name: Run ruff formatting check
-        run: uv run ruff format --check extractor/
+        run: uv run ruff format --check src/negentropy/perceives/
 
       - name: Run mypy type checking
-        run: uv run mypy extractor/
+        run: uv run mypy src/negentropy/perceives/
 
   security:
     name: Security Audit
@@ -62,8 +62,8 @@ jobs:
 
       - name: Run bandit security scan
         run: |
-          uv run bandit -r extractor/ -f json -o bandit-report.json || true
-          uv run bandit -r extractor/
+          uv run bandit -r src/negentropy/perceives/ -f json -o bandit-report.json || true
+          uv run bandit -r src/negentropy/perceives/
 
       - name: Run pip-audit vulnerability scan
         run: |
@@ -98,7 +98,7 @@ jobs:
       - name: Test installation from wheel
         run: |
           uv pip install dist/*.whl
-          uv run python -c "import extractor; print(f'Successfully imported extractor v{extractor.__version__}')" || uv run python -c "import extractor; print('Successfully imported extractor')"
+          uv run python -c "import negentropy.perceives; print(f'Successfully imported negentropy.perceives v{negentropy.perceives.__version__}')" || uv run python -c "import negentropy.perceives; print('Successfully imported negentropy.perceives')"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -118,10 +118,10 @@ jobs:
         uses: ./.github/actions/setup-python-uv
 
       - name: Run tests with coverage
-        run: uv run pytest --cov=extractor --cov-report=xml --cov-report=html --cov-report=term -n auto
+        run: uv run pytest --cov=negentropy.perceives --cov-report=xml --cov-report=html --cov-report=term -n auto
         timeout-minutes: 5
         env:
-          DATA_EXTRACTOR_ENABLE_JAVASCRIPT: "false"
+          NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v7

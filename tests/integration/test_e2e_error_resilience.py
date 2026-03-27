@@ -11,7 +11,7 @@ import pytest
 import time
 from unittest.mock import patch
 
-from extractor.server import (
+from negentropy.perceives.server import (
     web_scraper,
 )
 
@@ -129,7 +129,7 @@ class TestErrorResilience:
             }
 
         with (
-            patch("extractor.tools.pdf.create_pdf_processor", return_value=pdf_processor),
+            patch("negentropy.perceives.tools.pdf.create_pdf_processor", return_value=pdf_processor),
             patch.object(
                 pdf_processor,
                 "batch_process_pdfs",

@@ -27,13 +27,13 @@ import asyncio
 import time
 from unittest.mock import patch, AsyncMock
 
-from extractor.rate_limiter import RateLimiter, rate_limiter
-from extractor.retry import RetryManager, retry_manager
-from extractor.cache import CacheManager, cache_manager
-from extractor.metrics import MetricsCollector, metrics_collector
-from extractor.url_utils import URLValidator
-from extractor.text_utils import TextCleaner
-from extractor.tools._registry import normalize_extract_config
+from negentropy.perceives.rate_limiter import RateLimiter, rate_limiter
+from negentropy.perceives.retry import RetryManager, retry_manager
+from negentropy.perceives.cache import CacheManager, cache_manager
+from negentropy.perceives.metrics import MetricsCollector, metrics_collector
+from negentropy.perceives.url_utils import URLValidator
+from negentropy.perceives.text_utils import TextCleaner
+from negentropy.perceives.tools._registry import normalize_extract_config
 
 
 class TestRateLimiter:

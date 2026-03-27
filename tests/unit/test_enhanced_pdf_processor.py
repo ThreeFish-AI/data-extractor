@@ -4,7 +4,7 @@ import pytest
 import tempfile
 from unittest.mock import Mock, patch, MagicMock
 
-from extractor.pdf.enhanced import (
+from negentropy.perceives.pdf.enhanced import (
     EnhancedPDFProcessor,
     ExtractedImage,
     ExtractedTable,
@@ -43,7 +43,7 @@ class TestEnhancedPDFProcessor:
         assert asset_id.startswith("img_1_0_")
         assert len(asset_id) > 10  # Should include timestamp
 
-    @patch("extractor.pdf.enhanced.fitz")
+    @patch("negentropy.perceives.pdf.enhanced.fitz")
     @pytest.mark.asyncio
     async def test_extract_images_from_pdf_page(self, mock_fitz, processor):
         """Test image extraction from PDF page."""
@@ -90,7 +90,7 @@ class TestEnhancedPDFProcessor:
         assert image.position["x0"] == 50.0
         assert image.position["y0"] == 100.0
 
-    @patch("extractor.pdf.enhanced.fitz")
+    @patch("negentropy.perceives.pdf.enhanced.fitz")
     @pytest.mark.asyncio
     async def test_extract_cmyk_image_converted_to_rgb(self, mock_fitz, processor):
         """Test that CMYK images are converted to RGB instead of being skipped."""
@@ -404,7 +404,7 @@ class TestEnhancedPDFProcessor:
 
     def test_error_handling_in_image_extraction(self, processor):
         """Test error handling during image extraction."""
-        with patch("extractor.pdf.enhanced.fitz") as mock_fitz:
+        with patch("negentropy.perceives.pdf.enhanced.fitz") as mock_fitz:
             # Mock fitz to raise an exception
             mock_fitz.open.side_effect = Exception("PDF error")
 

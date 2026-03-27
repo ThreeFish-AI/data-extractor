@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from extractor.pdf.docling_engine import (
+from negentropy.perceives.pdf.docling_engine import (
     DoclingCodeBlock,
     DoclingConversionResult,
     DoclingEngine,
@@ -102,7 +102,7 @@ class TestDoclingEngineAvailability:
 class TestDoclingEngineConfigKey:
     """验证配置签名生成。"""
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
     def test_default_config_key(self, _mock: object) -> None:
         engine = DoclingEngine(device="cpu")
         key = engine._config_key()
@@ -111,7 +111,7 @@ class TestDoclingEngineConfigKey:
         assert "formula=True" in key
         assert "dev=cpu" in key
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
     def test_custom_config_key(self, _mock: object) -> None:
         engine = DoclingEngine(
             enable_table_structure=False,
@@ -123,13 +123,13 @@ class TestDoclingEngineConfigKey:
         assert "tbl=False:fast" in key
         assert "code=False" in key
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
     def test_different_configs_produce_different_keys(self, _mock: object) -> None:
         e1 = DoclingEngine(table_mode="accurate", device="cpu")
         e2 = DoclingEngine(table_mode="fast", device="cpu")
         assert e1._config_key() != e2._config_key()
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", return_value="cpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
     def test_config_key_includes_device(self, _mock: object) -> None:
         """配置签名应包含设备信息。"""
         engine = DoclingEngine(device="cpu")
@@ -137,7 +137,7 @@ class TestDoclingEngineConfigKey:
         assert "dev=cpu" in key
         assert "threads=" in key
 
-    @patch("extractor.pdf.device_config.get_device_for_docling", side_effect=lambda d: d if d and d != "auto" else "cpu")
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", side_effect=lambda d: d if d and d != "auto" else "cpu")
     def test_different_devices_produce_different_cache_keys(self, _mock: object) -> None:
         """不同设备的引擎应产生不同缓存键。"""
         e_cpu = DoclingEngine(device="cpu")
@@ -306,7 +306,7 @@ class TestPDFProcessorDoclingIntegration:
 
     def test_prefer_docling_default(self) -> None:
         """prefer_docling 默认为 True。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor(enable_enhanced_features=False)
         assert proc.prefer_docling is True
@@ -314,7 +314,7 @@ class TestPDFProcessorDoclingIntegration:
 
     def test_prefer_docling_false(self) -> None:
         """prefer_docling=False 时不初始化 Docling 引擎。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor(enable_enhanced_features=False, prefer_docling=False)
         assert proc._docling_engine is None
@@ -322,7 +322,7 @@ class TestPDFProcessorDoclingIntegration:
 
     def test_supported_methods_includes_docling(self) -> None:
         """supported_methods 应包含 'docling'。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor(enable_enhanced_features=False)
         assert "docling" in proc.supported_methods
@@ -330,7 +330,7 @@ class TestPDFProcessorDoclingIntegration:
 
     def test_build_result_from_docling(self) -> None:
         """_build_result_from_docling 应生成标准输出格式。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor(enable_enhanced_features=False, prefer_docling=False)
         try:
@@ -369,7 +369,7 @@ class TestPDFProcessorDoclingIntegration:
 
     def test_build_result_text_format(self) -> None:
         """output_format='text' 时不应包含 markdown 键。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         proc = PDFProcessor(enable_enhanced_features=False, prefer_docling=False)
         try:

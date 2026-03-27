@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from extractor.hardware import DeviceType, detect_device
-from extractor.pdf.docling_engine import DoclingEngine
+from negentropy.perceives.hardware import DeviceType, detect_device
+from negentropy.perceives.pdf.docling_engine import DoclingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +201,7 @@ class TestDoclingFallbackCompatibility:
     @pytest.mark.asyncio
     async def test_full_pipeline_with_docling(self) -> None:
         """通过 PDFProcessor 完整管线验证 Docling 路径。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True, prefer_docling=True)
         try:
@@ -223,7 +223,7 @@ class TestDoclingFallbackCompatibility:
     @pytest.mark.asyncio
     async def test_fallback_to_pymupdf(self) -> None:
         """prefer_docling=False 时应走 PyMuPDF 路径。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(
             enable_enhanced_features=True,
@@ -247,7 +247,7 @@ class TestDoclingFallbackCompatibility:
     @pytest.mark.asyncio
     async def test_explicit_docling_method(self) -> None:
         """method='docling' 显式指定应使用 Docling 引擎。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True, prefer_docling=True)
         try:
@@ -266,7 +266,7 @@ class TestDoclingFallbackCompatibility:
     @pytest.mark.asyncio
     async def test_docling_method_without_install_returns_error(self) -> None:
         """Docling 未安装时 method='docling' 应返回错误。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(
             enable_enhanced_features=True,
@@ -299,7 +299,7 @@ class TestConversionQualityComparison:
     @pytest.mark.asyncio
     async def test_compare_outputs(self) -> None:
         """对比两个引擎的关键质量指标。"""
-        from extractor.pdf.processor import PDFProcessor
+        from negentropy.perceives.pdf.processor import PDFProcessor
 
         # Docling 路径
         proc_docling = PDFProcessor(

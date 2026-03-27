@@ -2,13 +2,16 @@
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.package-dir]
+"" = "src"
+
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["extractor*"]
+where = ["src"]
+include = ["negentropy*"]
 exclude = ["tests*", "reports*", "htmlcov*", "scripts*"]
 
 [project]
-name = "document-reader"
+name = "negentropy-perceives"
 version = "0.1.6.1"
 description = "A commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments."
 readme = "README.md"
@@ -65,9 +68,7 @@ all = [
 ]
 
 [project.scripts]
-document-reader = "extractor.server:main"
-mcp-data-extractor = "extractor.server:main"
-data-extractor = "extractor.server:main"
+negentropy-perceives = "negentropy.perceives.server:main"
 
 [tool.pytest.ini_options]
 minversion = "9.0"
@@ -75,7 +76,7 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src"]
 addopts = [
     "-ra",
     "--strict-config",
@@ -99,9 +100,9 @@ log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
-source = ["extractor"]
+source = ["src/negentropy/perceives"]
 omit = [
-    "extractor/__init__.py",
+    "src/negentropy/perceives/__init__.py",
     "tests/*",
     "venv/*",
     ".venv/*",
@@ -129,7 +130,7 @@ exclude_lines = [
 
 [tool.coverage.html]
 directory = "htmlcov"
-title = "Data Extractor Test Coverage Report"
+title = "Negentropy Perceives Test Coverage Report"
 
 [tool.coverage.xml]
 output = "tests/reports/coverage.xml"
