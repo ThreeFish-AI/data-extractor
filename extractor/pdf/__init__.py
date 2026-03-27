@@ -1,4 +1,10 @@
-"""PDF processing sub-package."""
+"""PDF processing sub-package.
+
+This module provides multiple PDF extraction engines:
+- PDFProcessor: Standard processor using PyMuPDF and pypdf
+- DoclingEngine: GPU-accelerated processor using Docling
+  (supports Apple Silicon MPS, NVIDIA CUDA, and CPU fallback)
+"""
 
 from .enhanced import (  # noqa: F401
     EnhancedPDFProcessor,
@@ -32,3 +38,31 @@ from .llm_orchestrator import (  # noqa: F401
     EngineTask,
     EngineResult,
 )
+
+__all__ = [
+    "PDFProcessor",
+    "EnhancedPDFProcessor",
+    "ExtractedImage",
+    "ExtractedTable",
+    "ExtractedFormula",
+    "FormulaReconstructor",
+    "DoclingFormulaEnricher",
+    "MathRegion",
+    "unicode_to_latex",
+    "has_math_unicode",
+    "protect_math_content",
+    "DoclingEngine",
+    "DoclingConversionResult",
+    "DoclingTable",
+    "DoclingImage",
+    "DoclingFormula",
+    "DoclingCodeBlock",
+    "LLMClient",
+    "LLMResponse",
+    "LLMOrchestrator",
+    "OrchestrationResult",
+    "OrchestrationPlan",
+    "PDFCharacteristics",
+    "EngineTask",
+    "EngineResult",
+]

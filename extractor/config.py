@@ -93,6 +93,30 @@ class DataExtractorSettings(BaseSettings):
         default=2, ge=0, description="LLM API 重试次数"
     )
 
+    # Hardware acceleration settings
+    accelerator_device: str = Field(
+        default="auto",
+        description="Accelerator device: auto, cpu, cuda (NVIDIA), mps (Apple Silicon), xpu (Intel)",
+    )
+    accelerator_num_threads: int = Field(
+        default=4, ge=1, description="Number of CPU threads for inference"
+    )
+
+    # Docling settings
+    docling_enabled: bool = Field(
+        default=False,
+        description="Enable Docling as an alternative PDF extraction engine with GPU acceleration",
+    )
+    docling_ocr_enabled: bool = Field(
+        default=True, description="Enable OCR in Docling for scanned PDFs"
+    )
+    docling_table_extraction_enabled: bool = Field(
+        default=True, description="Enable advanced table extraction in Docling"
+    )
+    docling_formula_extraction_enabled: bool = Field(
+        default=True, description="Enable mathematical formula extraction in Docling"
+    )
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
@@ -120,6 +144,15 @@ class DataExtractorSettings(BaseSettings):
             raise ValueError(f"transport_mode must be one of: {valid_modes}")
         return v.lower()
 
+    @field_validator("accelerator_device")
+    @classmethod
+    def validate_accelerator_device(cls, v):
+        """Validate accelerator device is one of the supported devices."""
+        valid_devices = ["auto", "cpu", "cuda", "mps", "xpu"]
+        if v.lower() not in valid_devices:
+            raise ValueError(f"accelerator_device must be one of: {valid_devices}")
+        return v.lower()
+
     def get_scrapy_settings(self) -> Dict[str, Any]:
         """Get Scrapy-specific settings as a dictionary."""
         return {
@@ -133,6 +166,24 @@ class DataExtractorSettings(BaseSettings):
             "RETRY_TIMES": self.max_retries,
             "DOWNLOAD_TIMEOUT": self.request_timeout,
             "USER_AGENT": self.default_user_agent,
+        }
+
+    def get_docling_settings(self) -> Dict[str, Any]:
+        """Get Docling-specific settings as a dictionary.
+
+        Returns settings compatible with Docling's AcceleratorOptions and
+        pipeline configuration.
+
+        Example:
+            >>> settings.get_docling_settings()
+            {'device': 'auto', 'num_threads': 4, 'enable_ocr': True, ...}
+        """
+        return {
+            "device": self.accelerator_device,
+            "num_threads": self.accelerator_num_threads,
+            "enable_ocr": self.docling_ocr_enabled,
+            "enable_table_extraction": self.docling_table_extraction_enabled,
+            "enable_formula_extraction": self.docling_formula_extraction_enabled,
         }
 
 
