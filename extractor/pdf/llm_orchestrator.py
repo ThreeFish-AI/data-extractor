@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from ._imports import import_fitz as _import_fitz
+from ._imports import import_pypdf as _import_pypdf
 from .llm_client import LLMClient, LLMResponse
 
 logger = logging.getLogger(__name__)
@@ -905,28 +907,3 @@ class LLMOrchestrator:
                 return primary + supplement
 
         return primary
-
-
-# ---------------------------------------------------------------------------
-# 延迟导入辅助
-# ---------------------------------------------------------------------------
-
-
-def _import_fitz():
-    """延迟导入 PyMuPDF (fitz)。"""
-    try:
-        import fitz
-
-        return fitz
-    except ImportError as e:
-        raise ImportError(f"PyMuPDF (fitz) is required: {e}")
-
-
-def _import_pypdf():
-    """延迟导入 pypdf。"""
-    try:
-        import pypdf
-
-        return pypdf
-    except ImportError as e:
-        raise ImportError(f"pypdf is required: {e}")

@@ -1,9 +1,7 @@
-"""MCP tool registry: app instance, shared services, and common helpers."""
+"""MCP 工具注册枢纽与兼容导出。"""
 
 import logging
-import time
-from typing import Any, Dict, List, Literal, Optional
-from urllib.parse import urlparse
+from typing import Any, Dict, List, Optional
 
 from fastmcp import FastMCP
 
@@ -17,6 +15,19 @@ from ..retry import retry_manager  # noqa: F401
 from ..scraper import WebScraper
 from ..text_utils import TextCleaner  # noqa: F401
 from ..url_utils import URLValidator  # noqa: F401
+from . import _observability
+from ._types import (
+    BrowserMethod,
+    PDFMethod,
+    PDFOutputFormat,
+    ScrapeMethod,
+    StructuredDataType,
+)
+from ._validation import (
+    normalize_extract_config as _normalize_extract_config,
+    validate_page_range as _validate_page_range,
+    validate_url as _validate_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,17 +61,6 @@ __all__ = [
     "ToolTimer",
 ]
 
-# --- Literal 类型别名（由 Pydantic/MCP 层自动进行参数验证） ---
-
-ScrapeMethod = Literal["auto", "simple", "scrapy", "selenium"]
-BrowserMethod = Literal["selenium", "playwright"]
-PDFMethod = Literal["auto", "pymupdf", "pypdf", "docling", "smart"]
-PDFOutputFormat = Literal["markdown", "text"]
-StructuredDataType = Literal[
-    "all", "contact", "social", "content", "products", "addresses"
-]
-
-# Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -85,128 +85,47 @@ def create_pdf_processor(
     )
 
 
-# --- Common helper functions to eliminate duplication ---
-
-
 def validate_url(url: str) -> Optional[str]:
-    """Validate URL format. Returns error message or None if valid."""
-    parsed = urlparse(url)
-    if not parsed.scheme or not parsed.netloc:
-        return "Invalid URL format"
-    return None
+    """兼容导出：校验 URL 格式。"""
+    return _validate_url(url)
 
 
 def validate_page_range(
     page_range: Optional[List[int]],
 ) -> tuple[Optional[tuple], Optional[str]]:
-    """Validate and convert page_range. Returns (tuple_or_none, error_or_none)."""
-    if not page_range:
-        return None, None
-    if len(page_range) != 2:
-        return None, "Page range must contain exactly 2 elements: [start, end]"
-    if page_range[0] < 0 or page_range[1] < 0:
-        return None, "Page numbers must be non-negative"
-    if page_range[0] >= page_range[1]:
-        return None, "Start page must be less than end page"
-    return tuple(page_range), None
+    """兼容导出：校验并转换 page_range。"""
+    return _validate_page_range(page_range)
 
 
 def normalize_extract_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    """校验并规范化提取配置字典。
-
-    将简写形式（字符串 CSS 选择器）展开为完整配置字典，
-    并为缺失字段补充默认值。
-    """
-    if not isinstance(config, dict):
-        raise ValueError("Extract config must be a dictionary")
-
-    normalized: Dict[str, Any] = {}
-    for key, value in config.items():
-        if isinstance(value, str):
-            normalized[key] = {"selector": value, "multiple": True}
-        elif isinstance(value, dict):
-            if "selector" not in value:
-                raise ValueError(f"Missing 'selector' for key '{key}'")
-            normalized[key] = {
-                "selector": value["selector"],
-                "attr": value.get("attr", "text"),
-                "multiple": value.get("multiple", False),
-                "type": value.get("type", "css"),
-            }
-        else:
-            raise ValueError(f"Invalid config value for key '{key}'")
-    return normalized
+    """兼容导出：规范化提取配置字典。"""
+    return _normalize_extract_config(config)
 
 
 def record_error(e: Exception, url: str, method: str, duration_ms: int) -> str:
-    """Handle error + record metrics. Returns original error message."""
-    error_message = str(e)
-    msg_lower = error_message.lower()
-
-    if "timeout" in msg_lower:
-        category = "timeout"
-    elif "connection" in msg_lower:
-        category = "connection"
-    elif "404" in error_message:
-        category = "not_found"
-    elif "403" in error_message:
-        category = "forbidden"
-    elif "cloudflare" in msg_lower:
-        category = "anti_bot"
-    else:
-        category = "unknown"
-
-    logger.error(
-        f"Scraping error for {url} using {method}: {type(e).__name__}: {error_message}"
+    """兼容导出：记录失败指标并返回原始错误消息。"""
+    return _observability.record_error(
+        e,
+        url,
+        method,
+        duration_ms,
+        metrics=metrics_collector,
+        log=logger,
     )
-    metrics_collector.record_request(url, False, duration_ms, method, category)
-    return error_message
 
 
 def elapsed_ms(start_time: float) -> int:
-    """Calculate elapsed milliseconds from start_time."""
-    return int((time.time() - start_time) * 1000)
+    """兼容导出：计算耗时。"""
+    return _observability.elapsed_ms(start_time)
 
 
-class ToolTimer:
-    """Unified timing and metrics helper for MCP tool execution.
-
-    Encapsulates start_time tracking, elapsed calculation, and metrics recording
-    to eliminate repeated boilerplate across tool modules.
-
-    Usage::
-
-        timer = ToolTimer(url, f"stealth_{method}")
-        try:
-            result = await do_work()
-            if result.get("success"):
-                return Response(success=True, duration_ms=timer.record_success())
-            else:
-                return Response(success=False, error=timer.record_failure(Exception(result["error"])))
-        except Exception as e:
-            return Response(success=False, error=timer.record_failure(e))
-    """
-
-    __slots__ = ("url", "method", "_start", "duration_ms")
+class ToolTimer(_observability.ToolTimer):
+    """兼容导出：基于共享指标记录的计时器。"""
 
     def __init__(self, url: str, method: str) -> None:
-        self.url = url
-        self.method = method
-        self._start = time.time()
-        self.duration_ms = 0
-
-    def elapsed(self) -> int:
-        """Compute and cache elapsed milliseconds."""
-        self.duration_ms = elapsed_ms(self._start)
-        return self.duration_ms
-
-    def record_success(self) -> int:
-        """Record success metrics. Returns duration_ms."""
-        self.elapsed()
-        metrics_collector.record_request(self.url, True, self.duration_ms, self.method)
-        return self.duration_ms
-
-    def record_failure(self, error: Exception) -> str:
-        """Record failure metrics. Returns user-facing error message."""
-        self.elapsed()
-        return record_error(error, self.url, self.method, self.duration_ms)
+        super().__init__(
+            url,
+            method,
+            metrics=metrics_collector,
+            record_error_func=record_error,
+        )
