@@ -26,7 +26,7 @@ tags:
 uv run negentropy-perceives
 
 # 以 Python 模块方式运行服务器
-uv run python -m negentropy.perceives.server
+uv run python -m negentropy.perceives
 ```
 
 命令入口统一为 `negentropy-perceives`。
@@ -56,10 +56,10 @@ uv run --env NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT=true \
 uv run ruff rule --all
 
 # MyPy 显示详细的错误代码信息
-uv run mypy negentropy/perceives/ --show-error-codes
+uv run mypy src/negentropy/perceives/ --show-error-codes
 
 # MyPy 生成 HTML 格式的类型检查报告
-uv run mypy negentropy/perceives/ --html-report mypy-report
+uv run mypy src/negentropy/perceives/ --html-report mypy-report
 ```
 
 ## 测试执行
@@ -105,7 +105,7 @@ uv pip show <package-name>
 ### 版本号查询
 
 ```bash
-# 版本号在 pyproject.toml 中维护，运行时由 negentropy/perceives/__init__.py 动态读取
+# 版本号在 pyproject.toml 中维护，运行时由 src/negentropy/perceives/__init__.py 动态读取
 # 查看当前项目版本号
 uv run python -c "from negentropy.perceives import __version__; print(__version__)"
 ```

@@ -103,7 +103,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/mcp-data-extractor
+      url: https://test.pypi.org/p/negentropy-perceives
 
     permissions:
       id-token: write
@@ -129,7 +129,7 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
     environment:
       name: pypi
-      url: https://pypi.org/p/mcp-data-extractor
+      url: https://pypi.org/p/negentropy-perceives
 
     permissions:
       id-token: write
@@ -166,7 +166,7 @@ jobs:
           {
             echo "## Released $(date +'%Y-%m-%d')"
             echo ""
-            echo "Published to PyPI: https://pypi.org/project/mcp-data-extractor/${VERSION}/"
+            echo "Published to PyPI: https://pypi.org/project/negentropy-perceives/${VERSION}/"
             echo ""
             cat CHANGELOG.md
           } > temp_changelog.md

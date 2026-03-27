@@ -2,8 +2,11 @@
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.package-dir]
+"" = "src"
+
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["negentropy*"]
 exclude = ["tests*", "reports*", "htmlcov*", "scripts*"]
 
@@ -73,7 +76,7 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src"]
 addopts = [
     "-ra",
     "--strict-config",
@@ -97,9 +100,9 @@ log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
-source = ["negentropy/perceives"]
+source = ["src/negentropy/perceives"]
 omit = [
-    "negentropy/perceives/__init__.py",
+    "src/negentropy/perceives/__init__.py",
     "tests/*",
     "venv/*",
     ".venv/*",

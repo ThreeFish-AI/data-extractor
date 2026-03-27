@@ -1,4 +1,4 @@
-"""negentropy/perceives/markdown/html_preprocessor.py 数学元素保护的单元测试。"""
+"""src/negentropy/perceives/markdown/html_preprocessor.py 数学元素保护的单元测试。"""
 
 import pytest
 

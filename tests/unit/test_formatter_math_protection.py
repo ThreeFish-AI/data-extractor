@@ -1,4 +1,4 @@
-"""negentropy/perceives/markdown/formatter.py 数学内容保护的单元测试。"""
+"""src/negentropy/perceives/markdown/formatter.py 数学内容保护的单元测试。"""
 
 import pytest
 

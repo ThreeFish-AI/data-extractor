@@ -62,7 +62,7 @@ uv run playwright install chromium
 
 ```
 negentropy-perceives/
-├── negentropy/perceives/                    # 核心包
+├── src/negentropy/perceives/                    # 核心包
 │   ├── server.py                 # MCP 服务器入口（re-export + main()）
 │   ├── config.py                 # 配置系统 + 配置验证（NegentropyPerceivesSettings, ConfigValidator）
 │   ├── schemas.py                # 响应模型 + 数据传输对象（Pydantic BaseModel, ScrapingResult）
@@ -136,11 +136,11 @@ server.py                   re-export 所有工具（向后兼容）
 
 ### 开发新工具步骤
 
-以 `check_robots_txt`（[tools/utility.py](../negentropy/perceives/tools/utility.py)）为例，这是项目中最简单的 MCP 工具：
+以 `check_robots_txt`（[tools/utility.py](../src/negentropy/perceives/tools/utility.py)）为例，这是项目中最简单的 MCP 工具：
 
 #### 1. 定义响应模型
 
-在 [schemas.py](../negentropy/perceives/schemas.py) 中添加 Pydantic 响应模型：
+在 [schemas.py](../src/negentropy/perceives/schemas.py) 中添加 Pydantic 响应模型：
 
 ```python
 class RobotsResponse(BaseModel):
@@ -188,17 +188,17 @@ async def check_robots_txt(url: str) -> RobotsResponse:
 
 #### 3. 注册触发
 
-在 [tools/\_\_init\_\_.py](../negentropy/perceives/tools/__init__.py) 中导入新模块：
+在 [tools/\_\_init\_\_.py](../src/negentropy/perceives/tools/__init__.py) 中导入新模块：
 
 ```python
 from . import utility  # noqa: F401  # 触发 @app.tool() 注册
 ```
 
-如需向后兼容，还需在 [server.py](../negentropy/perceives/server.py) 中 re-export。
+如需向后兼容，还需在 [server.py](../src/negentropy/perceives/server.py) 中 re-export。
 
 ### 参数设计模式
 
-推荐使用 **Annotated Field 模式**，直接在函数签名中定义参数描述，无需额外的请求模型类。以 [tools/scraping.py](../negentropy/perceives/tools/scraping.py) 中的 `scrape_webpage` 为例：
+推荐使用 **Annotated Field 模式**，直接在函数签名中定义参数描述，无需额外的请求模型类。以 [tools/scraping.py](../src/negentropy/perceives/tools/scraping.py) 中的 `scrape_webpage` 为例：
 
 ```python
 @app.tool()
@@ -328,10 +328,10 @@ uv run pytest -m "not slow" --timeout=300
 
 ```bash
 # 逐步修复类型问题
-uv run mypy negentropy/perceives/ --ignore-missing-imports
+uv run mypy src/negentropy/perceives/ --ignore-missing-imports
 
 # 或使用宽松模式
-uv run mypy negentropy/perceives/ --disable-error-code=var-annotated
+uv run mypy src/negentropy/perceives/ --disable-error-code=var-annotated
 ```
 
 更多调试命令详见 [常用指令](./5-Commands.md)，测试故障排除详见 [测试指南](./3-Testing.md#故障排除)。

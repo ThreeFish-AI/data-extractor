@@ -200,7 +200,7 @@ def test_debug_example():
 ### 命名约定
 
 ```python
-# 文件：test_<模块名>.py，镜像 negentropy/perceives/ 下的源码模块
+# 文件：test_<模块名>.py，镜像 src/negentropy/perceives/ 下的源码模块
 # 类：Test<功能区域>
 # 方法：test_<行为>_<条件>
 
@@ -227,7 +227,7 @@ def test_extract_data():
 
 - **异步测试**：`asyncio_mode = "auto"` 已在 `pyproject.toml` 中配置，异步测试函数**无需**手动添加 `@pytest.mark.asyncio` 装饰器
 - **Mock 规范**：使用 `Mock(spec=TargetClass)` 而非裸 `Mock()`，确保 Mock 对象遵循目标类接口
-- **测试组织**：测试文件与 `negentropy/perceives/` 下的源码模块一一镜像（如 `negentropy/perceives/scraper.py` → `tests/unit/test_scraper.py`）
+- **测试组织**：测试文件与 `src/negentropy/perceives/` 下的源码模块一一镜像（如 `src/negentropy/perceives/scraper.py` → `tests/unit/test_scraper.py`）
 - **测试标记**：五种标记（`unit`、`integration`、`slow`、`requires_network`、`requires_browser`）已在 [`pyproject.toml`](../pyproject.toml) 中定义，按需在测试函数上标注
 
 ---

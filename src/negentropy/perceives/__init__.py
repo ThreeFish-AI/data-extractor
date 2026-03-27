@@ -9,7 +9,9 @@ def _get_version_from_pyproject():
     """从 pyproject.toml 动态读取版本号"""
     try:
         # 从当前文件位置向上查找项目根目录
-        pyproject_path = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
+        pyproject_path = (
+            Path(__file__).resolve().parent.parent.parent.parent / "pyproject.toml"
+        )
 
         if pyproject_path.exists():
             content = pyproject_path.read_text(encoding="utf-8")

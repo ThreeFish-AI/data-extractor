@@ -19,7 +19,7 @@ Negentropy Perceives 采用基于 [pydantic-settings](https://docs.pydantic.dev/
 1. **运行时参数** - 函数调用时直接传递（详见[用户指南 - 数据提取配置](./6-User-Guide.md)）
 2. **环境变量** - `NEGENTROPY_PERCEIVES_` 前缀的环境变量
 3. **环境文件** - `.env` 系列文件
-4. **默认配置** - [`NegentropyPerceivesSettings`](../negentropy/perceives/config.py) 中定义的默认值
+4. **默认配置** - [`NegentropyPerceivesSettings`](../src/negentropy/perceives/config.py) 中定义的默认值
 
 ## 环境变量配置
 
@@ -208,4 +208,4 @@ cat .env
 
 ---
 
-更多配置详情请参考 [`.env.example`](../.env.example) 和 [`negentropy/perceives/config.py`](../negentropy/perceives/config.py)。
+更多配置详情请参考 [`.env.example`](../.env.example) 和 [`src/negentropy/perceives/config.py`](../src/negentropy/perceives/config.py)。

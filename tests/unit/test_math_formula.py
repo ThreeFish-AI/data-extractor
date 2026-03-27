@@ -1,4 +1,4 @@
-"""negentropy/perceives/pdf/math_formula.py 核心模块的单元测试。"""
+"""src/negentropy/perceives/pdf/math_formula.py 核心模块的单元测试。"""
 
 import pytest
 
