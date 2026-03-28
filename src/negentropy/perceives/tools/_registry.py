@@ -6,24 +6,17 @@ from typing import Any, Optional
 from fastmcp import FastMCP
 
 from ..anti_detection import AntiDetectionScraper
-from ..cache import cache_manager  # noqa: F401
 from ..config import settings
 from ..markdown.converter import MarkdownConverter
 from ..metrics import metrics_collector
-from ..rate_limiter import rate_limiter  # noqa: F401
-from ..retry import retry_manager  # noqa: F401
 from ..scraper import WebScraper
-from ..text_utils import TextCleaner  # noqa: F401
-from ..url_utils import URLValidator  # noqa: F401
 from . import _observability
-from ._types import (
+from ._support import (
     BrowserMethod,
     PDFMethod,
     PDFOutputFormat,
     ScrapeMethod,
     StructuredDataType,
-)
-from ._validation import (
     normalize_extract_config as _normalize_extract_config,
     validate_page_range as _validate_page_range,
     validate_url as _validate_url,
@@ -44,12 +37,6 @@ __all__ = [
     "web_scraper",
     "anti_detection_scraper",
     "markdown_converter",
-    "cache_manager",
-    "rate_limiter",
-    "retry_manager",
-    "TextCleaner",
-    "URLValidator",
-    "metrics_collector",
     # 工厂函数
     "create_pdf_processor",
     # 辅助函数

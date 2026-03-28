@@ -7,7 +7,7 @@ from pydantic import Field
 
 from ..browser_utils import playwright_session, selenium_session
 from ..form_handler import FormHandler
-from ..rate_limiter import rate_limiter
+from ..resilience import rate_limiter
 from ..schemas import ScrapeResponse
 from ..validation_trace import trace_event
 from ._registry import BrowserMethod, app, validate_url, ToolTimer

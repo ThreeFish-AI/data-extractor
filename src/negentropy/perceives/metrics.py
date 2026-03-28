@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, Optional
 
-from .url_utils import URLValidator
+from .parsing import URLValidator
 
 
 class MetricsCollector:

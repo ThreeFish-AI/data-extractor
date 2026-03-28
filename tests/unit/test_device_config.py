@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from negentropy.perceives.hardware import DeviceType
+from negentropy.perceives.pdf.hardware import DeviceType
 from negentropy.perceives.pdf.device_config import (
     DoclingDeviceConfig,
     _apply_cuda_optimizations,

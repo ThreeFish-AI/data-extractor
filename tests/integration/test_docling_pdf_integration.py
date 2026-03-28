@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from negentropy.perceives.hardware import DeviceType, detect_device
+from negentropy.perceives.pdf.hardware import DeviceType, detect_device
 from negentropy.perceives.pdf.docling_engine import DoclingEngine
 
 logger = logging.getLogger(__name__)

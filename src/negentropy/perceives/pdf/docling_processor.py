@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 import asyncio
 import aiohttp
 
-from ..hardware import (
+from .hardware import (
     DeviceType,
     detect_device,
     get_device_for_docling,

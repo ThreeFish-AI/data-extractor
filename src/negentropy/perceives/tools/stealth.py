@@ -5,14 +5,12 @@ from typing import Annotated, Any, Dict, Optional
 
 from pydantic import Field
 
+from ..cache import cache_manager
+from ..parsing import TextCleaner, URLValidator
+from ..resilience import rate_limiter, retry_manager
 from ..schemas import ScrapeResponse
 from ._registry import (
     BrowserMethod,
-    cache_manager,
-    rate_limiter,
-    retry_manager,
-    TextCleaner,
-    URLValidator,
     app,
     anti_detection_scraper,
     normalize_extract_config,

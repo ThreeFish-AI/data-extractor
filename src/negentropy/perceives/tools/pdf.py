@@ -7,7 +7,7 @@ from typing import Annotated, Any, Dict, List, Optional
 from pydantic import Field
 
 from ..metrics import metrics_collector
-from ..rate_limiter import rate_limiter
+from ..resilience import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ..validation_trace import trace_event
 from ._registry import (

@@ -1,7 +1,16 @@
-"""工具层输入校验与参数规范化。"""
+"""工具层共享类型别名与输入校验。"""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlparse
+
+
+ScrapeMethod = Literal["auto", "simple", "scrapy", "selenium"]
+BrowserMethod = Literal["selenium", "playwright"]
+PDFMethod = Literal["auto", "pymupdf", "pypdf", "docling", "smart"]
+PDFOutputFormat = Literal["markdown", "text"]
+StructuredDataType = Literal[
+    "all", "contact", "social", "content", "products", "addresses"
+]
 
 
 def validate_url(url: str) -> Optional[str]:
