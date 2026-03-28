@@ -3,7 +3,7 @@
 from pathlib import Path
 import sys
 
-from .config import settings
+from .config import describe_config_sources, settings
 
 # Re-export from tools package for backward compatibility
 from .tools import app
@@ -53,6 +53,7 @@ def main() -> None:
         f"port={settings.http_port}, "
         f"path={settings.http_path}"
     )
+    print(f"Config sources: {describe_config_sources()}")
 
     if settings.transport_mode in ["http", "sse"]:
         transport_type = "HTTP" if settings.transport_mode == "http" else "SSE"

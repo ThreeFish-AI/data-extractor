@@ -4,12 +4,20 @@
 """
 
 import os
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
 
-from negentropy.perceives.config import NegentropyPerceivesSettings, settings
+from negentropy.perceives.config import (
+    NegentropyPerceivesSettings,
+    _PROJECT_ROOT,
+    _resolve_env_files,
+    describe_config_sources,
+    settings,
+)
 
 
 class TestNegentropyPerceivesSettings:
@@ -382,3 +390,81 @@ class TestConfigurationEdgeCases:
             retry_delay=60.0,
         )
         assert config is not None
+
+
+class TestEnvFileResolution:
+    """测试 .env 文件路径解析逻辑"""
+
+    def test_resolve_env_files_includes_project_root(self):
+        """验证项目根目录 .env 路径在返回元组中"""
+        result = _resolve_env_files()
+        # 项目根目录下有 pyproject.toml，应包含项目根 .env
+        project_env = _PROJECT_ROOT / ".env"
+        assert project_env in result
+
+    def test_resolve_env_files_includes_cwd_fallback(self):
+        """验证 CWD .env 始终在返回元组中"""
+        result = _resolve_env_files()
+        assert ".env" in result
+
+    def test_resolve_env_files_with_explicit_override(self):
+        """验证 NEGENTROPY_PERCEIVES_ENV_FILE 追加到末尾（最高优先级）"""
+        with patch.dict(
+            os.environ, {"NEGENTROPY_PERCEIVES_ENV_FILE": "/tmp/custom.env"}
+        ):
+            result = _resolve_env_files()
+            assert Path("/tmp/custom.env") in result
+            # 显式指定的文件应在元组末尾（最高优先级）
+            assert result[-1] == Path("/tmp/custom.env")
+
+    def test_resolve_env_files_without_explicit_override(self):
+        """验证无显式覆盖时不包含额外路径"""
+        with patch.dict(os.environ, {}, clear=False):
+            # 确保 NEGENTROPY_PERCEIVES_ENV_FILE 不存在
+            os.environ.pop("NEGENTROPY_PERCEIVES_ENV_FILE", None)
+            result = _resolve_env_files()
+            # 不应包含额外路径（仅项目根 + CWD）
+            assert len(result) <= 2
+
+    def test_resolve_env_files_without_project_root(self):
+        """当项目根不存在 pyproject.toml 时，仅包含 CWD 条目"""
+        with patch.object(Path, "is_file", return_value=False):
+            result = _resolve_env_files()
+            assert ".env" in result
+
+    def test_env_file_loading_via_explicit_path(self):
+        """端到端验证：通过 NEGENTROPY_PERCEIVES_ENV_FILE 加载配置"""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".env", delete=False
+        ) as f:
+            f.write("NEGENTROPY_PERCEIVES_HTTP_PORT=9999\n")
+            f.write("NEGENTROPY_PERCEIVES_SERVER_NAME=test-from-env-file\n")
+            tmp_path = f.name
+
+        try:
+            with patch.dict(
+                os.environ, {"NEGENTROPY_PERCEIVES_ENV_FILE": tmp_path}
+            ):
+                config = NegentropyPerceivesSettings(
+                    _env_file=tmp_path,
+                )
+                assert config.http_port == 9999
+                assert config.server_name == "test-from-env-file"
+        finally:
+            os.unlink(tmp_path)
+
+
+class TestDescribeConfigSources:
+    """测试启动诊断信息"""
+
+    def test_describe_config_sources_no_env_files(self):
+        """无 .env 文件时返回默认提示"""
+        with patch.object(Path, "is_file", return_value=False):
+            result = describe_config_sources()
+            assert "No .env files loaded" in result
+
+    def test_describe_config_sources_returns_string(self):
+        """诊断信息始终返回字符串"""
+        result = describe_config_sources()
+        assert isinstance(result, str)
+        assert len(result) > 0

@@ -18,8 +18,18 @@ Negentropy Perceives 采用基于 [pydantic-settings](https://docs.pydantic.dev/
 
 1. **运行时参数** - 函数调用时直接传递（详见[用户指南 - 数据提取配置](./6-User-Guide.md)）
 2. **环境变量** - `NEGENTROPY_PERCEIVES_` 前缀的环境变量
-3. **环境文件** - `.env` 系列文件
+3. **环境文件** - `.env` 系列文件（详见下方搜索路径）
 4. **默认配置** - [`NegentropyPerceivesSettings`](../src/negentropy/perceives/config.py) 中定义的默认值
+
+### `.env` 文件搜索路径
+
+系统按以下顺序搜索 `.env` 文件，后者覆盖前者（不存在的文件被静默跳过）：
+
+1. **项目根目录** `.env` — 通过 `pyproject.toml` 哨兵文件自动检测项目根目录位置
+2. **当前工作目录** `.env` — pydantic-settings 原生行为
+3. **显式指定** — 通过 `NEGENTROPY_PERCEIVES_ENV_FILE` 环境变量指定自定义路径（最高优先级）
+
+> **提示**：项目根目录检测使得 `.env` 文件无论从哪个目录执行命令都能被正确加载。如需使用非标准路径的配置文件，可通过 `NEGENTROPY_PERCEIVES_ENV_FILE=/path/to/.env` 显式指定。
 
 ## 环境变量配置
 
@@ -145,10 +155,11 @@ Negentropy Perceives 采用基于 [pydantic-settings](https://docs.pydantic.dev/
 
 ### 字段验证器
 
-系统内置两个 `@field_validator`，在加载时自动规范化输入：
+系统内置三个 `@field_validator`，在加载时自动规范化输入：
 
 - **`log_level`** — 自动转为大写，仅接受 `DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`
 - **`transport_mode`** — 自动转为小写，仅接受 `stdio`、`http`、`sse`
+- **`accelerator_device`** — 自动转为小写，仅接受 `auto`、`cpu`、`cuda`、`mps`、`xpu`
 
 ### 配置不可变性
 
@@ -196,15 +207,41 @@ NEGENTROPY_PERCEIVES_USE_RANDOM_USER_AGENT=true
 
 ## 故障诊断
 
+### 启动诊断输出
+
+服务启动时会自动输出配置来源信息：
+
+```text
+Config sources: Loaded: /path/to/project/.env
+```
+
+如果未加载任何 `.env` 文件，则显示：
+
+```text
+Config sources: No .env files loaded (using env vars and defaults)
+```
+
+### 常用排查命令
+
 ```bash
 # 查看所有 Negentropy Perceives 环境变量
 env | grep NEGENTROPY_PERCEIVES_
 
-# 检查配置文件
+# 检查配置文件内容
 cat .env
+
+# 验证最终生效的配置
+uv run python -c "from negentropy.perceives.config import settings; print(settings.model_dump())"
+
+# 检查 .env 搜索路径
+uv run python -c "from negentropy.perceives.config import describe_config_sources; print(describe_config_sources())"
 ```
 
-**常见问题**：环境变量未生效时，先确认执行的是 `negentropy-perceives` 而不是旧入口残留；再检查 `.env` 是否位于当前工作目录，并使用 `uv run python -c "from negentropy.perceives.config import settings; print(settings.model_dump())"` 验证最终配置。
+### 常见问题
+
+- **端口配置不生效**：检查启动日志中的 `Config sources:` 行，确认 `.env` 文件是否被成功加载。如未加载，确认 `.env` 位于项目根目录或当前工作目录。
+- **环境变量优先级**：环境变量始终覆盖 `.env` 文件中的同名配置。如需强制使用 `.env` 中的值，先清除对应的环境变量。
+- **自定义配置文件路径**：使用 `NEGENTROPY_PERCEIVES_ENV_FILE=/path/to/.env` 指定非标准路径。
 
 ---
 
