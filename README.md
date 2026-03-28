@@ -1,5 +1,72 @@
 Negentropy Perceives is a commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments.
 
+## 🐍 Python SDK 快速上手
+
+### 安装
+
+```bash
+# 安装（需要 Python >=3.13）
+uv add negentropy-perceives
+
+# 启动服务端（HTTP 模式，默认端口 8081）
+negentropy-perceives
+```
+
+### 用例一：CSS 选择器精准提取
+
+通过 `extract_config` 声明字段与 CSS 选择器的映射，对目标页面进行结构化提取：
+
+```python
+import asyncio
+from negentropy.perceives.sdk import NegentropyPerceivesClient
+
+async def main() -> None:
+    async with NegentropyPerceivesClient() as client:
+        result = await client.scrape_webpage(
+            url="https://example.com/products/123",
+            extract_config={
+                "title":  {"selector": "h1.product-title", "attr": "text", "multiple": False},
+                "price":  {"selector": ".price",           "attr": "text", "multiple": False},
+                "images": {"selector": ".gallery img",     "attr": "src",  "multiple": True},
+            },
+        )
+        print(result)
+
+asyncio.run(main())
+```
+
+### 用例二：页面转 Markdown
+
+自动识别正文区域并转换为标准 Markdown，适用于内容本地化与知识库归档：
+
+```python
+async with NegentropyPerceivesClient() as client:
+    markdown = await client.convert_webpage_to_markdown(
+        url="https://example.com/blog/post-1",
+        extract_main_content=True,   # 过滤导航栏、页脚等噪声区域
+        embed_images=False,          # True 则将图片内联为 base64 data URI
+    )
+```
+
+### 用例三：PDF 转 Markdown（通用工具调用）
+
+`call_tool` 泛型接口可调用全部 14 个 MCP 工具，此处以 PDF 转换为例：
+
+```python
+async with NegentropyPerceivesClient() as client:
+    result = await client.call_tool(
+        "convert_pdf_to_markdown",
+        {
+            "pdf_source": "https://example.com/report.pdf",
+            "method": "auto",         # auto / pymupdf / pypdf / docling / smart
+            "page_range": "1-10",
+            "output_format": "markdown",
+        },
+    )
+```
+
+> 完整 API 参考与高级用法（批量并发、反检测抓取、表单自动化等）详见[用户指南](https://github.com/ThreeFish-AI/negentropy-perceives/blob/master/docs/6-User-Guide.md)。
+
 ## 🛠️ MCP Server Core Tools (14)
 
 Negentropy Perceives 提供了 14 个专业的 MCP 工具，按功能分为四大类别：
