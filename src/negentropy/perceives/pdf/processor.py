@@ -1183,9 +1183,7 @@ class PDFProcessor:
                     for img in docling_result.images
                 ],
                 "files": [
-                    img.filename
-                    for img in docling_result.images
-                    if img.filename
+                    img.filename for img in docling_result.images if img.filename
                 ],
             }
 
@@ -1225,9 +1223,7 @@ class PDFProcessor:
 
         # 输出目录（与 PyMuPDF 路径的 get_extraction_summary 对齐）
         if self._docling_engine and self._docling_engine._output_dir:
-            enhanced_assets["output_directory"] = str(
-                self._docling_engine._output_dir
-            )
+            enhanced_assets["output_directory"] = str(self._docling_engine._output_dir)
 
         result: Dict[str, Any] = {
             "success": True,
