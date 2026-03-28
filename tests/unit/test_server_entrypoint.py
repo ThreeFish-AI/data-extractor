@@ -37,6 +37,7 @@ class TestServerMain:
         assert "CLI entrypoint: negentropy-perceives" in output
         assert "Resolved settings: server_name=negentropy-perceives" in output
         assert "port=8082" in output
+        assert "Config sources:" in output
         assert app_calls == [
             {
                 "transport": "http",

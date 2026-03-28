@@ -70,10 +70,13 @@ class TestEnvVarConsistency:
             f"以下环境变量在 config.py 中定义但文档未记录: {sorted(missing)}"
         )
 
+    # 元配置环境变量：用于定位 .env 文件本身，不对应 NegentropyPerceivesSettings 字段
+    _META_ENV_VARS = {"NEGENTROPY_PERCEIVES_ENV_FILE"}
+
     def test_doc_env_vars_exist_in_code(self, doc_content: str):
         """文档中引用的环境变量在 config.py 中有对应字段。"""
         doc_vars = set(self.ENV_VAR_PATTERN.findall(doc_content))
-        extra = doc_vars - _SETTINGS_ENV_VARS
+        extra = doc_vars - _SETTINGS_ENV_VARS - self._META_ENV_VARS
         assert extra == set(), (
             f"以下环境变量在文档中出现但 config.py 中无对应字段: {sorted(extra)}"
         )
