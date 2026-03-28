@@ -1,31 +1,10 @@
-"""FastMCP server entry point for Negentropy Perceives."""
+"""FastMCP application entry point for Negentropy Perceives."""
 
 from pathlib import Path
 import sys
 
-from .config import describe_config_sources, settings
-
-# Re-export from tools package for backward compatibility
-from .tools import app
-from .tools import web_scraper as web_scraper
-from .tools import anti_detection_scraper as anti_detection_scraper
-from .tools import markdown_converter as markdown_converter
-from .tools import create_pdf_processor as create_pdf_processor
-from .tools.scraping import scrape_webpage, scrape_multiple_webpages  # noqa: F401
-from .tools.stealth import scrape_with_stealth  # noqa: F401
-from .tools.extraction import (  # noqa: F401
-    extract_links,
-    get_page_info,
-    extract_structured_data,
-    check_robots_txt,
-)
-from .tools.form import fill_and_submit_form  # noqa: F401
-from .tools.markdown import convert_webpage_to_markdown as convert_webpage_to_markdown
-from .tools.markdown import (
-    batch_convert_webpages_to_markdown as batch_convert_webpages_to_markdown,
-)
-from .tools.pdf import convert_pdf_to_markdown, batch_convert_pdfs_to_markdown  # noqa: F401
-from .tools.service import get_server_metrics, clear_cache  # noqa: F401
+from ..config import describe_config_sources, settings
+from ..tools import app
 
 
 def _active_cli_name() -> str:

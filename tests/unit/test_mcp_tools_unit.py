@@ -1,5 +1,5 @@
 """
-单元测试：MCP Server 工具函数
+单元测试：MCP 工具函数
 测试所有 14 个 @app.tool() 装饰器的 MCP 工具函数
 """
 
@@ -7,25 +7,24 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-import negentropy.perceives.server as server_module
-
-# BaseModel request classes have been removed - tools now use individual parameters with Annotated Field
-
-# fastmcp >=2.x / >=3.x @app.tool() 装饰器直接返回原函数，无需 .fn 解包
-scrape_webpage = server_module.scrape_webpage
-scrape_multiple_webpages = server_module.scrape_multiple_webpages
-extract_links = server_module.extract_links
-get_page_info = server_module.get_page_info
-check_robots_txt = server_module.check_robots_txt
-scrape_with_stealth = server_module.scrape_with_stealth
-fill_and_submit_form = server_module.fill_and_submit_form
-get_server_metrics = server_module.get_server_metrics
-clear_cache = server_module.clear_cache
-extract_structured_data = server_module.extract_structured_data
-convert_webpage_to_markdown = server_module.convert_webpage_to_markdown
-batch_convert_webpages_to_markdown = server_module.batch_convert_webpages_to_markdown
-convert_pdf_to_markdown = server_module.convert_pdf_to_markdown
-batch_convert_pdfs_to_markdown = server_module.batch_convert_pdfs_to_markdown
+from negentropy.perceives.tools.scraping import scrape_webpage, scrape_multiple_webpages
+from negentropy.perceives.tools.extraction import (
+    extract_links,
+    get_page_info,
+    check_robots_txt,
+    extract_structured_data,
+)
+from negentropy.perceives.tools.stealth import scrape_with_stealth
+from negentropy.perceives.tools.form import fill_and_submit_form
+from negentropy.perceives.tools.service import get_server_metrics, clear_cache
+from negentropy.perceives.tools.markdown import (
+    convert_webpage_to_markdown,
+    batch_convert_webpages_to_markdown,
+)
+from negentropy.perceives.tools.pdf import (
+    convert_pdf_to_markdown,
+    batch_convert_pdfs_to_markdown,
+)
 
 
 class TestMCPToolsScraping:

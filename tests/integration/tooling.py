@@ -1,6 +1,6 @@
 """集成测试共享工具与参数 helper。"""
 
-from negentropy.perceives.server import app
+from negentropy.perceives.tools import app
 
 
 DEFAULT_PDF_TOOL_KWARGS = {

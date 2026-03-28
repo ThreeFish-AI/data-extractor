@@ -11,7 +11,7 @@ import time
 import pytest
 from unittest.mock import patch
 
-from negentropy.perceives.server import app, web_scraper, anti_detection_scraper
+from negentropy.perceives.tools import app, web_scraper, anti_detection_scraper
 from negentropy.perceives.scraping import WebScraper
 from negentropy.perceives.scraping import AntiDetectionScraper
 from negentropy.perceives.markdown.converter import MarkdownConverter
@@ -356,7 +356,7 @@ class TestPDFToolIntegration:
     async def test_pdf_tools_resource_cleanup(self):
         """Test that PDF tools properly clean up resources."""
         # Verify that PDF processor has cleanup capabilities
-        from negentropy.perceives.server import create_pdf_processor
+        from negentropy.perceives.tools import create_pdf_processor
 
         pdf_processor = create_pdf_processor()
 

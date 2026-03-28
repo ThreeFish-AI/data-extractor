@@ -17,7 +17,7 @@ import asyncio
 import time
 from unittest.mock import patch, AsyncMock
 
-from negentropy.perceives.server import app
+from negentropy.perceives.tools import app
 from negentropy.perceives.config import settings
 from tests.integration.tooling import get_tool_map
 
@@ -747,7 +747,7 @@ class TestSecurityCompliance:
         }
 
         with patch(
-            "negentropy.perceives.server.web_scraper.simple_scraper.scrape", new_callable=AsyncMock
+            "negentropy.perceives.tools.extraction.web_scraper.simple_scraper.scrape", new_callable=AsyncMock
         ) as mock_scrape:
             # Mock the robots.txt scraping result - no error means success
             mock_scrape.return_value = {
@@ -756,7 +756,7 @@ class TestSecurityCompliance:
             }
 
             # Get the check_robots_txt tool from the FastMCP app
-            from negentropy.perceives.server import check_robots_txt
+            from negentropy.perceives.tools.extraction import check_robots_txt
 
             result = await check_robots_txt(url="https://example.com")
 

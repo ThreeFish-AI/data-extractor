@@ -63,7 +63,9 @@ uv run playwright install chromium
 ```
 negentropy-perceives/
 ├── src/negentropy/perceives/                    # 核心包
-│   ├── server.py                 # MCP 服务器入口（re-export + main()）
+│   ├── apps/
+│   │   ├── __init__.py           # 应用入口包
+│   │   └── app.py                # MCP 服务器入口（main()）
 │   ├── config.py                 # 配置系统 + 配置验证（NegentropyPerceivesSettings, ConfigValidator）
 │   ├── schemas.py                # 响应模型 + 数据传输对象（Pydantic BaseModel, ScrapingResult）
 │   │
@@ -135,7 +137,7 @@ tools/scraping.py 等        用 @app.tool() 装饰器注册工具函数
        ↓
 tools/__init__.py           导入各子模块，触发装饰器注册
        ↓
-server.py                   re-export 所有工具（向后兼容）
+apps/app.py                 应用入口 main()，从 tools 导入 app 实例
 ```
 
 `_registry.py` 是中枢，提供 `app` 实例和共享服务（`web_scraper`、`anti_detection_scraper`、`markdown_converter`）以及通用辅助函数（`validate_url`、`record_error`、`elapsed_ms` 等）。
@@ -200,7 +202,7 @@ async def check_robots_txt(url: str) -> RobotsResponse:
 from . import utility  # noqa: F401  # 触发 @app.tool() 注册
 ```
 
-如需向后兼容，还需在 [server.py](../src/negentropy/perceives/server.py) 中 re-export。
+工具函数统一通过 `tools/` 包导入，无需额外 re-export。
 
 ### 参数设计模式
 
