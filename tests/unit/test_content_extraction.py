@@ -1,12 +1,14 @@
 """
-统一内容提取模块单元测试。
+内容提取子包单元测试。
 
-覆盖 `content_extraction.py` 中所有提取函数：
+覆盖 `content_extraction/` 子包中所有提取函数：
 - extract_default_content (BeautifulSoup)
 - extract_with_bs4_config (BeautifulSoup CSS)
 - extract_with_selenium_config (Selenium)
 - extract_with_playwright_config (Playwright)
 - extract_default_content_playwright (Playwright)
+- extract_page_data_selenium (Selenium 整页门面)
+- extract_page_data_playwright (Playwright 整页门面)
 """
 
 from unittest.mock import AsyncMock, Mock, MagicMock
@@ -21,6 +23,28 @@ from negentropy.perceives.content_extraction import (
     extract_page_data_selenium,
     extract_page_data_playwright,
 )
+
+
+# ---------------------------------------------------------------------------
+# 子包导出完整性验证
+# ---------------------------------------------------------------------------
+
+
+def test_subpackage_exports():
+    """验证 content_extraction 子包导出完整性。"""
+    from negentropy.perceives import content_extraction
+
+    expected_exports = [
+        "extract_default_content",
+        "extract_default_content_playwright",
+        "extract_page_data_selenium",
+        "extract_page_data_playwright",
+        "extract_with_bs4_config",
+        "extract_with_selenium_config",
+        "extract_with_playwright_config",
+    ]
+    for name in expected_exports:
+        assert hasattr(content_extraction, name), f"Missing export: {name}"
 
 
 # ---------------------------------------------------------------------------

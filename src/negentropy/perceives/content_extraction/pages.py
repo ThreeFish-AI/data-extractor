@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from .content_extraction_selectors import (
+from .selectors import (
     extract_with_playwright_config,
     extract_with_selenium_config,
 )
