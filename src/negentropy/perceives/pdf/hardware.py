@@ -59,7 +59,9 @@ class HardwareInfo:
         self.device_name = device_name
         self.device_count = device_count
         self.memory_gb = memory_gb
-        self.platform_info = platform_info or f"{platform.system()} {platform.machine()}"
+        self.platform_info = (
+            platform_info or f"{platform.system()} {platform.machine()}"
+        )
 
     def __repr__(self) -> str:
         details = []
@@ -107,9 +109,9 @@ def _check_mps_available() -> Tuple[bool, Optional[str], Optional[float]]:
         # MPS is available
         # Note: MPS doesn't expose direct memory info, use system memory as approximation
         try:
-            import subprocess
+            import subprocess  # nosec B404
 
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B607 B603
                 ["sysctl", "-n", "hw.memsize"],
                 capture_output=True,
                 text=True,
@@ -127,7 +129,7 @@ def _check_mps_available() -> Tuple[bool, Optional[str], Optional[float]]:
         # Get chip name
         chip_name = None
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B607 B603
                 ["sysctl", "-n", "machdep.cpu.brand_string"],
                 capture_output=True,
                 text=True,

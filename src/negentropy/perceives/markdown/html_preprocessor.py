@@ -309,7 +309,9 @@ def build_html_from_text(text_content: str, title: str, content_data: Dict) -> s
                         break
 
         # Second pass: distribute remaining images proportionally
-        unmatched_images = [i for i in range(num_images) if i not in matched_img_indices]
+        unmatched_images = [
+            i for i in range(num_images) if i not in matched_img_indices
+        ]
         proportional: dict = {}  # paragraph_index -> [img_indices]
         if unmatched_images and num_paragraphs > 0:
             for seq, img_idx in enumerate(unmatched_images):
@@ -375,8 +377,6 @@ def _preserve_math_elements(soup: BeautifulSoup) -> None:
     - KaTeX: ``.katex`` 容器 → 从 annotation 提取 LaTeX
     - MathML: ``<math>`` 标签 → 从 annotation 提取 LaTeX，否则保留
     """
-    from bs4 import NavigableString, Tag
-
     # 1. MathJax <script type="math/tex"> 或 <script type="math/tex; mode=display">
     for script in soup.find_all("script", type=re.compile(r"math/tex")):
         latex = script.string or ""

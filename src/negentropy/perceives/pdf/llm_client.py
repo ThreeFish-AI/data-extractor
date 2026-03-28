@@ -132,9 +132,7 @@ class LLMClient:
                 usage = {}
                 if hasattr(response, "usage") and response.usage:
                     usage = {
-                        "prompt_tokens": getattr(
-                            response.usage, "prompt_tokens", 0
-                        ),
+                        "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
                         "completion_tokens": getattr(
                             response.usage, "completion_tokens", 0
                         ),
@@ -168,9 +166,7 @@ class LLMClient:
 
                     await asyncio.sleep(delay)
                 else:
-                    logger.error(
-                        "LLM 调用失败 (所有重试耗尽): %s", e
-                    )
+                    logger.error("LLM 调用失败 (所有重试耗尽): %s", e)
 
         raise last_error  # type: ignore[misc]
 
@@ -193,9 +189,7 @@ class LLMClient:
         content = response.content.strip()
 
         # 去除 markdown 代码围栏
-        fence_pattern = re.compile(
-            r"^```(?:json)?\s*\n?(.*?)\n?\s*```$", re.DOTALL
-        )
+        fence_pattern = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?\s*```$", re.DOTALL)
         match = fence_pattern.match(content)
         if match:
             content = match.group(1).strip()

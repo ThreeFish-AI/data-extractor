@@ -37,12 +37,16 @@ def _extract_selector_value(adapter: BackendAdapter, cfg: Dict[str, Any]) -> Any
     return adapter.get_html(element)
 
 
-def _extract_with_config(adapter: BackendAdapter, extract_config: Dict[str, Any]) -> Dict[str, Any]:
+def _extract_with_config(
+    adapter: BackendAdapter, extract_config: Dict[str, Any]
+) -> Dict[str, Any]:
     content: Dict[str, Any] = {}
     for key, selector_config in extract_config.items():
         try:
             if isinstance(selector_config, str):
-                content[key] = [adapter.get_text(e) for e in adapter.find_all(selector_config)]
+                content[key] = [
+                    adapter.get_text(e) for e in adapter.find_all(selector_config)
+                ]
                 continue
             if not isinstance(selector_config, dict):
                 content[key] = None
@@ -81,10 +85,12 @@ class _SeleniumAdapter:
 
     def find_all(self, selector: str) -> list:
         from selenium.webdriver.common.by import By
+
         return self._driver.find_elements(By.CSS_SELECTOR, selector)
 
     def find_one(self, selector: str):
         from selenium.webdriver.common.by import By
+
         try:
             return self._driver.find_element(By.CSS_SELECTOR, selector)
         except Exception:
@@ -125,12 +131,16 @@ def extract_with_bs4_config(soup, extract_config: Dict[str, Any]) -> Dict[str, A
     return _extract_with_config(_BS4Adapter(soup), extract_config)
 
 
-def extract_with_selenium_config(driver, extract_config: Dict[str, Any]) -> Dict[str, Any]:
+def extract_with_selenium_config(
+    driver, extract_config: Dict[str, Any]
+) -> Dict[str, Any]:
     """使用 Selenium driver 按 extract_config 提取数据。"""
     return _extract_with_config(_SeleniumAdapter(driver), extract_config)
 
 
-async def extract_with_playwright_config(page, extract_config: Dict[str, Any]) -> Dict[str, Any]:
+async def extract_with_playwright_config(
+    page, extract_config: Dict[str, Any]
+) -> Dict[str, Any]:
     """使用 Playwright page 按 extract_config 提取数据。"""
     adapter = _PlaywrightAdapter(page)
     content: Dict[str, Any] = {}
@@ -143,14 +153,18 @@ async def extract_with_playwright_config(page, extract_config: Dict[str, Any]) -
             if not isinstance(selector_config, dict):
                 content[key] = None
                 continue
-            content[key] = await _extract_playwright_selector_value(adapter, selector_config)
+            content[key] = await _extract_playwright_selector_value(
+                adapter, selector_config
+            )
         except Exception as e:
             logger.warning("Failed to extract %s: %s", key, e)
             content[key] = None
     return content
 
 
-async def _extract_playwright_selector_value(adapter: _PlaywrightAdapter, cfg: Dict[str, Any]) -> Any:
+async def _extract_playwright_selector_value(
+    adapter: _PlaywrightAdapter, cfg: Dict[str, Any]
+) -> Any:
     selector, attr = cfg.get("selector"), cfg.get("attr")
     multiple = cfg.get("multiple", False)
     if multiple:

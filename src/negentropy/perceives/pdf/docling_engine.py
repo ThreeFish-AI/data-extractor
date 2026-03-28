@@ -385,9 +385,7 @@ class DoclingEngine:
 
         return images
 
-    def _extract_formulas(
-        self, doc: Any, markdown: str
-    ) -> List[DoclingFormula]:
+    def _extract_formulas(self, doc: Any, markdown: str) -> List[DoclingFormula]:
         """从 Markdown 文本中提取公式。
 
         Docling 将公式内嵌在 Markdown 输出中，通过正则匹配提取。
@@ -398,17 +396,13 @@ class DoclingEngine:
         for match in re.finditer(r"\$\$([\s\S]+?)\$\$", markdown):
             latex = match.group(1).strip()
             if latex:
-                formulas.append(
-                    DoclingFormula(latex=latex, formula_type="block")
-                )
+                formulas.append(DoclingFormula(latex=latex, formula_type="block"))
 
         # 行内公式: $ ... $ (排除 $$)
         for match in re.finditer(r"(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)", markdown):
             latex = match.group(1).strip()
             if latex and len(latex) > 1:
-                formulas.append(
-                    DoclingFormula(latex=latex, formula_type="inline")
-                )
+                formulas.append(DoclingFormula(latex=latex, formula_type="inline"))
 
         return formulas
 

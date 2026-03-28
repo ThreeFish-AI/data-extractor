@@ -83,32 +83,18 @@ class NegentropyPerceivesSettings(BaseSettings):
     transport_mode: str = Field(
         default="http", description="MCP 传输协议模式：stdio / http / sse"
     )
-    http_host: str = Field(
-        default="localhost", description="HTTP 服务器绑定主机"
-    )
-    http_port: int = Field(
-        default=8081, description="HTTP 服务器监听端口"
-    )
-    http_path: str = Field(
-        default="/mcp", description="HTTP 端点路径"
-    )
+    http_host: str = Field(default="localhost", description="HTTP 服务器绑定主机")
+    http_port: int = Field(default=8081, description="HTTP 服务器监听端口")
+    http_path: str = Field(default="/mcp", description="HTTP 端点路径")
     http_cors_origins: Optional[str] = Field(
         default="*", description="CORS 来源白名单（null 禁用）"
     )
 
     # ── 抓取引擎 ──────────────────────────────────────────────
-    concurrent_requests: int = Field(
-        default=16, gt=0, description="并发请求上限"
-    )
-    download_delay: float = Field(
-        default=1.0, ge=0.0, description="下载间隔（秒）"
-    )
-    randomize_download_delay: bool = Field(
-        default=True, description="随机化下载间隔"
-    )
-    autothrottle_enabled: bool = Field(
-        default=True, description="启用自动节流"
-    )
+    concurrent_requests: int = Field(default=16, gt=0, description="并发请求上限")
+    download_delay: float = Field(default=1.0, ge=0.0, description="下载间隔（秒）")
+    randomize_download_delay: bool = Field(default=True, description="随机化下载间隔")
+    autothrottle_enabled: bool = Field(default=True, description="启用自动节流")
     autothrottle_start_delay: float = Field(
         default=1.0, ge=0.0, description="自动节流初始延迟（秒）"
     )
@@ -125,45 +111,28 @@ class NegentropyPerceivesSettings(BaseSettings):
     )
 
     # ── 重试策略 ──────────────────────────────────────────────
-    max_retries: int = Field(
-        default=3, ge=0, description="失败重试最大次数"
-    )
-    retry_delay: float = Field(
-        default=1.0, ge=0.0, description="重试间隔（秒）"
-    )
+    max_retries: int = Field(default=3, ge=0, description="失败重试最大次数")
+    retry_delay: float = Field(default=1.0, ge=0.0, description="重试间隔（秒）")
 
     # ── 缓存系统 ──────────────────────────────────────────────
-    enable_caching: bool = Field(
-        default=True, description="启用响应缓存"
-    )
-    cache_ttl_hours: int = Field(
-        default=24, gt=0, description="缓存生存时间（小时）"
-    )
+    enable_caching: bool = Field(default=True, description="启用响应缓存")
+    cache_ttl_hours: int = Field(default=24, gt=0, description="缓存生存时间（小时）")
     cache_max_size: Optional[int] = Field(
         default=None, description="缓存最大条目数（null 不限）"
     )
 
     # ── 日志系统 ──────────────────────────────────────────────
     log_level: str = Field(
-        default="INFO", description="日志级别：DEBUG / INFO / WARNING / ERROR / CRITICAL"
+        default="INFO",
+        description="日志级别：DEBUG / INFO / WARNING / ERROR / CRITICAL",
     )
-    log_requests: Optional[bool] = Field(
-        default=None, description="记录请求详情"
-    )
-    log_responses: Optional[bool] = Field(
-        default=None, description="记录响应详情"
-    )
+    log_requests: Optional[bool] = Field(default=None, description="记录请求详情")
+    log_responses: Optional[bool] = Field(default=None, description="记录响应详情")
 
     # ── 浏览器引擎 ────────────────────────────────────────────
-    enable_javascript: bool = Field(
-        default=False, description="启用 JavaScript 执行"
-    )
-    browser_headless: bool = Field(
-        default=True, description="无头浏览器模式"
-    )
-    browser_timeout: int = Field(
-        default=30, ge=0, description="浏览器操作超时（秒）"
-    )
+    enable_javascript: bool = Field(default=False, description="启用 JavaScript 执行")
+    browser_headless: bool = Field(default=True, description="无头浏览器模式")
+    browser_timeout: int = Field(default=30, ge=0, description="浏览器操作超时（秒）")
     browser_window_size: Union[str, tuple] = Field(
         default="1920x1080", description="浏览器窗口尺寸"
     )
@@ -178,9 +147,7 @@ class NegentropyPerceivesSettings(BaseSettings):
     )
 
     # ── 代理服务 ──────────────────────────────────────────────
-    use_proxy: bool = Field(
-        default=False, description="启用代理服务器"
-    )
+    use_proxy: bool = Field(default=False, description="启用代理服务器")
     proxy_url: Optional[str] = Field(
         default=None, description="代理服务器 URL（启用代理时必填）"
     )
@@ -201,33 +168,23 @@ class NegentropyPerceivesSettings(BaseSettings):
     llm_temperature: float = Field(
         default=0.1, ge=0.0, le=2.0, description="LLM 温度参数"
     )
-    llm_max_tokens: int = Field(
-        default=4096, gt=0, description="LLM 最大输出 token"
-    )
-    llm_timeout: float = Field(
-        default=60.0, gt=0.0, description="LLM API 超时（秒）"
-    )
-    llm_max_retries: int = Field(
-        default=2, ge=0, description="LLM API 重试次数"
-    )
+    llm_max_tokens: int = Field(default=4096, gt=0, description="LLM 最大输出 token")
+    llm_timeout: float = Field(default=60.0, gt=0.0, description="LLM API 超时（秒）")
+    llm_max_retries: int = Field(default=2, ge=0, description="LLM API 重试次数")
 
     # ── 硬件加速 ──────────────────────────────────────────────
     accelerator_device: str = Field(
         default="auto",
         description="推理设备：auto / cpu / cuda (NVIDIA) / mps (Apple Silicon) / xpu (Intel)",
     )
-    accelerator_num_threads: int = Field(
-        default=4, ge=1, description="CPU 推理线程数"
-    )
+    accelerator_num_threads: int = Field(default=4, ge=1, description="CPU 推理线程数")
 
     # ── Docling PDF 引擎 ──────────────────────────────────────
     docling_enabled: bool = Field(
         default=False,
         description="启用 Docling 作为可选 PDF 提取引擎（需安装 docling 可选依赖）",
     )
-    docling_ocr_enabled: bool = Field(
-        default=True, description="为扫描版 PDF 启用 OCR"
-    )
+    docling_ocr_enabled: bool = Field(default=True, description="为扫描版 PDF 启用 OCR")
     docling_table_extraction_enabled: bool = Field(
         default=True, description="启用 Docling 高级表格提取"
     )

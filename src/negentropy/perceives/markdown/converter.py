@@ -84,7 +84,9 @@ class MarkdownConverter:
 
         html_content = page_content.get("html")
         if not html_content and page_content.get("text"):
-            html_content = build_html_from_text(page_content["text"], title, page_content)
+            html_content = build_html_from_text(
+                page_content["text"], title, page_content
+            )
         if not html_content:
             raise ValueError("No content found in scrape result")
         if extract_main_content:

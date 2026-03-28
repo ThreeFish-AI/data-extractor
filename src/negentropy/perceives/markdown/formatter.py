@@ -77,9 +77,7 @@ class MarkdownFormatter:
             logger.warning(f"Error post-processing Markdown: {str(e)}")
             return markdown_content
 
-    def _protect_code_blocks(
-        self, markdown_content: str
-    ) -> Tuple[str, Dict[str, str]]:
+    def _protect_code_blocks(self, markdown_content: str) -> Tuple[str, Dict[str, str]]:
         """提取已标注语言的代码块并替换为占位符，防止格式化管线修改其内容。
 
         仅保护已有语言标签的代码块（如 ```python, ```algorithm），

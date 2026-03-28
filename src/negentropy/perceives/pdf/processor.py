@@ -26,8 +26,6 @@ from .math_formula import (
     DoclingFormulaEnricher,
     FormulaReconstructor,
     MathRegion,
-    unicode_to_latex,
-    has_math_unicode,
 )
 from .docling_engine import DoclingEngine, DoclingConversionResult
 
@@ -230,13 +228,9 @@ class PDFProcessor:
                             output_format=output_format,
                         )
                     else:
-                        logger.warning(
-                            "Docling 返回空结果，降级至 PyMuPDF 路径"
-                        )
+                        logger.warning("Docling 返回空结果，降级至 PyMuPDF 路径")
                 except Exception as e:
-                    logger.warning(
-                        "Docling 转换失败，降级至 PyMuPDF 路径: %s", e
-                    )
+                    logger.warning("Docling 转换失败，降级至 PyMuPDF 路径: %s", e)
 
             # 若显式指定 docling 但不可用，返回错误
             if method == "docling" and not self._docling_engine:
@@ -532,15 +526,17 @@ class PDFProcessor:
                     for block in blocks:
                         if block[6] == 0:  # text block
                             bx0, by0, bx1, by1 = (
-                                block[0], block[1], block[2], block[3],
+                                block[0],
+                                block[1],
+                                block[2],
+                                block[3],
                             )
                             for tbbox in page_table_map:
                                 tx0, ty0, tx1, ty1 = tbbox
                                 # Check geometric intersection
-                                if (
-                                    min(bx1, tx1) > max(bx0, tx0)
-                                    and min(by1, ty1) > max(by0, ty0)
-                                ):
+                                if min(bx1, tx1) > max(bx0, tx0) and min(
+                                    by1, ty1
+                                ) > max(by0, ty0):
                                     table_block_nos.add(block[5])
                                     break
 
@@ -725,9 +721,7 @@ class PDFProcessor:
                 elif p.startswith("!["):
                     # Preserve inline image references as-is
                     html_parts.append(p)
-                elif p.startswith("|") or (
-                    p.startswith("**") and "\n|" in p
-                ):
+                elif p.startswith("|") or (p.startswith("**") and "\n|" in p):
                     # Preserve inline markdown tables as-is
                     html_parts.append(p)
                 elif p.startswith("```algorithm\n"):
@@ -855,7 +849,10 @@ class PDFProcessor:
             else:
                 # 检测算法/伪代码块，保留行结构
                 raw_text = "\n".join(lines)
-                if is_algorithm_block(raw_text) and _compute_algorithm_score(raw_text) >= 7:
+                if (
+                    is_algorithm_block(raw_text)
+                    and _compute_algorithm_score(raw_text) >= 7
+                ):
                     result_paragraphs.append(wrap_as_code_fence(raw_text))
                 else:
                     # Merge multiple lines into a single paragraph
@@ -985,7 +982,9 @@ class PDFProcessor:
 
                         image_map = (
                             await self.enhanced_processor.extract_images_with_positions(
-                                doc, page_num, blocks,
+                                doc,
+                                page_num,
+                                blocks,
                                 pdf_name=pdf_name,
                             )
                         )
@@ -1010,7 +1009,9 @@ class PDFProcessor:
                         # Primary: geometric table detection via find_tables()
                         bbox_map, geo_tables = (
                             self.enhanced_processor.extract_tables_with_geometry(
-                                doc, page_num, blocks,
+                                doc,
+                                page_num,
+                                blocks,
                             )
                         )
 
@@ -1037,9 +1038,7 @@ class PDFProcessor:
 
             # Extract formulas using dual-path strategy
             if extract_formulas:
-                self._extract_formulas_dual_path(
-                    doc, pdf_path, start_page, end_page
-                )
+                self._extract_formulas_dual_path(doc, pdf_path, start_page, end_page)
 
             # Add extraction summaries
             if extract_tables:
@@ -1082,9 +1081,7 @@ class PDFProcessor:
                 self._inject_docling_formulas(docling_md)
                 return
             except Exception as e:
-                logger.warning(
-                    f"Docling 公式提取失败，降级至 PyMuPDF 字体分析: {e}"
-                )
+                logger.warning(f"Docling 公式提取失败，降级至 PyMuPDF 字体分析: {e}")
 
         # 路径 2: PyMuPDF 字体分析降级路径
         logger.info("使用 PyMuPDF 字体分析提取公式")
@@ -1115,9 +1112,7 @@ class PDFProcessor:
                         )
                         self.enhanced_processor.formulas.append(formula)
             except Exception as e:
-                logger.warning(
-                    f"PyMuPDF 公式提取失败 (page {page_num}): {e}"
-                )
+                logger.warning(f"PyMuPDF 公式提取失败 (page {page_num}): {e}")
 
     def _inject_docling_formulas(self, docling_md: str) -> None:
         """从 Docling 输出的 Markdown 中提取公式，注入到 enhanced_processor。"""
@@ -1209,11 +1204,7 @@ class PDFProcessor:
             enhanced_assets["code_blocks"] = {
                 "count": len(docling_result.code_blocks),
                 "languages": list(
-                    {
-                        cb.language
-                        for cb in docling_result.code_blocks
-                        if cb.language
-                    }
+                    {cb.language for cb in docling_result.code_blocks if cb.language}
                 ),
             }
 
@@ -1277,7 +1268,9 @@ class PDFProcessor:
 
         if not content:
             result["success"] = False
-            result["error"] = orch_result.synthesis_reasoning or "编排失败：所有引擎均无输出"
+            result["error"] = (
+                orch_result.synthesis_reasoning or "编排失败：所有引擎均无输出"
+            )
 
         return result
 

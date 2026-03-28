@@ -1,7 +1,7 @@
 """MCP 工具注册枢纽。"""
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from fastmcp import FastMCP
 

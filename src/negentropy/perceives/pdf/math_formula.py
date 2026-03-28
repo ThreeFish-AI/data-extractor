@@ -9,7 +9,7 @@
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -372,7 +372,11 @@ def unicode_to_latex(text: str) -> str:
             latex_cmd = UNICODE_TO_LATEX[ch]
             # 如果上一个输出是 LaTeX 命令（以反斜杠开头的字母序列），
             # 且当前替换也以反斜杠开头，添加空格分隔
-            if result and latex_cmd.startswith("\\") and not latex_cmd.startswith("\\{"):
+            if (
+                result
+                and latex_cmd.startswith("\\")
+                and not latex_cmd.startswith("\\{")
+            ):
                 last = result[-1]
                 if last and last[-1].isalpha():
                     result.append(" ")
@@ -465,7 +469,9 @@ class FormulaReconstructor:
         baseline_y = line_dict.get("bbox", [0, 0, 0, 0])[1]
 
         # 取所有 span 的中位 y 坐标作为基线参考
-        y_origins = [s.get("origin", (0, 0))[1] for s in spans if s.get("text", "").strip()]
+        y_origins = [
+            s.get("origin", (0, 0))[1] for s in spans if s.get("text", "").strip()
+        ]
         if y_origins:
             y_origins_sorted = sorted(y_origins)
             baseline_y = y_origins_sorted[len(y_origins_sorted) // 2]
@@ -484,9 +490,7 @@ class FormulaReconstructor:
             origin = span.get("origin", (0, baseline_y))
 
             span_is_math = is_math_font(font_name) or has_math_unicode(text)
-            script = detect_script_type(
-                font_size, origin[1], baseline_y, normal_size
-            )
+            script = detect_script_type(font_size, origin[1], baseline_y, normal_size)
 
             if span_is_math or script != "normal":
                 if not in_math:
@@ -569,7 +573,9 @@ class FormulaReconstructor:
         return is_block, eq_number
 
     def extract_formulas_from_page(
-        self, page, page_num: int  # noqa: ANN001 — fitz.Page
+        self,
+        page,
+        page_num: int,  # noqa: ANN001 — fitz.Page
     ) -> Tuple[List[str], List[MathRegion]]:
         """从一页 PDF 中提取公式，返回增强文本块和数学区域列表。
 
@@ -615,7 +621,11 @@ class FormulaReconstructor:
 
                 # 去除包裹的单层 $ 符号
                 inner = math_content.strip()
-                if inner.startswith("$") and inner.endswith("$") and not inner.startswith("$$"):
+                if (
+                    inner.startswith("$")
+                    and inner.endswith("$")
+                    and not inner.startswith("$$")
+                ):
                     inner = inner[1:-1].strip()
 
                 region = MathRegion(
@@ -689,7 +699,9 @@ class DoclingFormulaEnricher:
         except ImportError:
             return False
 
-    def extract_formulas(self, pdf_path: str, page_range: Optional[Tuple[int, int]] = None):  # noqa: ANN201
+    def extract_formulas(
+        self, pdf_path: str, page_range: Optional[Tuple[int, int]] = None
+    ):  # noqa: ANN201
         """调用 Docling 提取公式。
 
         Args:
