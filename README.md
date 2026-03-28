@@ -14,12 +14,17 @@ uv add negentropy-perceives
 自动识别正文区域并转换为标准 Markdown，适用于内容本地化与知识库归档：
 
 ```python
+import asyncio
+from negentropy.perceives.sdk import NegentropyPerceivesClient
+
 async with NegentropyPerceivesClient() as client:
     markdown = await client.convert_webpage_to_markdown(
         url="https://example.com/blog/post-1",
         extract_main_content=True,   # 过滤导航栏、页脚等噪声区域
         embed_images=False,          # True 则将图片内联为 base64 data URI
     )
+
+asyncio.run(main())
 ```
 
 ### PDF 转 Markdown
@@ -44,9 +49,6 @@ async with NegentropyPerceivesClient() as client:
 通过 `extract_config` 声明字段与 CSS 选择器的映射，对目标页面进行结构化提取：
 
 ```python
-import asyncio
-from negentropy.perceives.sdk import NegentropyPerceivesClient
-
 async def main() -> None:
     async with NegentropyPerceivesClient() as client:
         result = await client.scrape_webpage(
@@ -58,8 +60,6 @@ async def main() -> None:
             },
         )
         print(result)
-
-asyncio.run(main())
 ```
 
 > 完整 API 参考与高级用法（批量并发、反检测抓取、表单自动化等）详见[用户指南](https://github.com/ThreeFish-AI/negentropy-perceives/blob/master/docs/6-User-Guide.md)。
@@ -172,22 +172,9 @@ graph TD
     T8 -->|"表单响应"| T6
 
     %% ─── 知识汇聚 ───
-    T10 --> KB(["知识库 · Knowledge Base"])
+    T10 --> KB(["Knowledge · Fact"])
     T11 --> KB
     T12 --> KB
-
-    %% ─── 样式 ───
-    classDef blue fill:#1e3a8a,stroke:#3b82f6,color:#fff
-    classDef green fill:#166534,stroke:#22c55e,color:#fff
-    classDef purple fill:#581c87,stroke:#9333ea,color:#fff
-    class T1,T2,T3,T4,T5,T6,T7,T8 blue
-    class T9,T10,T11,T12 green
-    class KB purple
-    style EXTRACT fill:#1e3a8a,stroke:#3b82f6,color:#fff
-    style SCRAPE fill:#1e3a8a,stroke:#3b82f6,color:#fff
-    style FORM fill:#1e3a8a,stroke:#3b82f6,color:#fff
-    style MD fill:#166534,stroke:#22c55e,color:#fff
-    style PDF fill:#166534,stroke:#22c55e,color:#fff
 ```
 
 **典型生产协同场景**：
