@@ -5,9 +5,9 @@ import tempfile
 from unittest.mock import Mock, AsyncMock
 
 from negentropy.perceives.config import NegentropyPerceivesSettings
-from negentropy.perceives.scraper import WebScraper
-from negentropy.perceives.anti_detection import AntiDetectionScraper
-from negentropy.perceives.form_handler import FormHandler
+from negentropy.perceives.scraping import WebScraper
+from negentropy.perceives.scraping import AntiDetectionScraper
+from negentropy.perceives.scraping import FormHandler
 
 
 @pytest.fixture

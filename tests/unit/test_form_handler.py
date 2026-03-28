@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 
-from negentropy.perceives.form_handler import FormHandler
+from negentropy.perceives.scraping.form_handler import FormHandler
 
 
 class TestFormHandlerInit:
@@ -114,7 +114,7 @@ class TestFormHandlerSelenium:
 
         handler = FormHandler(mock_driver)
 
-        with patch("negentropy.perceives.form_handler.Select") as MockSelect:
+        with patch("negentropy.perceives.scraping.form_handler.Select") as MockSelect:
             mock_select = MagicMock()
             MockSelect.return_value = mock_select
 
@@ -223,12 +223,12 @@ class TestImportCompatibility:
 
     def test_import_from_form_handler(self):
         """直接从 form_handler 模块导入。"""
-        from negentropy.perceives.form_handler import FormHandler
+        from negentropy.perceives.scraping.form_handler import FormHandler
 
         assert FormHandler is not None
 
     def test_import_from_form_handler_module(self):
         """直接从 form_handler 模块导入。"""
-        from negentropy.perceives.form_handler import FormHandler
+        from negentropy.perceives.scraping.form_handler import FormHandler
 
         assert FormHandler is not None

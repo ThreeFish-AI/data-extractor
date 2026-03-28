@@ -17,7 +17,7 @@ import pytest
 from unittest.mock import patch, Mock
 from bs4 import BeautifulSoup
 
-from negentropy.perceives.scraper import WebScraper
+from negentropy.perceives.scraping import WebScraper
 
 
 class TestDataExtractor:

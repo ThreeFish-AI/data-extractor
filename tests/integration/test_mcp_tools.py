@@ -12,8 +12,8 @@ import pytest
 from unittest.mock import patch
 
 from negentropy.perceives.server import app, web_scraper, anti_detection_scraper
-from negentropy.perceives.scraper import WebScraper
-from negentropy.perceives.anti_detection import AntiDetectionScraper
+from negentropy.perceives.scraping import WebScraper
+from negentropy.perceives.scraping import AntiDetectionScraper
 from negentropy.perceives.markdown.converter import MarkdownConverter
 
 
@@ -403,7 +403,7 @@ class TestMCPToolWorkflows:
     async def test_scrape_to_markdown_workflow(self, sample_scrape_result):
         """测试爬取到Markdown的完整工作流"""
         with (
-            patch("negentropy.perceives.scraper.WebScraper.scrape_url") as mock_scrape,
+            patch("negentropy.perceives.scraping.engine.WebScraper.scrape_url") as mock_scrape,
             patch(
                 "negentropy.perceives.markdown.converter.MarkdownConverter.convert_webpage_to_markdown"
             ) as mock_convert,
@@ -428,7 +428,7 @@ class TestMCPToolWorkflows:
         """测试批量处理工作流"""
         with (
             patch(
-                "negentropy.perceives.scraper.WebScraper.scrape_multiple_urls"
+                "negentropy.perceives.scraping.engine.WebScraper.scrape_multiple_urls"
             ) as mock_batch_scrape,
             patch(
                 "negentropy.perceives.markdown.converter.MarkdownConverter.batch_convert_to_markdown"
@@ -470,7 +470,7 @@ class TestMCPToolWorkflows:
     async def test_stealth_to_structured_data_workflow(self):
         """测试隐身爬取到结构化数据提取工作流"""
         with patch(
-            "negentropy.perceives.anti_detection.AntiDetectionScraper.scrape_with_stealth"
+            "negentropy.perceives.scraping.anti_detection.AntiDetectionScraper.scrape_with_stealth"
         ) as mock_stealth:
             mock_stealth.return_value = {
                 "url": "https://ecommerce-example.com",
@@ -535,7 +535,7 @@ class TestMCPToolRobustness:
     @pytest.mark.asyncio
     async def test_tools_handle_network_errors(self):
         """测试工具处理网络错误的能力"""
-        with patch("negentropy.perceives.scraper.WebScraper.scrape_url") as mock_scrape:
+        with patch("negentropy.perceives.scraping.engine.WebScraper.scrape_url") as mock_scrape:
             # 模拟网络错误
             mock_scrape.side_effect = Exception("Network timeout")
 

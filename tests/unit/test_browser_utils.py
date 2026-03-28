@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
-from negentropy.perceives.browser_utils import (
+from negentropy.perceives.scraping.browser import (
     build_chrome_options,
     playwright_session,
     selenium_session,
