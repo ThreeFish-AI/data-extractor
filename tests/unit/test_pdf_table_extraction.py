@@ -498,6 +498,7 @@ class TestWebFallbackTablePreservation:
 PDF_PATH = Path(__file__).parent.parent.parent / "assets" / "2603.05344v3.pdf"
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 class TestRealPDFTableExtraction:
     """Integration tests using the real 2603.05344v3.pdf."""
