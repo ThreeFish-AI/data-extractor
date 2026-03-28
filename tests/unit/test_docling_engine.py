@@ -440,6 +440,66 @@ class TestDoclingResultExtraction:
 
 
 # ============================================================
+# page_range 透传
+# ============================================================
+class TestDoclingEnginePageRange:
+    """验证 page_range 正确透传至 Docling DocumentConverter。"""
+
+    def _make_mock_converter(self) -> MagicMock:
+        """构造 mock converter，其 convert() 返回有效的 ConversionResult。"""
+        mock_doc = MagicMock()
+        mock_doc.export_to_markdown.return_value = "# Mock"
+        mock_doc.tables = []
+        mock_doc.pictures = []
+        mock_doc.pages = []
+        mock_doc.name = "mock"
+        mock_doc.origin = None
+
+        mock_result = MagicMock()
+        mock_result.document = mock_doc
+        mock_converter = MagicMock()
+        mock_converter.convert.return_value = mock_result
+        return mock_converter
+
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
+    def test_page_range_passed_to_converter(self, _mock_device: object) -> None:
+        """page_range=(80, 82) 应转换为 Docling 1-based (81, 82) 并传递。"""
+        engine = DoclingEngine(device="cpu")
+        mock_converter = self._make_mock_converter()
+
+        with patch.object(engine, "_get_converter", return_value=mock_converter):
+            engine.convert("/fake.pdf", page_range=(80, 82))
+
+        mock_converter.convert.assert_called_once()
+        call_kwargs = mock_converter.convert.call_args
+        assert call_kwargs.kwargs["page_range"] == (81, 82)
+
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
+    def test_no_page_range_omits_kwarg(self, _mock_device: object) -> None:
+        """page_range=None 时不应传递 page_range 给 converter。"""
+        engine = DoclingEngine(device="cpu")
+        mock_converter = self._make_mock_converter()
+
+        with patch.object(engine, "_get_converter", return_value=mock_converter):
+            engine.convert("/fake.pdf")
+
+        call_kwargs = mock_converter.convert.call_args
+        assert "page_range" not in call_kwargs.kwargs
+
+    @patch("negentropy.perceives.pdf.device_config.get_device_for_docling", return_value="cpu")
+    def test_single_page_range(self, _mock_device: object) -> None:
+        """page_range=(0, 1) 应转换为 Docling (1, 1)（单页）。"""
+        engine = DoclingEngine(device="cpu")
+        mock_converter = self._make_mock_converter()
+
+        with patch.object(engine, "_get_converter", return_value=mock_converter):
+            engine.convert("/fake.pdf", page_range=(0, 1))
+
+        call_kwargs = mock_converter.convert.call_args
+        assert call_kwargs.kwargs["page_range"] == (1, 1)
+
+
+# ============================================================
 # 缓存管理
 # ============================================================
 class TestDoclingEngineCacheManagement:

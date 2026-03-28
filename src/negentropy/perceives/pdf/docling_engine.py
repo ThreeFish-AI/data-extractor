@@ -312,7 +312,7 @@ class DoclingEngine:
 
         Args:
             pdf_path: PDF 文件本地路径。
-            page_range: 可选的页码范围 ``(start, end)``。
+            page_range: 可选的页码范围 ``(start, end)``，0-based start / exclusive end。
             embed_images: 是否将图片以 base64 嵌入 Markdown（默认 False，
                 使用文件引用模式）。
 
@@ -325,8 +325,22 @@ class DoclingEngine:
         try:
             converter = self._get_converter()
 
-            # Docling convert() 接受 str 路径
-            result = converter.convert(pdf_path)
+            # 构建 Docling convert() 关键字参数
+            convert_kwargs: Dict[str, Any] = {}
+            if page_range is not None:
+                # 项目约定: 0-based start, exclusive end — (80, 82) = 页面 80, 81
+                # Docling 约定: 1-based start, inclusive end — (81, 82) = 页面 81, 82
+                docling_start = page_range[0] + 1
+                docling_end = page_range[1]
+                if docling_start >= 1 and docling_end >= docling_start:
+                    convert_kwargs["page_range"] = (docling_start, docling_end)
+                    logger.info(
+                        "Docling page_range: (%d, %d) (1-based inclusive)",
+                        docling_start,
+                        docling_end,
+                    )
+
+            result = converter.convert(pdf_path, **convert_kwargs)
             doc = result.document
 
             # 1. 先提取图片（保存到磁盘），供后续 REFERENCED 模式引用
