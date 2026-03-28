@@ -27,6 +27,7 @@ from .tools.markdown import (
 from .tools.pdf import convert_pdf_to_markdown, batch_convert_pdfs_to_markdown  # noqa: F401
 from .tools.service import get_server_metrics, clear_cache  # noqa: F401
 
+
 def _active_cli_name() -> str:
     """Return the current CLI executable name for user-facing diagnostics."""
     argv0 = sys.argv[0] if sys.argv else "negentropy-perceives"

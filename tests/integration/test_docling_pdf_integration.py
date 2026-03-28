@@ -50,6 +50,7 @@ skip_no_arxiv_pdf = pytest.mark.skipif(
 # ============================================================
 # Context Engineering PDF — Docling 引擎转换测试
 # ============================================================
+@pytest.mark.slow
 @skip_no_docling
 @skip_no_ce_pdf
 class TestDoclingCEPDFConversion:
@@ -142,6 +143,7 @@ class TestDoclingCEPDFConversion:
 # ============================================================
 # arXiv 论文 PDF — Docling 引擎转换测试
 # ============================================================
+@pytest.mark.slow
 @skip_no_docling
 @skip_no_arxiv_pdf
 class TestDoclingArxivPDFConversion:
@@ -192,6 +194,7 @@ class TestDoclingArxivPDFConversion:
 # ============================================================
 # Docling 路径与 PyMuPDF 降级兼容性
 # ============================================================
+@pytest.mark.slow
 @skip_no_ce_pdf
 class TestDoclingFallbackCompatibility:
     """验证 Docling 路径与 PyMuPDF 降级路径的兼容性。"""
@@ -287,6 +290,7 @@ class TestDoclingFallbackCompatibility:
 # ============================================================
 # 质量对比（记录指标，不做硬断言）
 # ============================================================
+@pytest.mark.slow
 @skip_no_docling
 @skip_no_ce_pdf
 class TestConversionQualityComparison:

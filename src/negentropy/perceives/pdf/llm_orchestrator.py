@@ -15,11 +15,11 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ._imports import import_fitz as _import_fitz
 from ._imports import import_pypdf as _import_pypdf
-from .llm_client import LLMClient, LLMResponse
+from .llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -102,12 +102,18 @@ def _extract_quality_signals(content: str) -> Dict[str, Any]:
 
     lines = content.split("\n")
     heading_count = sum(1 for line in lines if re.match(r"^#{1,6}\s+", line))
-    table_pipe_count = sum(1 for line in lines if "|" in line and line.strip().startswith("|"))
+    table_pipe_count = sum(
+        1 for line in lines if "|" in line and line.strip().startswith("|")
+    )
     formula_block_count = len(re.findall(r"\$\$[\s\S]+?\$\$", content))
     formula_inline_count = len(re.findall(r"(?<!\$)\$(?!\$)([^$]+?)\$(?!\$)", content))
     code_fence_count = len(re.findall(r"```", content)) // 2
     image_count = len(re.findall(r"!\[.*?\]\(.*?\)", content))
-    list_count = sum(1 for line in lines if re.match(r"^\s*[-*+]\s+", line) or re.match(r"^\s*\d+\.\s+", line))
+    list_count = sum(
+        1
+        for line in lines
+        if re.match(r"^\s*[-*+]\s+", line) or re.match(r"^\s*\d+\.\s+", line)
+    )
 
     return {
         "word_count": len(content.split()),
@@ -131,7 +137,11 @@ def _extract_quality_signals(content: str) -> Dict[str, Any]:
 _DEFAULT_PLAN = OrchestrationPlan(
     characteristics=PDFCharacteristics(),
     engine_tasks=[
-        EngineTask(engine="docling", focus="全文档高保真转换（布局、表格、公式、代码）", priority=8),
+        EngineTask(
+            engine="docling",
+            focus="全文档高保真转换（布局、表格、公式、代码）",
+            priority=8,
+        ),
         EngineTask(engine="pymupdf", focus="快速文本提取作为参考与补充", priority=5),
     ],
     synthesis_strategy="merge",
@@ -357,7 +367,11 @@ class LLMOrchestrator:
                 # 表格指示器：查找管道符号行
                 for line in page_text.split("\n"):
                     stripped = line.strip()
-                    if stripped.startswith("|") and stripped.endswith("|") and stripped.count("|") >= 3:
+                    if (
+                        stripped.startswith("|")
+                        and stripped.endswith("|")
+                        and stripped.count("|") >= 3
+                    ):
                         table_indicator_count += 1
                     # 代码指示器：缩进 >= 4 的行
                     if re.match(r"^    \S", line) or "def " in line or "class " in line:
@@ -403,9 +417,7 @@ class LLMOrchestrator:
 
         return chars
 
-    async def _llm_plan(
-        self, characteristics: PDFCharacteristics
-    ) -> OrchestrationPlan:
+    async def _llm_plan(self, characteristics: PDFCharacteristics) -> OrchestrationPlan:
         """LLM 根据 PDF 特征生成引擎调度计划。"""
         user_msg = _ANALYSIS_USER_TEMPLATE.format(
             page_count=characteristics.page_count,
@@ -454,9 +466,7 @@ class LLMOrchestrator:
 
         # 确保至少有一个引擎
         if not engine_tasks:
-            engine_tasks = [
-                EngineTask(engine="pymupdf", focus="文本提取", priority=5)
-            ]
+            engine_tasks = [EngineTask(engine="pymupdf", focus="文本提取", priority=5)]
 
         strategy = data.get("synthesis_strategy", "merge")
         if strategy not in ("best_of", "merge", "weighted"):
@@ -496,7 +506,9 @@ class LLMOrchestrator:
 
         engine_results: List[EngineResult] = []
         for i, raw in enumerate(raw_results):
-            engine_name = plan.engine_tasks[i].engine if i < len(plan.engine_tasks) else "unknown"
+            engine_name = (
+                plan.engine_tasks[i].engine if i < len(plan.engine_tasks) else "unknown"
+            )
             if isinstance(raw, Exception):
                 engine_results.append(
                     EngineResult(
@@ -523,7 +535,9 @@ class LLMOrchestrator:
     ) -> EngineResult:
         """执行 Docling 引擎。"""
         if not self._docling_engine:
-            return EngineResult(engine="docling", success=False, error="Docling 引擎不可用")
+            return EngineResult(
+                engine="docling", success=False, error="Docling 引擎不可用"
+            )
 
         try:
             result = self._docling_engine.convert(
@@ -531,7 +545,9 @@ class LLMOrchestrator:
                 page_range=page_range,
             )
             if not result or not result.markdown:
-                return EngineResult(engine="docling", success=False, error="Docling 返回空结果")
+                return EngineResult(
+                    engine="docling", success=False, error="Docling 返回空结果"
+                )
 
             quality = _extract_quality_signals(result.markdown)
 
@@ -541,7 +557,11 @@ class LLMOrchestrator:
                 enhanced_assets["images"] = {
                     "count": len(result.images),
                     "items": [
-                        {"caption": img.caption or "", "page": img.page_number, "classification": img.classification}
+                        {
+                            "caption": img.caption or "",
+                            "page": img.page_number,
+                            "classification": img.classification,
+                        }
                         for img in result.images
                     ],
                 }
@@ -549,20 +569,31 @@ class LLMOrchestrator:
                 enhanced_assets["tables"] = {
                     "count": len(result.tables),
                     "items": [
-                        {"rows": t.rows, "columns": t.columns, "caption": t.caption or "", "page": t.page_number}
+                        {
+                            "rows": t.rows,
+                            "columns": t.columns,
+                            "caption": t.caption or "",
+                            "page": t.page_number,
+                        }
                         for t in result.tables
                     ],
                 }
             if result.formulas:
                 enhanced_assets["formulas"] = {
                     "count": len(result.formulas),
-                    "block_count": sum(1 for f in result.formulas if f.formula_type == "block"),
-                    "inline_count": sum(1 for f in result.formulas if f.formula_type == "inline"),
+                    "block_count": sum(
+                        1 for f in result.formulas if f.formula_type == "block"
+                    ),
+                    "inline_count": sum(
+                        1 for f in result.formulas if f.formula_type == "inline"
+                    ),
                 }
             if result.code_blocks:
                 enhanced_assets["code_blocks"] = {
                     "count": len(result.code_blocks),
-                    "languages": list({cb.language for cb in result.code_blocks if cb.language}),
+                    "languages": list(
+                        {cb.language for cb in result.code_blocks if cb.language}
+                    ),
                 }
 
             return EngineResult(
@@ -700,7 +731,9 @@ class LLMOrchestrator:
             logger.warning("LLM 融合阶段失败，使用启发式融合: %s", e)
             decision = self._heuristic_synthesize(successful, plan)
 
-        return self._apply_synthesis_decision(decision, successful, plan, engine_results)
+        return self._apply_synthesis_decision(
+            decision, successful, plan, engine_results
+        )
 
     async def _llm_synthesize(
         self, engine_summaries: str, strategy: str
@@ -735,9 +768,7 @@ class LLMOrchestrator:
         选择质量信号综合最优的引擎为主体，其他引擎作为补充源。
         """
         # 按优先级排序（plan 中 priority 更高的引擎优先）
-        engine_priority = {
-            t.engine: t.priority for t in plan.engine_tasks
-        }
+        engine_priority = {t.engine: t.priority for t in plan.engine_tasks}
         scored = []
         for r in successful:
             qs = r.quality_signals
@@ -765,14 +796,36 @@ class LLMOrchestrator:
 
             # 检查次优引擎是否在某些维度更强
             if s_qs.get("table_lines", 0) > p_qs.get("table_lines", 0) * 1.5:
-                supplements.append({"from_engine": secondary.engine, "content_type": "tables", "reason": "表格更丰富"})
+                supplements.append(
+                    {
+                        "from_engine": secondary.engine,
+                        "content_type": "tables",
+                        "reason": "表格更丰富",
+                    }
+                )
             if (
                 s_qs.get("formula_block_count", 0) + s_qs.get("formula_inline_count", 0)
-                > (p_qs.get("formula_block_count", 0) + p_qs.get("formula_inline_count", 0)) * 1.5
+                > (
+                    p_qs.get("formula_block_count", 0)
+                    + p_qs.get("formula_inline_count", 0)
+                )
+                * 1.5
             ):
-                supplements.append({"from_engine": secondary.engine, "content_type": "formulas", "reason": "公式更完整"})
+                supplements.append(
+                    {
+                        "from_engine": secondary.engine,
+                        "content_type": "formulas",
+                        "reason": "公式更完整",
+                    }
+                )
             if s_qs.get("code_fence_count", 0) > p_qs.get("code_fence_count", 0) * 1.5:
-                supplements.append({"from_engine": secondary.engine, "content_type": "code_blocks", "reason": "代码块更多"})
+                supplements.append(
+                    {
+                        "from_engine": secondary.engine,
+                        "content_type": "code_blocks",
+                        "reason": "代码块更多",
+                    }
+                )
 
         return {
             "primary_engine": primary.engine,
@@ -831,9 +884,7 @@ class LLMOrchestrator:
             page_count=page_count,
         )
 
-    def _merge_content(
-        self, primary: str, secondary: str, content_type: str
-    ) -> str:
+    def _merge_content(self, primary: str, secondary: str, content_type: str) -> str:
         """从 secondary 中提取指定类型的结构化内容，补充到 primary 中。
 
         采用保守策略：仅在 primary 中缺失时补充，避免重复。

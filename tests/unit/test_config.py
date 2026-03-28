@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
+from negentropy.perceives import __version__
 from negentropy.perceives.config import (
     NegentropyPerceivesSettings,
     _PROJECT_ROOT,
@@ -29,7 +30,7 @@ class TestNegentropyPerceivesSettings:
 
         # 测试默认值（考虑环境变量覆盖）
         assert config.server_name == "negentropy-perceives"
-        assert config.server_version == "0.1.6.1"
+        assert config.server_version == __version__
         assert config.enable_javascript is False
         assert config.concurrent_requests == 16
         assert config.request_timeout == 30.0

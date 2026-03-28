@@ -8,7 +8,7 @@ import base64
 import unicodedata
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 # PyMuPDF imports for PDF processing
 try:
@@ -63,7 +63,9 @@ class ExtractedFormula:
 
 # Caption detection patterns
 _CAPTION_PATTERNS = [
-    re.compile(r"^(Figure|Fig\.?|Image|Diagram|Chart|Graph|Illustration)\s*\d+", re.IGNORECASE),
+    re.compile(
+        r"^(Figure|Fig\.?|Image|Diagram|Chart|Graph|Illustration)\s*\d+", re.IGNORECASE
+    ),
     re.compile(r"^(图|插图|示意图|架构图|流程图)\s*\d+", re.IGNORECASE),
     re.compile(r"^(Table|表)\s*\d+", re.IGNORECASE),
 ]
@@ -101,6 +103,7 @@ class EnhancedPDFProcessor:
     def _generate_asset_id(self, asset_type: str, page_num: int, index: int) -> str:
         """Generate unique ID for extracted assets (tables, formulas)."""
         from datetime import datetime
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"{asset_type}_{page_num}_{index}_{timestamp}"
 
@@ -128,7 +131,12 @@ class EnhancedPDFProcessor:
         return slug.lower() if slug else ""
 
     def _detect_caption(
-        self, text_blocks: list, img_y1: float, img_x0: float, img_x1: float, tolerance: float = 30.0
+        self,
+        text_blocks: list,
+        img_y1: float,
+        img_x0: float,
+        img_x1: float,
+        tolerance: float = 30.0,
     ) -> Optional[str]:
         """Detect caption text below an image by scanning nearby text blocks.
 
@@ -288,10 +296,7 @@ class EnhancedPDFProcessor:
                                 "y1": rect.y1,
                             }
                     except Exception:
-                        pass
-
-                    # Get PDF internal image name
-                    xref_name = img_info[7] if len(img_info) > 7 else ""
+                        pass  # nosec B110
 
                     # Create ExtractedImage object
                     extracted_image = ExtractedImage(
@@ -308,9 +313,7 @@ class EnhancedPDFProcessor:
                     )
 
                     images.append(extracted_image)
-                    self.logger.info(
-                        f"Extracted image {img_id} from page {page_num}"
-                    )
+                    self.logger.info(f"Extracted image {img_id} from page {page_num}")
 
                     pix = None  # Free memory
 
@@ -371,7 +374,7 @@ class EnhancedPDFProcessor:
                     if rects:
                         xref_rects[xref] = rects[0]
                 except Exception:
-                    continue
+                    continue  # nosec B112
 
             # Collect image blocks (block[6] == 1)
             image_blocks = [b for b in text_blocks if b[6] == 1]
@@ -399,15 +402,19 @@ class EnhancedPDFProcessor:
                     overlap_y1 = min(b_y1, rect.y1)
 
                     if overlap_x1 > overlap_x0 and overlap_y1 > overlap_y0:
-                        overlap_area = (overlap_x1 - overlap_x0) * (overlap_y1 - overlap_y0)
+                        overlap_area = (overlap_x1 - overlap_x0) * (
+                            overlap_y1 - overlap_y0
+                        )
                         if overlap_area > best_overlap:
                             best_overlap = overlap_area
                             best_xref = xref
                     else:
                         # Fallback: check if center of block is inside rect (with tolerance)
                         margin = 20
-                        if (rect.x0 - margin <= b_cx <= rect.x1 + margin and
-                                rect.y0 - margin <= b_cy <= rect.y1 + margin):
+                        if (
+                            rect.x0 - margin <= b_cx <= rect.x1 + margin
+                            and rect.y0 - margin <= b_cy <= rect.y1 + margin
+                        ):
                             # Use a small pseudo-overlap so actual overlaps take priority
                             if best_overlap < 0:
                                 best_xref = xref
@@ -529,7 +536,12 @@ class EnhancedPDFProcessor:
                     position = None
                     if xref in xref_rects:
                         rect = xref_rects[xref]
-                        position = {"x0": rect.x0, "y0": rect.y0, "x1": rect.x1, "y1": rect.y1}
+                        position = {
+                            "x0": rect.x0,
+                            "y0": rect.y0,
+                            "x1": rect.x1,
+                            "y1": rect.y1,
+                        }
 
                     name_slug = self._generate_image_name(
                         page_num, img_index, xref_name, None, "", pdf_name
@@ -690,7 +702,9 @@ class EnhancedPDFProcessor:
 
             # Phase 1: Detect table title positions for clip-based extraction
             title_regions = self._find_table_title_regions(
-                page, text_only_blocks, page_rect,
+                page,
+                text_only_blocks,
+                page_rect,
             )
 
             if title_regions:
@@ -699,8 +713,13 @@ class EnhancedPDFProcessor:
                     title_regions
                 ):
                     table = self._extract_single_table(
-                        page, clip_rect, title, title_rect,
-                        text_only_blocks, page_num, table_idx,
+                        page,
+                        clip_rect,
+                        title,
+                        title_rect,
+                        text_only_blocks,
+                        page_num,
+                        table_idx,
                     )
                     if table:
                         bbox_to_table[table.bbox] = table
@@ -711,7 +730,10 @@ class EnhancedPDFProcessor:
 
                 for table_idx, table in enumerate(found_tables):
                     extracted = self._process_found_table(
-                        table, text_only_blocks, page_num, table_idx,
+                        table,
+                        text_only_blocks,
+                        page_num,
+                        table_idx,
                     )
                     if extracted:
                         bbox_to_table[extracted.bbox] = extracted
@@ -729,15 +751,16 @@ class EnhancedPDFProcessor:
         return bbox_to_table, all_tables
 
     def _find_table_title_regions(
-        self, page, text_blocks: list, page_rect,
+        self,
+        page,
+        text_blocks: list,
+        page_rect,
     ) -> List[Tuple[str, Any, Any]]:
         """Find table titles and compute clip rectangles for each table.
 
         Returns list of (title_text, clip_rect, title_rect) tuples.
         """
-        table_title_pattern = re.compile(
-            r"^(Table|表)\s*\d+", re.IGNORECASE
-        )
+        table_title_pattern = re.compile(r"^(Table|表)\s*\d+", re.IGNORECASE)
 
         # Collect title positions
         titles = []
@@ -835,8 +858,10 @@ class EnhancedPDFProcessor:
                 columns=len(merged_data[0]),
                 page_number=page_num,
                 position={
-                    "x0": bbox[0], "y0": bbox[1],
-                    "x1": bbox[2], "y1": bbox[3],
+                    "x0": bbox[0],
+                    "y0": bbox[1],
+                    "x1": bbox[2],
+                    "y1": bbox[3],
                 },
                 caption=title,
                 headers=merged_data[0] if merged_data else None,
@@ -865,7 +890,11 @@ class EnhancedPDFProcessor:
             return []
 
     def _process_found_table(
-        self, table, text_blocks: list, page_num: int, table_idx: int,
+        self,
+        table,
+        text_blocks: list,
+        page_num: int,
+        table_idx: int,
     ) -> Optional[ExtractedTable]:
         """Process a single found table into an ExtractedTable."""
         try:
@@ -887,9 +916,7 @@ class EnhancedPDFProcessor:
 
             bbox = tuple(table.bbox)
 
-            caption = self._detect_table_caption(
-                text_blocks, bbox, tolerance=30.0
-            )
+            caption = self._detect_table_caption(text_blocks, bbox, tolerance=30.0)
 
             table_id = self._generate_asset_id("table", page_num, table_idx)
 
@@ -900,8 +927,10 @@ class EnhancedPDFProcessor:
                 columns=len(merged_data[0]),
                 page_number=page_num,
                 position={
-                    "x0": bbox[0], "y0": bbox[1],
-                    "x1": bbox[2], "y1": bbox[3],
+                    "x0": bbox[0],
+                    "y0": bbox[1],
+                    "x1": bbox[2],
+                    "y1": bbox[3],
                 },
                 caption=caption,
                 headers=merged_data[0] if merged_data else None,
@@ -930,9 +959,7 @@ class EnhancedPDFProcessor:
         header = data[0]
 
         # Find columns with non-empty headers
-        content_cols = [
-            i for i, h in enumerate(header) if h and h.strip()
-        ]
+        content_cols = [i for i, h in enumerate(header) if h and h.strip()]
 
         # If all headers are populated, no column merging needed
         if len(content_cols) == len(header):
@@ -947,9 +974,7 @@ class EnhancedPDFProcessor:
             merged = []
             for ci, col_idx in enumerate(content_cols):
                 next_col = (
-                    content_cols[ci + 1]
-                    if ci + 1 < len(content_cols)
-                    else len(header)
+                    content_cols[ci + 1] if ci + 1 < len(content_cols) else len(header)
                 )
                 parts = []
                 for j in range(col_idx, next_col):
@@ -966,9 +991,7 @@ class EnhancedPDFProcessor:
         for row in merged_rows:
             if row[0].strip():  # New data row
                 # Clean hyphen-broken words in each cell
-                final_rows.append(
-                    [re.sub(r"(\w)- (\w)", r"\1\2", c) for c in row]
-                )
+                final_rows.append([re.sub(r"(\w)- (\w)", r"\1\2", c) for c in row])
             elif final_rows:  # Continuation row
                 for ci in range(len(row)):
                     if row[ci].strip():
@@ -1349,9 +1372,7 @@ class EnhancedPDFProcessor:
                 for table in self.tables:
                     # Use first data row as fingerprint for dedup
                     first_row = (
-                        table.markdown.split("\n")[0].strip()
-                        if table.markdown
-                        else ""
+                        table.markdown.split("\n")[0].strip() if table.markdown else ""
                     )
                     if first_row and first_row in enhanced_content:
                         continue
@@ -1367,9 +1388,7 @@ class EnhancedPDFProcessor:
                         enhanced_content += table.markdown + "\n\n"
 
                         # Add table metadata
-                        enhanced_content += (
-                            f"*Table: {table.rows} rows \u00d7 {table.columns} columns*\n"
-                        )
+                        enhanced_content += f"*Table: {table.rows} rows \u00d7 {table.columns} columns*\n"
                         if table.page_number is not None:
                             enhanced_content += (
                                 f"*Source: Page {table.page_number + 1}*\n"

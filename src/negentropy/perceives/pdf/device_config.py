@@ -21,7 +21,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
-from .hardware import DeviceType, detect_device, get_device_for_docling
+from .hardware import DeviceType, get_device_for_docling
 
 logger = logging.getLogger(__name__)
 

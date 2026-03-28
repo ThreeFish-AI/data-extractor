@@ -82,6 +82,7 @@ def _log_quality_signals(label: str, signals: dict) -> None:
 # ============================================================
 # Smart 模式降级路径验证
 # ============================================================
+@pytest.mark.slow
 class TestSmartModeDegradation:
     """验证 smart 模式在 LLM 不可用时的降级行为。"""
 
@@ -140,6 +141,7 @@ class TestSmartModeDegradation:
 # ============================================================
 # Context Engineering PDF — Smart 模式端到端
 # ============================================================
+@pytest.mark.slow
 @skip_no_litellm
 @skip_no_api_key
 @skip_no_ce_pdf
@@ -221,6 +223,7 @@ class TestSmartModeCEPDF:
 # ============================================================
 # arXiv 论文 PDF — Smart 模式端到端
 # ============================================================
+@pytest.mark.slow
 @skip_no_litellm
 @skip_no_api_key
 @skip_no_arxiv_pdf
@@ -274,6 +277,7 @@ class TestSmartModeArxivPDF:
 # ============================================================
 # Smart 模式 vs Docling 模式质量对比
 # ============================================================
+@pytest.mark.slow
 @skip_no_litellm
 @skip_no_api_key
 @skip_no_ce_pdf
@@ -367,6 +371,7 @@ class TestSmartVsDoclingComparison:
 # ============================================================
 # LLM 编排器直接集成测试
 # ============================================================
+@pytest.mark.slow
 @skip_no_litellm
 @skip_no_api_key
 @skip_no_ce_pdf

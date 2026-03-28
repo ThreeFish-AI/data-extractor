@@ -26,11 +26,8 @@ import asyncio
 import aiohttp
 
 from .hardware import (
-    DeviceType,
-    detect_device,
     get_device_for_docling,
     get_hardware_info,
-    is_gpu_acceleration_available,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,7 +59,7 @@ def _import_docling_types():
     Returns:
         tuple: (DocumentConverter, AcceleratorDevice, AcceleratorOptions, PdfFormatOption)
     """
-    docling = _import_docling()
+    _import_docling()
     from docling.document_converter import DocumentConverter, PdfFormatOption
     from docling.datamodel.accelerator_options import (
         AcceleratorDevice,
@@ -70,7 +67,13 @@ def _import_docling_types():
     )
     from docling.datamodel.pipeline_options import PdfPipelineOptions
 
-    return DocumentConverter, AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions, PdfFormatOption
+    return (
+        DocumentConverter,
+        AcceleratorDevice,
+        AcceleratorOptions,
+        PdfPipelineOptions,
+        PdfFormatOption,
+    )
 
 
 class DoclingPDFProcessor:
@@ -424,7 +427,9 @@ class DoclingPDFProcessor:
         formulas = []
         try:
             # Extract formulas from document text using regex patterns
-            text = doc.export_to_markdown() if hasattr(doc, "export_to_markdown") else ""
+            text = (
+                doc.export_to_markdown() if hasattr(doc, "export_to_markdown") else ""
+            )
 
             # Pattern for LaTeX formulas
             patterns = [
@@ -437,11 +442,13 @@ class DoclingPDFProcessor:
                 for i, match in enumerate(matches):
                     formula_content = match.group(1).strip()
                     if formula_content and len(formula_content) > 1:
-                        formulas.append({
-                            "id": f"formula_{len(formulas)}",
-                            "latex": formula_content,
-                            "formula_type": formula_type,
-                        })
+                        formulas.append(
+                            {
+                                "id": f"formula_{len(formulas)}",
+                                "latex": formula_content,
+                                "formula_type": formula_type,
+                            }
+                        )
 
         except Exception as e:
             self.logger.warning(f"Formula extraction error: {str(e)}")

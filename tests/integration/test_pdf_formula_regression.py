@@ -85,6 +85,7 @@ class TestUnicodeMathSymbolConversion:
 # ============================================================
 # 回归测试：PyMuPDF 字体分析路径
 # ============================================================
+@pytest.mark.slow
 class TestPyMuPDFFormulaExtraction:
     """使用真实 PDF 验证 PyMuPDF 字体分析路径的公式提取。"""
 
@@ -154,6 +155,7 @@ class TestPyMuPDFFormulaExtraction:
 # ============================================================
 # 回归测试：完整 PDF 处理管线
 # ============================================================
+@pytest.mark.slow
 class TestFullPDFProcessingPipeline:
     """通过 PDFProcessor 完整管线验证公式提取。"""
 
