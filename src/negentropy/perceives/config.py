@@ -178,6 +178,21 @@ class NegentropyPerceivesSettings(BaseSettings):
         description="推理设备：auto / cpu / cuda (NVIDIA) / mps (Apple Silicon) / xpu (Intel)",
     )
     accelerator_num_threads: int = Field(default=4, ge=1, description="CPU 推理线程数")
+    accelerator_ocr_batch_size: int = Field(
+        default=0,
+        ge=0,
+        description="OCR 推理 batch size（0 = 根据设备显存自动推断）",
+    )
+    accelerator_layout_batch_size: int = Field(
+        default=0,
+        ge=0,
+        description="Layout 推理 batch size（0 = 根据设备显存自动推断）",
+    )
+    accelerator_table_batch_size: int = Field(
+        default=0,
+        ge=0,
+        description="Table 推理 batch size（0 = 根据设备显存自动推断）",
+    )
 
     # ── Docling PDF 引擎 ──────────────────────────────────────
     docling_enabled: bool = Field(
@@ -259,6 +274,9 @@ class NegentropyPerceivesSettings(BaseSettings):
             "enable_ocr": self.docling_ocr_enabled,
             "enable_table_extraction": self.docling_table_extraction_enabled,
             "enable_formula_extraction": self.docling_formula_extraction_enabled,
+            "ocr_batch_size": self.accelerator_ocr_batch_size,
+            "layout_batch_size": self.accelerator_layout_batch_size,
+            "table_batch_size": self.accelerator_table_batch_size,
         }
 
 

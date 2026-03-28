@@ -492,3 +492,28 @@ class TestGPUDeviceVerification:
             f"Converter 预热耗时过长: {warm_docling_converter:.2f}s"
         )
         logger.info("Converter 预热耗时: %.2f 秒", warm_docling_converter)
+
+    @pytest.mark.integration
+    def test_batch_size_optimized_for_gpu(self, gpu_docling_engine) -> None:
+        """GPU 设备下 batch sizes 应大于 CPU 默认值 4。"""
+        device_config = gpu_docling_engine._resolve_device_config()
+        if device_config.device_type.is_gpu:
+            assert device_config.ocr_batch_size > 4, (
+                f"GPU batch size 未优化: ocr_batch_size={device_config.ocr_batch_size}"
+            )
+            assert device_config.layout_batch_size > 4
+            logger.info(
+                "GPU batch size 验证通过: ocr=%d, layout=%d, table=%d",
+                device_config.ocr_batch_size,
+                device_config.layout_batch_size,
+                device_config.table_batch_size,
+            )
+
+    @pytest.mark.integration
+    def test_batch_size_logged_in_adjustments(self, gpu_docling_engine) -> None:
+        """batch size 决策应记录在 adjustments 中供可观测性审查。"""
+        device_config = gpu_docling_engine._resolve_device_config()
+        if device_config.device_type.is_gpu:
+            assert "batch_sizes" in device_config.adjustments, (
+                "adjustments 中缺少 batch_sizes 条目"
+            )

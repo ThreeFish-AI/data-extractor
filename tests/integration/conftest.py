@@ -70,11 +70,16 @@ def gpu_docling_engine(detected_gpu_device):
     device_config = engine._resolve_device_config()
     logger.info(
         "DoclingEngine 设备配置: device=%s, device_type=%s, "
-        "formula_enrichment=%s, flash_attention=%s",
+        "formula_enrichment=%s, flash_attention=%s, "
+        "batch_sizes=(ocr=%d, layout=%d, table=%d), ocr_engine=%s",
         device_config.device,
         device_config.device_type.value,
         device_config.do_formula_enrichment,
         device_config.use_flash_attention,
+        device_config.ocr_batch_size,
+        device_config.layout_batch_size,
+        device_config.table_batch_size,
+        device_config.ocr_engine,
     )
 
     return engine
