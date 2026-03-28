@@ -1268,10 +1268,9 @@ async with NegentropyPerceivesClient("http://127.0.0.1:8081/mcp") as client:
 
 ```python
 import asyncio
-from negentropy.perceives.server import (
-    scrape_webpage, scrape_multiple_webpages,
-    scrape_with_stealth, fill_and_submit_form
-)
+from negentropy.perceives.tools.scraping import scrape_webpage, scrape_multiple_webpages
+from negentropy.perceives.tools.stealth import scrape_with_stealth
+from negentropy.perceives.tools.form import fill_and_submit_form
 
 # 基础页面抓取
 async def basic_scraping_example():

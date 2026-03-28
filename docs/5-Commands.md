@@ -141,5 +141,5 @@ uv run python -c "from negentropy.perceives.config import settings; print(settin
 uv run python -c "import negentropy.perceives; print('Import successful')"
 
 # 检查 MCP 服务器可用的工具列表
-uv run python -c "from negentropy.perceives.server import app; print([tool.name for tool in app.tools])"
+uv run python -c "from negentropy.perceives.tools import app; print([tool.name for tool in app.tools])"
 ```

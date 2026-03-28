@@ -1,12 +1,12 @@
-"""Unit tests for the negentropy-perceives server entrypoint."""
+"""Unit tests for the negentropy-perceives application entrypoint."""
 
 from types import SimpleNamespace
 
-import negentropy.perceives.server as server_module
+import negentropy.perceives.apps.app as app_module
 
 
-class TestServerMain:
-    """测试服务启动入口打印与参数透传。"""
+class TestAppMain:
+    """测试应用启动入口打印与参数透传。"""
 
     def test_main_prints_resolved_settings(self, capsys, monkeypatch):
         mock_settings = SimpleNamespace(
@@ -27,11 +27,11 @@ class TestServerMain:
         def fake_run(**kwargs):
             app_calls.append(kwargs)
 
-        monkeypatch.setattr(server_module, "settings", mock_settings)
-        monkeypatch.setattr(server_module.app, "run", fake_run)
-        monkeypatch.setattr(server_module.sys, "argv", ["negentropy-perceives"])
+        monkeypatch.setattr(app_module, "settings", mock_settings)
+        monkeypatch.setattr(app_module.app, "run", fake_run)
+        monkeypatch.setattr(app_module.sys, "argv", ["negentropy-perceives"])
 
-        server_module.main()
+        app_module.main()
 
         output = capsys.readouterr().out
         assert "CLI entrypoint: negentropy-perceives" in output

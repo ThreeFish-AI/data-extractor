@@ -4,6 +4,7 @@
 1. Docling 全链路转换质量（布局、段落顺序、表格、公式、图片、代码）
 2. 与 PyMuPDF 路径的降级兼容性
 3. 两种引擎的输出质量对比（记录指标，不做硬断言）
+4. GPU 加速（MPS/CUDA）的显式验证与可观测性
 
 测试资源：
 - assets/Context Engineering 2.0 - The Context of Context Engineering.pdf
@@ -11,6 +12,7 @@
 """
 
 import logging
+import time
 from pathlib import Path
 
 import pytest
@@ -20,19 +22,23 @@ from negentropy.perceives.pdf.docling_engine import DoclingEngine
 
 logger = logging.getLogger(__name__)
 
+# ── 设备检测（模块级，供 skipif 装饰器使用）──────────────────
+_detected_device = detect_device()
+_is_gpu = _detected_device.is_gpu
+_is_mps = _detected_device == DeviceType.MPS
+
 # MPS 上 formula enrichment 被禁用以保持 GPU 加速，公式相关测试需跳过
-_is_mps = detect_device() == DeviceType.MPS
 skip_formula_on_mps = pytest.mark.skipif(
     _is_mps,
     reason="MPS 与 Docling formula enrichment 不兼容，公式测试跳过",
 )
 
+# ── 条件跳过装饰器 ────────────────────────────────────────────
 # 真实 PDF 文件路径
 ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 CE_PDF = ASSETS_DIR / "Context Engineering 2.0 - The Context of Context Engineering.pdf"
 ARXIV_PDF = ASSETS_DIR / "2603.05344v3.pdf"
 
-# 条件跳过装饰器
 skip_no_docling = pytest.mark.skipif(
     not DoclingEngine.is_available(),
     reason="需要安装 docling 可选依赖",
@@ -45,26 +51,51 @@ skip_no_arxiv_pdf = pytest.mark.skipif(
     not ARXIV_PDF.exists(),
     reason=f"PDF 文件不存在: {ARXIV_PDF}",
 )
+skip_no_gpu = pytest.mark.skipif(
+    not _is_gpu,
+    reason=f"未检测到 GPU 加速设备 (当前: {_detected_device.value})，跳过 GPU 测试",
+)
 
 
 # ============================================================
-# Context Engineering PDF — Docling 引擎转换测试
+# Context Engineering PDF — Docling GPU 加速转换测试
 # ============================================================
 @pytest.mark.slow
+@pytest.mark.requires_gpu
 @skip_no_docling
 @skip_no_ce_pdf
+@skip_no_gpu
 class TestDoclingCEPDFConversion:
-    """Context Engineering 2.0 PDF 的 Docling 转换质量验证。
+    """Context Engineering 2.0 PDF 的 Docling GPU 加速转换质量验证。
 
     该 PDF 包含丰富的数学公式、表格和图像。
+    通过 session 级 fixture 显式绑定 GPU 设备并预热 converter。
     """
 
     @pytest.fixture(scope="class")
-    def docling_result(self):
-        """类级 fixture：执行一次 Docling 转换，所有测试共享结果。"""
-        engine = DoclingEngine()
-        result = engine.convert(str(CE_PDF))
+    def docling_result(self, gpu_docling_engine, warm_docling_converter):
+        """类级 fixture：使用 session 级 GPU 引擎执行一次转换，所有测试共享结果。"""
+        device_config = gpu_docling_engine._resolve_device_config()
+        assert device_config.device_type.is_gpu, (
+            f"预期 GPU 设备，实际: {device_config.device_type.value}"
+        )
+        logger.info(
+            "CE PDF 转换使用设备: %s (预热耗时: %.2fs)",
+            device_config.device,
+            warm_docling_converter,
+        )
+
+        t0 = time.perf_counter()
+        result = gpu_docling_engine.convert(str(CE_PDF))
+        elapsed = time.perf_counter() - t0
+
         assert result is not None, "Docling 转换返回 None"
+        logger.info(
+            "CE PDF 转换完成: %.2f 秒, %d 页, %d 字符",
+            elapsed,
+            result.page_count,
+            len(result.markdown),
+        )
         return result
 
     @pytest.mark.integration
@@ -141,22 +172,38 @@ class TestDoclingCEPDFConversion:
 
 
 # ============================================================
-# arXiv 论文 PDF — Docling 引擎转换测试
+# arXiv 论文 PDF — Docling GPU 加速转换测试
 # ============================================================
 @pytest.mark.slow
+@pytest.mark.requires_gpu
 @skip_no_docling
 @skip_no_arxiv_pdf
+@skip_no_gpu
 class TestDoclingArxivPDFConversion:
-    """arXiv 论文 2603.05344v3 的 Docling 转换质量验证。
+    """arXiv 论文 2603.05344v3 的 Docling GPU 加速转换质量验证。
 
     该 PDF 包含大量代码块。
     """
 
     @pytest.fixture(scope="class")
-    def docling_result(self):
-        engine = DoclingEngine()
-        result = engine.convert(str(ARXIV_PDF))
+    def docling_result(self, gpu_docling_engine, warm_docling_converter):
+        """类级 fixture：使用 session 级 GPU 引擎转换 arXiv PDF。"""
+        device_config = gpu_docling_engine._resolve_device_config()
+        assert device_config.device_type.is_gpu, (
+            f"预期 GPU 设备，实际: {device_config.device_type.value}"
+        )
+
+        t0 = time.perf_counter()
+        result = gpu_docling_engine.convert(str(ARXIV_PDF))
+        elapsed = time.perf_counter() - t0
+
         assert result is not None, "Docling 转换返回 None"
+        logger.info(
+            "arXiv PDF 转换完成: %.2f 秒, %d 页, %d 字符",
+            elapsed,
+            result.page_count,
+            len(result.markdown),
+        )
         return result
 
     @pytest.mark.integration
@@ -200,14 +247,23 @@ class TestDoclingFallbackCompatibility:
     """验证 Docling 路径与 PyMuPDF 降级路径的兼容性。"""
 
     @skip_no_docling
+    @pytest.mark.requires_gpu
+    @skip_no_gpu
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_full_pipeline_with_docling(self) -> None:
-        """通过 PDFProcessor 完整管线验证 Docling 路径。"""
+        """通过 PDFProcessor 完整管线验证 Docling GPU 加速路径。"""
         from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True, prefer_docling=True)
         try:
+            if processor._docling_engine is not None:
+                dc = processor._docling_engine._resolve_device_config()
+                logger.info("PDFProcessor Docling 引擎设备: %s", dc.device)
+                assert dc.device_type.is_gpu, (
+                    f"PDFProcessor 的 Docling 引擎未使用 GPU: {dc.device}"
+                )
+
             result = await processor.process_pdf(
                 str(CE_PDF),
                 method="auto",
@@ -246,14 +302,20 @@ class TestDoclingFallbackCompatibility:
             processor.cleanup()
 
     @skip_no_docling
+    @pytest.mark.requires_gpu
+    @skip_no_gpu
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_explicit_docling_method(self) -> None:
-        """method='docling' 显式指定应使用 Docling 引擎。"""
+        """method='docling' 显式指定应使用 Docling GPU 引擎。"""
         from negentropy.perceives.pdf.processor import PDFProcessor
 
         processor = PDFProcessor(enable_enhanced_features=True, prefer_docling=True)
         try:
+            if processor._docling_engine is not None:
+                dc = processor._docling_engine._resolve_device_config()
+                logger.info("显式 Docling 引擎设备: %s", dc.device)
+
             result = await processor.process_pdf(
                 str(CE_PDF),
                 method="docling",
@@ -291,10 +353,12 @@ class TestDoclingFallbackCompatibility:
 # 质量对比（记录指标，不做硬断言）
 # ============================================================
 @pytest.mark.slow
+@pytest.mark.requires_gpu
 @skip_no_docling
 @skip_no_ce_pdf
+@skip_no_gpu
 class TestConversionQualityComparison:
-    """对比 Docling 与 PyMuPDF 引擎的输出质量。
+    """对比 Docling（GPU 加速）与 PyMuPDF 引擎的输出质量。
 
     记录指标供人工审查，不做引擎间的硬性断言。
     """
@@ -302,19 +366,25 @@ class TestConversionQualityComparison:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_compare_outputs(self) -> None:
-        """对比两个引擎的关键质量指标。"""
+        """对比两个引擎的关键质量指标与耗时。"""
         from negentropy.perceives.pdf.processor import PDFProcessor
 
-        # Docling 路径
+        # Docling GPU 路径
         proc_docling = PDFProcessor(
             enable_enhanced_features=True, prefer_docling=True,
         )
-        # PyMuPDF 路径
+        # PyMuPDF CPU 路径
         proc_pymupdf = PDFProcessor(
             enable_enhanced_features=True, prefer_docling=False,
         )
 
         try:
+            # GPU 设备日志
+            if proc_docling._docling_engine is not None:
+                dc = proc_docling._docling_engine._resolve_device_config()
+                logger.info("质量对比 - Docling 设备: %s", dc.device)
+
+            t0 = time.perf_counter()
             docling_result = await proc_docling.process_pdf(
                 str(CE_PDF),
                 method="auto",
@@ -322,6 +392,9 @@ class TestConversionQualityComparison:
                 extract_images=True,
                 extract_tables=True,
             )
+            docling_elapsed = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
             pymupdf_result = await proc_pymupdf.process_pdf(
                 str(CE_PDF),
                 method="pymupdf",
@@ -329,22 +402,25 @@ class TestConversionQualityComparison:
                 extract_images=True,
                 extract_tables=True,
             )
+            pymupdf_elapsed = time.perf_counter() - t0
 
             assert docling_result["success"] is True
             assert pymupdf_result["success"] is True
 
-            # 记录质量指标
+            # 记录质量 + 性能指标
             logger.info(
                 "质量对比 [Context Engineering 2.0 PDF]:\n"
-                "  Docling: %d 词, %d 字符, method=%s\n"
-                "  PyMuPDF: %d 词, %d 字符, method=%s\n"
+                "  Docling (GPU): %.2f 秒, %d 词, %d 字符, method=%s\n"
+                "  PyMuPDF (CPU): %.2f 秒, %d 词, %d 字符, method=%s\n"
                 "  Docling tables: %s\n"
                 "  PyMuPDF tables: %s\n"
                 "  Docling formulas: %s\n"
                 "  PyMuPDF formulas: %s",
+                docling_elapsed,
                 docling_result.get("word_count", 0),
                 docling_result.get("character_count", 0),
                 docling_result.get("method_used"),
+                pymupdf_elapsed,
                 pymupdf_result.get("word_count", 0),
                 pymupdf_result.get("character_count", 0),
                 pymupdf_result.get("method_used"),
@@ -356,3 +432,63 @@ class TestConversionQualityComparison:
         finally:
             proc_docling.cleanup()
             proc_pymupdf.cleanup()
+
+
+# ============================================================
+# GPU 设备检测与配置验证
+# ============================================================
+@pytest.mark.requires_gpu
+@skip_no_docling
+@skip_no_gpu
+class TestGPUDeviceVerification:
+    """GPU 加速设备检测与配置验证。
+
+    独立测试类，确保 GPU 检测、设备配置策略和 MPS 限制降级
+    在测试环境中正确生效。
+    """
+
+    @pytest.mark.integration
+    def test_gpu_device_detected(self, detected_gpu_device: DeviceType) -> None:
+        """验证检测到 GPU 加速设备。"""
+        assert detected_gpu_device.is_gpu, (
+            f"预期 GPU 设备，实际检测到: {detected_gpu_device.value}"
+        )
+        logger.info("GPU 设备验证通过: %s", detected_gpu_device.value)
+
+    @pytest.mark.integration
+    def test_docling_engine_uses_gpu(self, gpu_docling_engine) -> None:
+        """验证 DoclingEngine 实例已绑定 GPU 设备。"""
+        device_config = gpu_docling_engine._resolve_device_config()
+        assert device_config.device_type.is_gpu
+        assert device_config.device in ("mps", "cuda", "xpu")
+        logger.info(
+            "DoclingEngine GPU 配置: device=%s, type=%s",
+            device_config.device,
+            device_config.device_type.value,
+        )
+
+    @pytest.mark.integration
+    def test_mps_formula_enrichment_disabled(self, gpu_docling_engine) -> None:
+        """MPS 设备下，formula enrichment 应被自动禁用。
+
+        参考: device_config.py._apply_mps_constraints()
+        """
+        device_config = gpu_docling_engine._resolve_device_config()
+        if device_config.device_type == DeviceType.MPS:
+            assert device_config.do_formula_enrichment is False, (
+                "MPS 下 formula enrichment 应被禁用"
+            )
+            assert "formula_enrichment" in device_config.adjustments
+            logger.info("MPS formula enrichment 降级验证通过")
+        else:
+            pytest.skip(
+                f"非 MPS 设备 ({device_config.device_type.value})，跳过此验证"
+            )
+
+    @pytest.mark.integration
+    def test_converter_warmup_performance(self, warm_docling_converter: float) -> None:
+        """验证 converter 预热在合理时间内完成。"""
+        assert warm_docling_converter < 120, (
+            f"Converter 预热耗时过长: {warm_docling_converter:.2f}s"
+        )
+        logger.info("Converter 预热耗时: %.2f 秒", warm_docling_converter)

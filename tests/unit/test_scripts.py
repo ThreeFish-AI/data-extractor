@@ -158,4 +158,4 @@ class TestVersionManagement:
         pyproject_path = PROJECT_ROOT / "pyproject.toml"
         content = pyproject_path.read_text(encoding="utf-8")
 
-        assert 'negentropy-perceives = "negentropy.perceives.server:main"' in content
+        assert 'negentropy-perceives = "negentropy.perceives.apps.app:main"' in content

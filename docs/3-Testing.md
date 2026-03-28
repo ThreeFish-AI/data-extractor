@@ -45,13 +45,14 @@ tests/
 │   ├── test_schemas.py                      # 响应模型
 │   ├── test_scraper.py                      # 网页抓取引擎
 │   ├── test_scripts.py                      # 脚本文件验证
-│   ├── test_server_mcp_tools.py             # MCP 服务器与工具
+│   ├── test_mcp_tools_unit.py               # MCP 工具单元测试
 │   ├── test_tool_registry.py                # 工具注册表
 │   └── test_utils.py                        # 工具类
 ├── integration/                             # 集成测试 (9 files)
 │   ├── conftest.py                          # 集成测试专用 Fixture
 │   ├── test_comprehensive_integration.py    # 综合集成 + 性能负载
 │   ├── test_cross_tool_integration.py       # 跨工具协作
+│   ├── test_docling_pdf_integration.py      # Docling PDF GPU 加速集成
 │   ├── test_e2e_data_validation.py          # 数据有效性验证
 │   ├── test_e2e_document_pipeline.py        # 文档处理管道
 │   ├── test_e2e_error_resilience.py         # 错误恢复能力
@@ -112,6 +113,11 @@ uv run pytest --ff                   # 优先跑失败的
 uv run pytest -n auto                # 自动并行（需 pytest-xdist）
 uv run pytest --durations=10         # 最慢 10 个测试
 uv run pytest -m "not slow"          # 排除慢速测试
+
+# GPU 加速测试（Docling + MPS/CUDA）
+uv run pytest -m requires_gpu -v --log-cli-level=INFO     # 仅 GPU 测试
+uv run pytest tests/integration/test_docling_pdf_integration.py -v -x  # Docling 完整测试
+uv run pytest --co -m requires_gpu                         # 列出 GPU 测试（不执行）
 ```
 
 ### 测试配置
@@ -143,10 +149,13 @@ uv run pytest -m "not slow"          # 排除慢速测试
 
 ### 集成测试 Fixture（[`tests/integration/conftest.py`](../tests/integration/conftest.py)）
 
-| Fixture | 类型 | 说明 |
-| ------- | ---- | ---- |
-| `pdf_processor` | sync | `create_pdf_processor()` 真实 PDF 处理器实例 |
-| `e2e_tools` | async | MCP 工具名称→工具对象映射字典（`pytest_asyncio.fixture`） |
+| Fixture | 作用域 | 说明 |
+| ------- | ------ | ---- |
+| `pdf_processor` | function | `create_pdf_processor()` 真实 PDF 处理器实例 |
+| `e2e_tools` | function | MCP 工具名称→工具对象映射字典（`pytest_asyncio.fixture`） |
+| `detected_gpu_device` | session | 硬件检测，返回 `DeviceType` 枚举（MPS/CUDA/XPU/CPU） |
+| `gpu_docling_engine` | session | 显式绑定 GPU 设备的 `DoclingEngine` 实例 |
+| `warm_docling_converter` | session | 预热 Docling Converter（模型加载 ~10-30s，仅一次） |
 
 ### Fixture 约定
 
@@ -228,7 +237,10 @@ def test_extract_data():
 - **异步测试**：`asyncio_mode = "auto"` 已在 `pyproject.toml` 中配置，异步测试函数**无需**手动添加 `@pytest.mark.asyncio` 装饰器
 - **Mock 规范**：使用 `Mock(spec=TargetClass)` 而非裸 `Mock()`，确保 Mock 对象遵循目标类接口
 - **测试组织**：测试文件与 `src/negentropy/perceives/` 下的源码模块一一镜像（如 `src/negentropy/perceives/scraper.py` → `tests/unit/test_scraper.py`）
-- **测试标记**：五种标记（`unit`、`integration`、`slow`、`requires_network`、`requires_browser`）已在 [`pyproject.toml`](../pyproject.toml) 中定义，按需在测试函数上标注
+- **测试标记**：六种标记已在 [`pyproject.toml`](../pyproject.toml) 中定义，按需在测试函数上标注：
+  - `unit` / `integration` / `slow` — 测试分类
+  - `requires_network` / `requires_browser` — 环境依赖
+  - `requires_gpu` — GPU 加速依赖（MPS/CUDA/XPU）
 
 ---
 

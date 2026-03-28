@@ -95,7 +95,7 @@ graph LR
 
 ### 传输模式
 
-[`server.py`](../src/negentropy/perceives/server.py) 入口函数 `main()` 支持 **STDIO**（默认）、**HTTP**（可配置 host/port/path/CORS）和 **SSE** 三种传输模式。
+[`apps/app.py`](../src/negentropy/perceives/apps/app.py) 入口函数 `main()` 支持 **STDIO**（默认）、**HTTP**（可配置 host/port/path/CORS）和 **SSE** 三种传输模式。
 
 ## 处理引擎层
 

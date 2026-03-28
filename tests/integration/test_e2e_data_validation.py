@@ -11,9 +11,7 @@ import pytest
 import asyncio
 from unittest.mock import patch
 
-from negentropy.perceives.server import (
-    web_scraper,
-)
+from negentropy.perceives.tools import web_scraper
 
 
 class TestDataValidation:
