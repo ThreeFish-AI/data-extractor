@@ -3,7 +3,7 @@
 
 import pytest
 import tempfile
-from negentropy.perceives.scraper import WebScraper
+from negentropy.perceives.scraping import WebScraper
 from negentropy.perceives.markdown.converter import MarkdownConverter
 
 

@@ -1135,9 +1135,9 @@ _Source: Page 3_
 #### 1. 直接使用核心引擎
 
 ```python
-from negentropy.perceives.scraper import WebScraper
-from negentropy.perceives.anti_detection import AntiDetectionScraper
-from negentropy.perceives.form_handler import FormHandler
+from negentropy.perceives.scraping import WebScraper
+from negentropy.perceives.scraping import AntiDetectionScraper
+from negentropy.perceives.scraping import FormHandler
 
 # 基础抓取
 scraper = WebScraper()
@@ -1189,10 +1189,10 @@ result = await scraper.scrape_url(url, extract_config=extract_config)
 #### 3. 企业级功能集成
 
 ```python
-from negentropy.perceives.rate_limiter import rate_limiter
-from negentropy.perceives.retry import retry_manager
-from negentropy.perceives.cache import cache_manager
-from negentropy.perceives.metrics import metrics_collector
+from negentropy.perceives.infra import rate_limiter
+from negentropy.perceives.infra import retry_manager
+from negentropy.perceives.infra import cache_manager
+from negentropy.perceives.infra import metrics_collector
 
 # 集成完整功能的抓取流程
 async def enterprise_scrape(url: str):

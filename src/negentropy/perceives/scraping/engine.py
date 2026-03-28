@@ -14,7 +14,7 @@ from fake_useragent import UserAgent
 
 from .browser import build_chrome_options
 from ..config import settings
-from ..content_extraction import (
+from .content_extraction import (
     extract_default_content,
     extract_with_bs4_config,
     extract_with_selenium_config,

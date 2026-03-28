@@ -300,7 +300,7 @@ asyncio.run(debug_async_function())
 @pytest.mark.requires_browser
 async def test_with_browser_debugging():
     """启用浏览器调试的测试"""
-    from negentropy.perceives.anti_detection import AntiDetectionScraper
+    from negentropy.perceives.scraping import AntiDetectionScraper
 
     scraper = AntiDetectionScraper()
     options = {

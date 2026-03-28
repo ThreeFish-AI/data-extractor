@@ -14,7 +14,7 @@
 from unittest.mock import AsyncMock, Mock, MagicMock
 from bs4 import BeautifulSoup
 
-from negentropy.perceives.content_extraction import (
+from negentropy.perceives.scraping.content_extraction import (
     extract_default_content,
     extract_with_bs4_config,
     extract_with_selenium_config,
@@ -32,7 +32,7 @@ from negentropy.perceives.content_extraction import (
 
 def test_subpackage_exports():
     """验证 content_extraction 子包导出完整性。"""
-    from negentropy.perceives import content_extraction
+    from negentropy.perceives.scraping import content_extraction
 
     expected_exports = [
         "extract_default_content",

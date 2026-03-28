@@ -8,7 +8,7 @@ import logging
 from selenium.webdriver.common.action_chains import ActionChains
 
 from .browser import stealth_selenium_session, stealth_playwright_session
-from ..content_extraction import (
+from .content_extraction import (
     extract_page_data_selenium,
     extract_page_data_playwright,
 )

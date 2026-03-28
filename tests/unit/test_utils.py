@@ -27,11 +27,11 @@ import asyncio
 import time
 from unittest.mock import patch, AsyncMock
 
-from negentropy.perceives.resilience import RateLimiter, rate_limiter
-from negentropy.perceives.resilience import RetryManager, retry_manager
-from negentropy.perceives.cache import CacheManager, cache_manager
-from negentropy.perceives.metrics import MetricsCollector, metrics_collector
-from negentropy.perceives.parsing import URLValidator, TextCleaner
+from negentropy.perceives.infra import RateLimiter, rate_limiter
+from negentropy.perceives.infra import RetryManager, retry_manager
+from negentropy.perceives.infra import CacheManager, cache_manager
+from negentropy.perceives.infra import MetricsCollector, metrics_collector
+from negentropy.perceives.infra import URLValidator, TextCleaner
 from negentropy.perceives.tools._registry import normalize_extract_config
 
 
