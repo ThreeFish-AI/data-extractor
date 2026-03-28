@@ -94,9 +94,17 @@ negentropy-perceives/
 │   │   ├── utility.py            # 实用工具（1 个 tool）
 │   │   └── service.py            # 服务管理工具（2 个 tool）
 │   │
-│   └── pdf/                      # PDF 处理引擎子包
-│       ├── processor.py          # 核心 PDF 处理器
-│       └── enhanced.py           # 增强 PDF 处理器（PyMuPDF）
+│   ├── pdf/                      # PDF 处理引擎子包
+│   │   ├── processor.py          # 核心 PDF 处理器
+│   │   └── enhanced.py           # 增强 PDF 处理器（PyMuPDF）
+│   │
+│   └── examples/                 # 示例与配置模板（随包分发）
+│       ├── configs/
+│       │   └── extraction_configs.py  # 领域提取配置模板
+│       ├── mcp/
+│       │   └── basic_usage.py         # MCP 工具调用示例
+│       └── sdk/
+│           └── python_sdk_usage.py    # Python SDK 集成示例
 │
 ├── tests/                        # 测试套件
 │   ├── conftest.py               # 共享 Fixtures
@@ -108,14 +116,6 @@ negentropy-perceives/
 │   │   └── setup.sh              # 环境初始化
 │   └── test/
 │       └── run-tests.sh          # 测试执行（支持 unit/integration/full/coverage 等模式）
-│
-├── examples/                     # 示例与模板
-│   ├── mcp/
-│   │   └── basic_usage.py        # MCP 工具调用示例
-│   ├── sdk/
-│   │   └── python_sdk_usage.py   # Python SDK 集成示例
-│   └── configs/
-│       └── extraction_configs.py # 提取配置模板
 │
 ├── docs/                         # 项目文档
 ├── .github/workflows/            # CI/CD 配置
