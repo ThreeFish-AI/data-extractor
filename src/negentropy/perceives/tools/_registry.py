@@ -47,10 +47,6 @@ __all__ = [
     "ToolTimer",
 ]
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-
 # FastMCP application instance
 app = FastMCP(settings.server_name, version=settings.server_version)
 

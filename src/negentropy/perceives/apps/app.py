@@ -1,10 +1,13 @@
 """FastMCP application entry point for Negentropy Perceives."""
 
+import logging
 from pathlib import Path
 import sys
 
 from ..config import describe_config_sources, settings
-from ..tools import app
+from .._logging import build_uvicorn_log_config, setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def _active_cli_name() -> str:
@@ -15,25 +18,33 @@ def _active_cli_name() -> str:
 
 def main() -> None:
     """Run the MCP server."""
+    # ── 步骤 1：初始化日志体系（必须在导入 tools 之前） ──
+    setup_logging(settings.log_level)
+
+    # ── 步骤 2：延迟导入 tools（触发 @app.tool 注册，此时 logger 已就绪） ──
+    from ..tools import app  # noqa: E402
+
     cli_name = _active_cli_name()
-    print(f"Starting {settings.server_name} v{settings.server_version}")
-    print(f"CLI entrypoint: {cli_name}")
-    print(f"Transport mode: {settings.transport_mode}")
-    print(
-        f"JavaScript support: {'Enabled' if settings.enable_javascript else 'Disabled'}"
+    logger.info("Starting %s v%s", settings.server_name, settings.server_version)
+    logger.info("CLI entrypoint: %s", cli_name)
+    logger.info("Transport mode: %s", settings.transport_mode)
+    logger.info(
+        "JavaScript support: %s",
+        "Enabled" if settings.enable_javascript else "Disabled",
     )
-    print(
-        f"Random User-Agent: {'Enabled' if settings.use_random_user_agent else 'Disabled'}"
+    logger.info(
+        "Random User-Agent: %s",
+        "Enabled" if settings.use_random_user_agent else "Disabled",
     )
-    print(f"Proxy: {'Enabled' if settings.use_proxy else 'Disabled'}")
-    print(
-        "Resolved settings: "
-        f"server_name={settings.server_name}, "
-        f"host={settings.http_host}, "
-        f"port={settings.http_port}, "
-        f"path={settings.http_path}"
+    logger.info("Proxy: %s", "Enabled" if settings.use_proxy else "Disabled")
+    logger.info(
+        "Resolved settings: server_name=%s, host=%s, port=%s, path=%s",
+        settings.server_name,
+        settings.http_host,
+        settings.http_port,
+        settings.http_path,
     )
-    print(f"Config sources: {describe_config_sources()}")
+    logger.info("Config sources: %s", describe_config_sources())
 
     if settings.transport_mode in ["http", "sse"]:
         transport_type = "HTTP" if settings.transport_mode == "http" else "SSE"
@@ -41,31 +52,40 @@ def main() -> None:
         binding_port = settings.http_port
         binding_path = settings.http_path
 
-        # Determine the actual endpoint URL for user-friendly display
         if binding_host == "0.0.0.0":  # nosec B104
-            # For 0.0.0.0 binding, show both localhost and actual binding
-            print(f"Starting {transport_type} server on {binding_host}:{binding_port}")
-            print(f"Local endpoint: http://localhost:{binding_port}{binding_path}")
-            print(
-                f"Network endpoint: http://{binding_host}:{binding_port}{binding_path}"
+            logger.info(
+                "Starting %s server on %s:%s", transport_type, binding_host, binding_port
+            )
+            logger.info(
+                "Local endpoint: http://localhost:%s%s", binding_port, binding_path
+            )
+            logger.info(
+                "Network endpoint: http://%s:%s%s",
+                binding_host,
+                binding_port,
+                binding_path,
             )
         else:
-            print(f"Starting {transport_type} server on {binding_host}:{binding_port}")
+            logger.info(
+                "Starting %s server on %s:%s", transport_type, binding_host, binding_port
+            )
             endpoint_url = f"http://{binding_host}:{binding_port}{binding_path}"
-            print(f"{transport_type} endpoint: {endpoint_url}")
+            logger.info("%s endpoint: %s", transport_type, endpoint_url)
 
-        print(f"CORS origins: {settings.http_cors_origins}")
+        logger.info("CORS origins: %s", settings.http_cors_origins)
 
-        # Run with appropriate transport
+        # ── 步骤 3：构建 Uvicorn 日志配置并启动 ──
+        uvicorn_log_config = build_uvicorn_log_config(settings.log_level)
+
         app.run(
             transport=settings.transport_mode,
             host=binding_host,
             port=binding_port,
             path=binding_path,
+            uvicorn_config={"log_config": uvicorn_log_config},
         )
     else:
-        # Default STDIO transport mode
-        print("Starting STDIO server")
+        logger.info("Starting STDIO server")
         app.run()
 
 
