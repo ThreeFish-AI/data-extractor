@@ -1,4 +1,4 @@
-"""In-memory cache for scraping results."""
+"""抓取结果的内存缓存管理。"""
 
 import hashlib
 import json
@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 
 
 class CacheManager:
-    """Simple in-memory cache for scraping results."""
+    """抓取结果的简易内存缓存管理器。"""
 
     def __init__(self, max_size: int = 1000, ttl_seconds: int = 3600):
         self.max_size = max_size
@@ -18,7 +18,7 @@ class CacheManager:
     def _generate_key(
         self, url: str, method: str, config: Optional[Dict] = None
     ) -> str:
-        """Generate cache key."""
+        """生成缓存键。"""
         key_data = (
             f"{url}:{method}:{json.dumps(config, sort_keys=True) if config else ''}"
         )
@@ -27,7 +27,7 @@ class CacheManager:
     def get(
         self, url: str, method: str, config: Optional[Dict] = None
     ) -> Optional[Dict[str, Any]]:
-        """Get cached result if available and not expired."""
+        """获取缓存结果（若存在且未过期）。"""
         key = self._generate_key(url, method, config)
 
         if key not in self.cache:
@@ -49,7 +49,7 @@ class CacheManager:
         result: Dict[str, Any],
         config: Optional[Dict] = None,
     ) -> None:
-        """Cache result."""
+        """缓存抓取结果。"""
         key = self._generate_key(url, method, config)
 
         # Ensure cache size limit
@@ -60,12 +60,12 @@ class CacheManager:
         self.timestamps[key] = datetime.now()
 
     def _remove(self, key: str) -> None:
-        """Remove item from cache."""
+        """从缓存中移除条目。"""
         self.cache.pop(key, None)
         self.timestamps.pop(key, None)
 
     def _evict_oldest(self) -> None:
-        """Evict oldest cache entry."""
+        """淘汰最旧的缓存条目。"""
         if not self.timestamps:
             return
 
@@ -73,18 +73,18 @@ class CacheManager:
         self._remove(oldest_key)
 
     def clear(self) -> int:
-        """Clear all cache. Returns number of cleared items."""
+        """清空所有缓存，返回被清除的条目数量。"""
         count = len(self.cache)
         self.cache.clear()
         self.timestamps.clear()
         return count
 
     def size(self) -> int:
-        """Return current number of cached items."""
+        """返回当前缓存条目数量。"""
         return len(self.cache)
 
     def stats(self) -> Dict[str, Any]:
-        """Get cache statistics."""
+        """获取缓存统计信息。"""
         return {
             "size": len(self.cache),
             "max_size": self.max_size,

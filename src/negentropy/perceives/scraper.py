@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 
 
 class SeleniumScraper:
-    """Selenium-based scraper for JavaScript-heavy sites."""
+    """基于 Selenium 的抓取器，适用于 JavaScript 重度渲染的站点。"""
 
     def __init__(self) -> None:
         self.driver = None
         self.ua = UserAgent() if settings.use_random_user_agent else None
 
     def _get_driver(self) -> webdriver.Chrome:
-        """Get configured Chrome driver."""
+        """获取已配置的 Chrome 驱动实例。"""
         user_agent = (
             self.ua.random if (settings.use_random_user_agent and self.ua) else None
         )
@@ -47,7 +47,7 @@ class SeleniumScraper:
         wait_for_element: Optional[str] = None,
         extract_config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Scrape a URL using Selenium."""
+        """使用 Selenium 抓取指定 URL。"""
         try:
             self.driver = self._get_driver()
             self.driver.get(url)
@@ -98,7 +98,7 @@ class SeleniumScraper:
 
 
 class HttpScraper:
-    """HTTP-based scraper using requests."""
+    """基于 HTTP 的抓取器，使用 requests 库。"""
 
     def __init__(self) -> None:
         self.session = requests.Session()
@@ -106,7 +106,7 @@ class HttpScraper:
         self._configure_session()
 
     def _configure_session(self) -> None:
-        """Configure the requests session."""
+        """配置 requests 会话。"""
         if settings.use_random_user_agent and self.ua:
             self.session.headers.update({"User-Agent": self.ua.random})
         else:
@@ -120,7 +120,7 @@ class HttpScraper:
     async def scrape(
         self, url: str, extract_config: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Scrape a URL using requests."""
+        """使用 HTTP 请求抓取指定 URL。"""
         try:
             response = self.session.get(url, timeout=settings.request_timeout)
             response.raise_for_status()
@@ -158,12 +158,8 @@ class HttpScraper:
             return {"error": str(e), "url": url}
 
 
-# Backward-compatible alias
-SimpleScraper = HttpScraper
-
-
 class WebScraper:
-    """Main web scraper that chooses the appropriate scraping method."""
+    """主抓取调度器，自动选择合适的抓取方法。"""
 
     def __init__(self) -> None:
         self.http_scraper = HttpScraper()
@@ -179,16 +175,16 @@ class WebScraper:
         wait_for_element: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Scrape a URL using the specified method.
+        使用指定方法抓取 URL。
 
         Args:
-            url: The URL to scrape
-            method: Scraping method ("auto", "simple", "scrapy", "selenium")
-            extract_config: Configuration for data extraction
-            wait_for_element: CSS selector to wait for (Selenium only)
+            url: 待抓取的 URL
+            method: 抓取方法（"auto"、"simple"、"scrapy"、"selenium"）
+            extract_config: 数据提取配置
+            wait_for_element: 等待的 CSS 选择器（仅 Selenium 模式）
 
         Returns:
-            Dict containing scraped data
+            包含抓取数据的字典
         """
 
         if method == "auto":
@@ -221,7 +217,7 @@ class WebScraper:
         method: str = "auto",
         extract_config: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        """Scrape multiple URLs concurrently."""
+        """并发抓取多个 URL。"""
         tasks = [self.scrape_url(url, method, extract_config) for url in urls]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)

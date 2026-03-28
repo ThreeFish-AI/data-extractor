@@ -1,4 +1,4 @@
-"""Retry logic with exponential backoff."""
+"""指数退避重试逻辑。"""
 
 import asyncio
 import logging
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class RetryManager:
-    """Handle retry logic with exponential backoff."""
+    """带指数退避的重试逻辑管理器。"""
 
     def __init__(
         self, max_retries: int = 3, base_delay: float = 1.0, backoff_factor: float = 2.0
@@ -20,7 +20,7 @@ class RetryManager:
     async def retry_async(
         self, func: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> Any:
-        """Retry an async function with exponential backoff."""
+        """以指数退避策略重试异步函数。"""
         last_exception = None
 
         for attempt in range(self.max_retries + 1):

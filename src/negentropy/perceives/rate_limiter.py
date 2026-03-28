@@ -1,11 +1,11 @@
-"""Request rate limiting."""
+"""请求速率限制器。"""
 
 import asyncio
 import time
 
 
 class RateLimiter:
-    """Simple rate limiter for requests."""
+    """简易请求速率限制器。"""
 
     def __init__(self, requests_per_second: float = 1.0):
         self.requests_per_second = requests_per_second
@@ -13,7 +13,7 @@ class RateLimiter:
         self.last_request_time = 0.0
 
     async def wait(self) -> None:
-        """Wait if necessary to respect rate limit."""
+        """在必要时等待以遵守速率限制。"""
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class ScrapeResponse(BaseModel):
-    """Response model for scraping operations."""
+    """抓取操作的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     url: str = Field(..., description="被抓取的URL")
@@ -19,7 +19,7 @@ class ScrapeResponse(BaseModel):
 
 
 class BatchScrapeResponse(BaseModel):
-    """Response model for batch scraping operations."""
+    """批量抓取操作的响应模型。"""
 
     success: bool = Field(..., description="整体操作是否成功")
     total_urls: int = Field(..., description="总URL数量")
@@ -30,7 +30,7 @@ class BatchScrapeResponse(BaseModel):
 
 
 class LinkItem(BaseModel):
-    """Individual link item model."""
+    """单个链接项模型。"""
 
     url: str = Field(..., description="链接URL")
     text: str = Field(..., description="链接文本")
@@ -38,7 +38,7 @@ class LinkItem(BaseModel):
 
 
 class LinksResponse(BaseModel):
-    """Response model for link extraction."""
+    """链接提取的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     url: str = Field(..., description="源页面URL")
@@ -50,7 +50,7 @@ class LinksResponse(BaseModel):
 
 
 class PageInfoResponse(BaseModel):
-    """Response model for page information."""
+    """页面信息的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     url: str = Field(..., description="页面URL")
@@ -64,7 +64,7 @@ class PageInfoResponse(BaseModel):
 
 
 class RobotsResponse(BaseModel):
-    """Response model for robots.txt check."""
+    """robots.txt 检查的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     url: str = Field(..., description="检查的URL")
@@ -76,7 +76,7 @@ class RobotsResponse(BaseModel):
 
 
 class StructuredDataResponse(BaseModel):
-    """Response model for structured data extraction."""
+    """结构化数据提取的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     url: str = Field(..., description="源页面URL")
@@ -87,7 +87,7 @@ class StructuredDataResponse(BaseModel):
 
 
 class MarkdownResponse(BaseModel):
-    """Response model for Markdown conversion."""
+    """Markdown 转换的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     url: str = Field(..., description="源页面URL")
@@ -103,7 +103,7 @@ class MarkdownResponse(BaseModel):
 
 
 class BatchMarkdownResponse(BaseModel):
-    """Response model for batch Markdown conversion."""
+    """批量 Markdown 转换的响应模型。"""
 
     success: bool = Field(..., description="整体操作是否成功")
     total_urls: int = Field(..., description="总URL数量")
@@ -115,7 +115,7 @@ class BatchMarkdownResponse(BaseModel):
 
 
 class PDFResponse(BaseModel):
-    """Response model for PDF conversion with enhanced features."""
+    """PDF 增强转换的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     pdf_source: str = Field(..., description="PDF源路径或URL")
@@ -137,7 +137,7 @@ class PDFResponse(BaseModel):
 
 
 class BatchPDFResponse(BaseModel):
-    """Response model for batch PDF conversion."""
+    """批量 PDF 转换的响应模型。"""
 
     success: bool = Field(..., description="整体操作是否成功")
     total_pdfs: int = Field(..., description="总PDF数量")
@@ -150,7 +150,7 @@ class BatchPDFResponse(BaseModel):
 
 
 class MetricsResponse(BaseModel):
-    """Response model for server metrics."""
+    """服务器指标的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     total_requests: int = Field(..., description="总请求数")
@@ -165,7 +165,7 @@ class MetricsResponse(BaseModel):
 
 
 class CacheOperationResponse(BaseModel):
-    """Response model for cache clearing."""
+    """缓存清理操作的响应模型。"""
 
     success: bool = Field(..., description="操作是否成功")
     cleared_items: int = Field(..., description="清理的缓存项数量")
