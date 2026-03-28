@@ -36,8 +36,8 @@ def _get_version_from_pyproject():
 
 __version__ = _get_version_from_pyproject()
 __app_name__ = "negentropy-perceives"
-__author__ = "Aurelius"
-__email__ = "aureliusshu@gmail.com"
+__author__ = "ThreeFish-AI"
+__email__ = "threefish.ai@gmail.com"
 
 __all__ = [
     "__version__",
