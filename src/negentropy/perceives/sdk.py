@@ -20,12 +20,16 @@ class NegentropyPerceivesToolError(NegentropyPerceivesError):
     """Raised when a tool invocation fails."""
 
 
+# 默认端点地址（与服务端配置默认值一致：http_host=localhost, http_port=8081, http_path=/mcp）
+DEFAULT_BASE_URL = "http://localhost:8081/mcp"
+
+
 class NegentropyPerceivesClient:
     """High-level async SDK for calling the negentropy-perceives MCP service."""
 
     def __init__(
         self,
-        base_url: str = "http://127.0.0.1:8081/mcp",
+        base_url: str = DEFAULT_BASE_URL,
         *,
         headers: dict[str, str] | None = None,
         auth: Any = None,

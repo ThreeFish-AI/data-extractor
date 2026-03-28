@@ -1,80 +1,198 @@
-"""Configuration settings for the Negentropy Perceives MCP Server."""
+"""Negentropy Perceives MCP Server 配置管理模块。
 
-from typing import Dict, Any, Optional, Union
+基于 pydantic-settings 的分层配置系统，按优先级从高到低：
+1. 环境变量（NEGENTROPY_PERCEIVES_ 前缀）
+2. .env 文件（项目根目录 → CWD → 显式指定）
+3. 字段默认值
+"""
+
+import os
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 from . import __version__
 
+# ---------------------------------------------------------------------------
+# .env 文件路径解析
+# ---------------------------------------------------------------------------
+
+# 项目根目录（与 __init__.py 中版本检测使用相同的定位策略）
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+
+
+def _resolve_env_files() -> tuple[Path | str, ...]:
+    """计算 .env 文件搜索路径。
+
+    pydantic-settings 按顺序加载列表中的文件，后者覆盖前者。
+    优先级（后者覆盖前者）：
+    1. 项目根目录 .env（通过 pyproject.toml 哨兵文件检测）
+    2. CWD .env（pydantic-settings 原生行为）
+    3. NEGENTROPY_PERCEIVES_ENV_FILE 显式指定（最高优先级）
+
+    不存在的文件由 pydantic-settings 静默跳过。
+    """
+    candidates: list[Path | str] = []
+
+    # 项目根目录（仅当 pyproject.toml 存在时才视为有效项目根）
+    if (_PROJECT_ROOT / "pyproject.toml").is_file():
+        candidates.append(_PROJECT_ROOT / ".env")
+
+    # CWD 回退（保持 pydantic-settings 原生行为）
+    candidates.append(".env")
+
+    # 显式覆盖（最高优先级）
+    explicit = os.environ.get("NEGENTROPY_PERCEIVES_ENV_FILE")
+    if explicit:
+        candidates.append(Path(explicit))
+
+    return tuple(candidates)
+
+
+def describe_config_sources() -> str:
+    """报告 .env 文件加载情况，用于启动诊断。"""
+    found: list[str] = []
+    for ef in _resolve_env_files():
+        p = Path(ef) if Path(ef).is_absolute() else Path.cwd() / ef
+        if p.is_file():
+            found.append(str(p))
+    if found:
+        return f"Loaded: {', '.join(found)}"
+    return "No .env files loaded (using env vars and defaults)"
+
+
+# ---------------------------------------------------------------------------
+# 配置模型
+# ---------------------------------------------------------------------------
+
 
 class NegentropyPerceivesSettings(BaseSettings):
-    """Settings for the Negentropy Perceives MCP Server."""
+    """Negentropy Perceives MCP Server 配置。"""
 
-    # Server settings
-    server_name: str = Field(default="negentropy-perceives")
-    server_version: str = Field(default=__version__)
+    # ── 服务标识 ──────────────────────────────────────────────
+    server_name: str = Field(
+        default="negentropy-perceives", description="MCP 服务器标识名称"
+    )
+    server_version: str = Field(
+        default=__version__, description="版本号（从 pyproject.toml 自动获取）"
+    )
 
-    # HTTP transport settings
+    # ── 传输层 ────────────────────────────────────────────────
     transport_mode: str = Field(
-        default="http", description="Transport mode: stdio, http, or sse"
+        default="http", description="MCP 传输协议模式：stdio / http / sse"
     )
     http_host: str = Field(
-        default="localhost", description="Host to bind HTTP server to"
+        default="localhost", description="HTTP 服务器绑定主机"
     )
-    http_port: int = Field(default=8081, description="Port for HTTP server")
-    http_path: str = Field(default="/mcp", description="Path for HTTP endpoint")
+    http_port: int = Field(
+        default=8081, description="HTTP 服务器监听端口"
+    )
+    http_path: str = Field(
+        default="/mcp", description="HTTP 端点路径"
+    )
     http_cors_origins: Optional[str] = Field(
-        default="*", description="CORS origins for HTTP transport"
+        default="*", description="CORS 来源白名单（null 禁用）"
     )
 
-    # Negentropy Perceives settings
-    concurrent_requests: int = Field(default=16, gt=0)
-    download_delay: float = Field(default=1.0, ge=0.0)
-    randomize_download_delay: bool = Field(default=True)
-    autothrottle_enabled: bool = Field(default=True)
-    autothrottle_start_delay: float = Field(default=1.0, ge=0.0)
-    autothrottle_max_delay: float = Field(default=60.0, ge=0.0)
-    autothrottle_target_concurrency: float = Field(default=1.0, ge=0.0)
+    # ── 抓取引擎 ──────────────────────────────────────────────
+    concurrent_requests: int = Field(
+        default=16, gt=0, description="并发请求上限"
+    )
+    download_delay: float = Field(
+        default=1.0, ge=0.0, description="下载间隔（秒）"
+    )
+    randomize_download_delay: bool = Field(
+        default=True, description="随机化下载间隔"
+    )
+    autothrottle_enabled: bool = Field(
+        default=True, description="启用自动节流"
+    )
+    autothrottle_start_delay: float = Field(
+        default=1.0, ge=0.0, description="自动节流初始延迟（秒）"
+    )
+    autothrottle_max_delay: float = Field(
+        default=60.0, ge=0.0, description="自动节流最大延迟（秒）"
+    )
+    autothrottle_target_concurrency: float = Field(
+        default=1.0, ge=0.0, description="自动节流目标并发度"
+    )
 
-    # Rate limiting settings
-    rate_limit_requests_per_minute: int = Field(default=60, ge=1)
+    # ── 速率限制 ──────────────────────────────────────────────
+    rate_limit_requests_per_minute: int = Field(
+        default=60, ge=1, description="每分钟请求频率上限"
+    )
 
-    # Retry settings
-    max_retries: int = Field(default=3, ge=0)
-    retry_delay: float = Field(default=1.0, ge=0.0)
+    # ── 重试策略 ──────────────────────────────────────────────
+    max_retries: int = Field(
+        default=3, ge=0, description="失败重试最大次数"
+    )
+    retry_delay: float = Field(
+        default=1.0, ge=0.0, description="重试间隔（秒）"
+    )
 
-    # Cache settings
-    enable_caching: bool = Field(default=True)
-    cache_ttl_hours: int = Field(default=24, gt=0)
-    cache_max_size: Optional[int] = Field(default=None)
+    # ── 缓存系统 ──────────────────────────────────────────────
+    enable_caching: bool = Field(
+        default=True, description="启用响应缓存"
+    )
+    cache_ttl_hours: int = Field(
+        default=24, gt=0, description="缓存生存时间（小时）"
+    )
+    cache_max_size: Optional[int] = Field(
+        default=None, description="缓存最大条目数（null 不限）"
+    )
 
-    # Logging settings
-    log_level: str = Field(default="INFO")
-    log_requests: Optional[bool] = Field(default=None)
-    log_responses: Optional[bool] = Field(default=None)
+    # ── 日志系统 ──────────────────────────────────────────────
+    log_level: str = Field(
+        default="INFO", description="日志级别：DEBUG / INFO / WARNING / ERROR / CRITICAL"
+    )
+    log_requests: Optional[bool] = Field(
+        default=None, description="记录请求详情"
+    )
+    log_responses: Optional[bool] = Field(
+        default=None, description="记录响应详情"
+    )
 
-    # Browser settings
-    enable_javascript: bool = Field(default=False)
-    browser_headless: bool = Field(default=True)
-    browser_timeout: int = Field(default=30, ge=0)
-    browser_window_size: Union[str, tuple] = Field(default="1920x1080")
+    # ── 浏览器引擎 ────────────────────────────────────────────
+    enable_javascript: bool = Field(
+        default=False, description="启用 JavaScript 执行"
+    )
+    browser_headless: bool = Field(
+        default=True, description="无头浏览器模式"
+    )
+    browser_timeout: int = Field(
+        default=30, ge=0, description="浏览器操作超时（秒）"
+    )
+    browser_window_size: Union[str, tuple] = Field(
+        default="1920x1080", description="浏览器窗口尺寸"
+    )
 
-    # User agent settings
-    use_random_user_agent: bool = Field(default=True)
+    # ── 用户代理 ──────────────────────────────────────────────
+    use_random_user_agent: bool = Field(
+        default=True, description="启用随机 User-Agent 轮换"
+    )
     default_user_agent: str = Field(
-        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        description="默认 User-Agent 字符串",
     )
 
-    # Proxy settings
-    use_proxy: bool = Field(default=False)
-    proxy_url: Optional[str] = Field(default=None)
+    # ── 代理服务 ──────────────────────────────────────────────
+    use_proxy: bool = Field(
+        default=False, description="启用代理服务器"
+    )
+    proxy_url: Optional[str] = Field(
+        default=None, description="代理服务器 URL（启用代理时必填）"
+    )
 
-    # Request settings
-    request_timeout: float = Field(default=30.0, gt=0.0)
+    # ── 请求设置 ──────────────────────────────────────────────
+    request_timeout: float = Field(
+        default=30.0, gt=0.0, description="HTTP 请求超时（秒）"
+    )
 
-    # LLM orchestration settings
+    # ── LLM 编排 ──────────────────────────────────────────────
     llm_api_key: Optional[str] = Field(
-        default=None, description="LLM API Key (ZhipuAI)"
+        default=None, description="LLM API Key（ZhipuAI）"
     )
     llm_model: str = Field(
         default="zhipu/glm-5-plus-250414",
@@ -93,37 +211,37 @@ class NegentropyPerceivesSettings(BaseSettings):
         default=2, ge=0, description="LLM API 重试次数"
     )
 
-    # Hardware acceleration settings
+    # ── 硬件加速 ──────────────────────────────────────────────
     accelerator_device: str = Field(
         default="auto",
-        description="Accelerator device: auto, cpu, cuda (NVIDIA), mps (Apple Silicon), xpu (Intel)",
+        description="推理设备：auto / cpu / cuda (NVIDIA) / mps (Apple Silicon) / xpu (Intel)",
     )
     accelerator_num_threads: int = Field(
-        default=4, ge=1, description="Number of CPU threads for inference"
+        default=4, ge=1, description="CPU 推理线程数"
     )
 
-    # Docling settings
+    # ── Docling PDF 引擎 ──────────────────────────────────────
     docling_enabled: bool = Field(
         default=False,
-        description="Enable Docling as an alternative PDF extraction engine with GPU acceleration",
+        description="启用 Docling 作为可选 PDF 提取引擎（需安装 docling 可选依赖）",
     )
     docling_ocr_enabled: bool = Field(
-        default=True, description="Enable OCR in Docling for scanned PDFs"
+        default=True, description="为扫描版 PDF 启用 OCR"
     )
     docling_table_extraction_enabled: bool = Field(
-        default=True, description="Enable advanced table extraction in Docling"
+        default=True, description="启用 Docling 高级表格提取"
     )
     docling_formula_extraction_enabled: bool = Field(
-        default=True, description="Enable mathematical formula extraction in Docling"
+        default=True, description="启用 Docling 数学公式提取"
     )
 
     model_config = {
-        "env_file": ".env",
+        "env_file": _resolve_env_files(),
         "env_file_encoding": "utf-8",
-        "extra": "ignore",  # Allow extra environment variables
-        "env_prefix": "NEGENTROPY_PERCEIVES_",  # Automatically map env vars with this prefix
-        "env_ignore_empty": True,  # Ignore empty environment variables
-        "frozen": True,  # Make instances immutable
+        "extra": "ignore",
+        "env_prefix": "NEGENTROPY_PERCEIVES_",
+        "env_ignore_empty": True,
+        "frozen": True,
     }
 
     @field_validator("log_level")
