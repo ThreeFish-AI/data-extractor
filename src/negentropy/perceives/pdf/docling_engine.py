@@ -595,7 +595,9 @@ class DoclingEngine:
                     if text:
                         return str(text)
                 except Exception:
-                    pass
+                    logger.debug(
+                        "caption_text() 调用失败，降级为手动遍历", exc_info=True
+                    )
 
         # 2. 降级：手动遍历 captions[0].text
         captions = getattr(item, "captions", None)
@@ -616,7 +618,9 @@ class DoclingEngine:
                     if resolved_text:
                         return str(resolved_text)
                 except Exception:
-                    pass
+                    logger.debug(
+                        "RefItem.resolve() 调用失败，跳过 caption 解析", exc_info=True
+                    )
         return ""
 
     @staticmethod
