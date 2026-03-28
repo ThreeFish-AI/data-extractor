@@ -5,7 +5,6 @@ from typing import List
 from urllib.parse import urlparse
 
 
-
 def clean_text(text: str) -> str:
     """清洗提取的文本。"""
     if not text:
