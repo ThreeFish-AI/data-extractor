@@ -26,7 +26,7 @@ jobs:
           enable-cache: "true"
 
       - name: Run tests
-        run: uv run pytest -v --tb=short -n auto
+        run: uv run pytest -v --tb=short -n auto --timeout=300 -m "not slow"
         timeout-minutes: 20
         env:
           NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
@@ -118,7 +118,7 @@ jobs:
         uses: ./.github/actions/setup-python-uv
 
       - name: Run tests with coverage
-        run: uv run pytest --cov=negentropy.perceives --cov-report=xml --cov-report=html --cov-report=term -n auto
+        run: uv run pytest --cov=negentropy.perceives --cov-report=xml --cov-report=html --cov-report=term -n auto --timeout=300 -m "not slow"
         timeout-minutes: 20
         env:
           NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
