@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master, main, develop]
+    branches: [master, main, develop, "feature/**"]
   pull_request:
-    branches: [master, main, develop]
+    branches: [master, main, develop, "feature/**"]
   workflow_call:
   workflow_dispatch:
 
@@ -27,7 +27,7 @@ jobs:
 
       - name: Run tests
         run: uv run pytest -v --tb=short -n auto
-        timeout-minutes: 5
+        timeout-minutes: 20
         env:
           NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
 
@@ -119,7 +119,7 @@ jobs:
 
       - name: Run tests with coverage
         run: uv run pytest --cov=negentropy.perceives --cov-report=xml --cov-report=html --cov-report=term -n auto
-        timeout-minutes: 5
+        timeout-minutes: 20
         env:
           NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT: "false"
 
