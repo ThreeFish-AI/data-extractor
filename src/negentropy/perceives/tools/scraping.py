@@ -5,8 +5,8 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from pydantic import Field
 
+from ..infra import trace_event
 from ..schemas import BatchScrapeResponse, ScrapeResponse
-from ..validation_trace import trace_event
 from ._registry import ScrapeMethod, app, validate_url, web_scraper
 
 logger = logging.getLogger(__name__)

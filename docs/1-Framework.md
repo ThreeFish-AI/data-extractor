@@ -101,7 +101,7 @@ graph LR
 
 ### 网页抓取引擎
 
-[`src/negentropy/perceives/scraper.py`](../src/negentropy/perceives/scraper.py) 中的 `WebScraper` 作为门面类，持有三个后端实例并通过 `if/elif` 方法分发进行路由：
+[`src/negentropy/perceives/scraping/engine.py`](../src/negentropy/perceives/scraping/engine.py) 中的 `WebScraper` 作为门面类，持有三个后端实例并通过 `if/elif` 方法分发进行路由：
 
 | 后端 | 类 | 技术栈 | 状态 |
 |------|------|--------|------|
@@ -113,7 +113,7 @@ graph LR
 
 ### 反检测抓取引擎
 
-[`src/negentropy/perceives/anti_detection.py`](../src/negentropy/perceives/anti_detection.py) 中的 `AntiDetectionScraper` 提供两种隐身后端：
+[`src/negentropy/perceives/scraping/anti_detection.py`](../src/negentropy/perceives/scraping/anti_detection.py) 中的 `AntiDetectionScraper` 提供两种隐身后端：
 
 - **Selenium 隐身**：基于 `undetected-chromedriver`，覆盖 `navigator.webdriver` 属性、伪装插件/语言信息
 - **Playwright 隐身**：注入 stealth 脚本，规避 Canvas/WebGL 指纹检测
@@ -169,7 +169,7 @@ graph LR
 
 ### 表单处理器
 
-[`src/negentropy/perceives/form_handler.py`](../src/negentropy/perceives/form_handler.py) 中的 `FormHandler` 支持 Selenium 和 Playwright 双后端（通过 `hasattr(driver_or_page, "fill")` 检测），处理文本输入、下拉选择、复选框/单选框、文件上传和表单提交。
+[`src/negentropy/perceives/scraping/form_handler.py`](../src/negentropy/perceives/scraping/form_handler.py) 中的 `FormHandler` 支持 Selenium 和 Playwright 双后端（通过 `hasattr(driver_or_page, "fill")` 检测），处理文本输入、下拉选择、复选框/单选框、文件上传和表单提交。
 
 ### 请求处理流程
 
@@ -195,10 +195,10 @@ sequenceDiagram
 
 | 组件 | 文件 | 实现方式 |
 |------|------|---------|
-| `RateLimiter` | [`rate_limiter.py`](../src/negentropy/perceives/rate_limiter.py) | 时间间隔限速器：记录上次请求时间，间隔不足时 `asyncio.sleep` |
-| `RetryManager` | [`retry.py`](../src/negentropy/perceives/retry.py) | 指数退避重试：`base_delay × backoff_factor^attempt`（全局配置：max=3, factor=2.0） |
-| `CacheManager` | [`cache.py`](../src/negentropy/perceives/cache.py) | 内存 TTL 缓存：MD5 键、可配置过期时间，FIFO 淘汰策略（按时间戳淘汰最旧条目） |
-| `MetricsCollector` | [`metrics.py`](../src/negentropy/perceives/metrics.py) | 计数器/累加器：统计总请求数、成功/失败数、累计耗时、方法使用分布、错误分类 |
+| `RateLimiter` | [`infra/resilience.py`](../src/negentropy/perceives/infra/resilience.py) | 时间间隔限速器：记录上次请求时间，间隔不足时 `asyncio.sleep` |
+| `RetryManager` | [`infra/resilience.py`](../src/negentropy/perceives/infra/resilience.py) | 指数退避重试：`base_delay × backoff_factor^attempt`（全局配置：max=3, factor=2.0） |
+| `CacheManager` | [`infra/cache.py`](../src/negentropy/perceives/infra/cache.py) | 内存 TTL 缓存：MD5 键、可配置过期时间，FIFO 淘汰策略（按时间戳淘汰最旧条目） |
+| `MetricsCollector` | [`infra/metrics.py`](../src/negentropy/perceives/infra/metrics.py) | 计数器/累加器：统计总请求数、成功/失败数、累计耗时、方法使用分布、错误分类 |
 | `record_error()` | [`tools/_registry.py`](../src/negentropy/perceives/tools/_registry.py) | 字符串匹配分类器：按关键字匹配为 timeout/connection/not_found/forbidden/anti_bot/unknown |
 
 ### 缓存流程
@@ -236,20 +236,21 @@ graph TD
 
 | 模块 | 类/函数 | 功能 |
 |------|---------|------|
-| [`url_utils.py`](../src/negentropy/perceives/url_utils.py) | `URLValidator` | URL 校验、规范化、域名提取 |
-| [`text_utils.py`](../src/negentropy/perceives/text_utils.py) | `TextCleaner` | 文本清理、邮箱/电话提取、截断 |
+| [`infra/parsing.py`](../src/negentropy/perceives/infra/parsing.py) | `URLValidator` / `TextCleaner` | URL 校验/规范化、文本清理、邮箱/电话提取 |
 | [`config.py`](../src/negentropy/perceives/config.py) | `ConfigValidator` | 提取配置字典校验（已合并至 config 模块） |
-| [`browser_utils.py`](../src/negentropy/perceives/browser_utils.py) | `build_chrome_options()` | 共享 Chrome 选项构建器 |
+| [`scraping/browser.py`](../src/negentropy/perceives/scraping/browser.py) | `build_chrome_options()` | 共享 Chrome 选项构建器 |
 
 ### 导入路径
 
-各模块均通过其实际所在路径直接导入：
+各模块通过规范路径导入（旧路径仍可通过 shim 文件兼容使用）：
 
+- 网页抓取：`from negentropy.perceives.scraping import WebScraper`
+- 反检测抓取：`from negentropy.perceives.scraping import AntiDetectionScraper`
+- 表单处理：`from negentropy.perceives.scraping import FormHandler`
 - PDF 处理：`from negentropy.perceives.pdf.processor import PDFProcessor`
 - 增强 PDF：`from negentropy.perceives.pdf.enhanced import EnhancedPDFProcessor`
 - Markdown 转换：`from negentropy.perceives.markdown.converter import MarkdownConverter`
-- 反检测抓取：`from negentropy.perceives.anti_detection import AntiDetectionScraper`
-- 表单处理：`from negentropy.perceives.form_handler import FormHandler`
+- 基础设施：`from negentropy.perceives.infra import cache_manager, rate_limiter, metrics_collector`
 
 ---
 

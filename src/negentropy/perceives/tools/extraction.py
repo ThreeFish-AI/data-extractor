@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from pydantic import Field
 
-from ..resilience import rate_limiter
+from ..infra import TextCleaner, URLValidator, rate_limiter
 from ..schemas import (
     LinkItem,
     LinksResponse,
@@ -14,7 +14,6 @@ from ..schemas import (
     RobotsResponse,
     StructuredDataResponse,
 )
-from ..parsing import TextCleaner, URLValidator
 from ._registry import StructuredDataType, app, validate_url, web_scraper
 
 logger = logging.getLogger(__name__)

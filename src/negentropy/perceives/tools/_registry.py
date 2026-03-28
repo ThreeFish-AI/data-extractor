@@ -5,11 +5,10 @@ from typing import Optional
 
 from fastmcp import FastMCP
 
-from ..anti_detection import AntiDetectionScraper
 from ..config import settings
+from ..infra import metrics_collector
 from ..markdown.converter import MarkdownConverter
-from ..metrics import metrics_collector
-from ..scraper import WebScraper
+from ..scraping import AntiDetectionScraper, WebScraper
 from . import _observability
 from ._support import (
     BrowserMethod,
