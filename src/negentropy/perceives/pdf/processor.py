@@ -83,6 +83,9 @@ class PDFProcessor:
                 enable_formula_enrichment=settings.docling_formula_extraction_enabled,
                 enable_table_structure=settings.docling_table_extraction_enabled,
                 enable_ocr=settings.docling_ocr_enabled,
+                ocr_batch_size=settings.accelerator_ocr_batch_size,
+                layout_batch_size=settings.accelerator_layout_batch_size,
+                table_batch_size=settings.accelerator_table_batch_size,
             )
 
         # Page-level image maps populated during enhanced extraction,

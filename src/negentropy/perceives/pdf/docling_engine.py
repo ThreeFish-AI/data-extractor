@@ -113,6 +113,9 @@ class DoclingEngine:
         output_dir: Optional[str] = None,
         device: Optional[str] = None,
         num_threads: int = 4,
+        ocr_batch_size: int = 0,
+        layout_batch_size: int = 0,
+        table_batch_size: int = 0,
     ) -> None:
         self._enable_table_structure = enable_table_structure
         self._table_mode = table_mode
@@ -124,6 +127,9 @@ class DoclingEngine:
         self._output_dir = Path(output_dir) if output_dir else None
         self._device = device
         self._num_threads = num_threads
+        self._ocr_batch_size = ocr_batch_size
+        self._layout_batch_size = layout_batch_size
+        self._table_batch_size = table_batch_size
         self._device_config: Optional[Any] = None
 
     # ------------------------------------------------------------------
@@ -159,6 +165,9 @@ class DoclingEngine:
                 enable_formula=self._enable_formula_enrichment,
                 enable_table=self._enable_table_structure,
                 table_mode=self._table_mode,
+                ocr_batch_size_override=self._ocr_batch_size,
+                layout_batch_size_override=self._layout_batch_size,
+                table_batch_size_override=self._table_batch_size,
             )
             # 回写降级后的配置以保持一致性
             self._enable_formula_enrichment = self._device_config.do_formula_enrichment
@@ -211,6 +220,34 @@ class DoclingEngine:
 
         # 禁用非必要的页面图像生成以节省内存
         pipeline_options.generate_page_images = False
+
+        # GPU 批处理吞吐优化
+        if hasattr(pipeline_options, "ocr_batch_size"):
+            pipeline_options.ocr_batch_size = device_cfg.ocr_batch_size
+        if hasattr(pipeline_options, "layout_batch_size"):
+            pipeline_options.layout_batch_size = device_cfg.layout_batch_size
+        if hasattr(pipeline_options, "table_batch_size"):
+            pipeline_options.table_batch_size = device_cfg.table_batch_size
+
+        logger.info(
+            "Docling batch sizes: ocr=%d, layout=%d, table=%d (device=%s)",
+            device_cfg.ocr_batch_size,
+            device_cfg.layout_batch_size,
+            device_cfg.table_batch_size,
+            device_cfg.device,
+        )
+
+        # macOS 原生 OCR 引擎（Apple Vision Framework）
+        if device_cfg.ocr_engine == "mac_native" and self._enable_ocr:
+            try:
+                from docling.datamodel.pipeline_options import OcrMacOptions  # type: ignore[import-untyped]
+
+                pipeline_options.ocr_options = OcrMacOptions()
+                logger.info("macOS 原生 OCR (Apple Vision Framework) 已启用")
+            except ImportError:
+                logger.debug(
+                    "OcrMacOptions 不可用（需 docling[mac] 依赖），使用默认 OCR 引擎"
+                )
 
         # 硬件加速配置
         from docling.datamodel.accelerator_options import (  # type: ignore[import-untyped]
