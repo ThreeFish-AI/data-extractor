@@ -5,11 +5,9 @@ from typing import Annotated, Any, Dict, Optional
 
 from pydantic import Field
 
-from ..browser_utils import playwright_session, selenium_session
-from ..form_handler import FormHandler
-from ..resilience import rate_limiter
+from ..infra import rate_limiter, trace_event
 from ..schemas import ScrapeResponse
-from ..validation_trace import trace_event
+from ..scraping import FormHandler, playwright_session, selenium_session
 from ._registry import BrowserMethod, app, validate_url, ToolTimer
 
 logger = logging.getLogger(__name__)

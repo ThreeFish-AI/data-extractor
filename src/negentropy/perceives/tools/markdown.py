@@ -6,10 +6,8 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from pydantic import Field
 
-from ..metrics import metrics_collector
-from ..resilience import rate_limiter
+from ..infra import metrics_collector, rate_limiter, trace_event
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
-from ..validation_trace import trace_event
 from ._registry import (
     ScrapeMethod,
     app,

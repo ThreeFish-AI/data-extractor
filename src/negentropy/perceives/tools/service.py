@@ -2,8 +2,7 @@
 
 import time
 
-from ..cache import cache_manager
-from ..metrics import metrics_collector
+from ..infra import cache_manager, metrics_collector
 from ..schemas import CacheOperationResponse, MetricsResponse
 from ._registry import app
 
