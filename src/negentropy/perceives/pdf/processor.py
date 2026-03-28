@@ -219,6 +219,7 @@ class PDFProcessor:
                     docling_result = self._docling_engine.convert(
                         str(pdf_path),
                         page_range=page_range_tuple,
+                        embed_images=embed_images,
                     )
                     if docling_result and docling_result.markdown:
                         return self._build_result_from_docling(
@@ -1170,8 +1171,18 @@ class PDFProcessor:
                         "caption": img.caption or "",
                         "page": img.page_number,
                         "classification": img.classification,
+                        "filename": img.filename,
+                        "local_path": img.local_path,
+                        "width": img.width,
+                        "height": img.height,
+                        "mime_type": img.mime_type,
                     }
                     for img in docling_result.images
+                ],
+                "files": [
+                    img.filename
+                    for img in docling_result.images
+                    if img.filename
                 ],
             }
 
@@ -1184,6 +1195,7 @@ class PDFProcessor:
                         "columns": t.columns,
                         "caption": t.caption or "",
                         "page": t.page_number,
+                        "markdown": t.markdown,
                     }
                     for t in docling_result.tables
                 ],
@@ -1207,6 +1219,12 @@ class PDFProcessor:
                     {cb.language for cb in docling_result.code_blocks if cb.language}
                 ),
             }
+
+        # 输出目录（与 PyMuPDF 路径的 get_extraction_summary 对齐）
+        if self._docling_engine and self._docling_engine._output_dir:
+            enhanced_assets["output_directory"] = str(
+                self._docling_engine._output_dir
+            )
 
         result: Dict[str, Any] = {
             "success": True,

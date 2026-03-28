@@ -4,9 +4,12 @@
 - 当 Docling 未安装时：验证 is_available() 返回 False，convert() 返回 None
 - 当 Docling 已安装时：使用 mock 验证 pipeline 配置和转换流程
 - 数据类完整性验证
+- 图片保存到磁盘验证
+- Caption 提取多层降级验证
 """
 
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -65,6 +68,33 @@ class TestDoclingDataClasses:
         assert img.page_number is None
         assert img.caption is None
         assert img.classification is None
+
+    def test_docling_image_extended_fields_defaults(self) -> None:
+        """验证 DoclingImage 新增字段的默认值。"""
+        img = DoclingImage()
+        assert img.filename is None
+        assert img.local_path is None
+        assert img.width is None
+        assert img.height is None
+        assert img.mime_type == "image/png"
+        assert img.base64_data is None
+
+    def test_docling_image_with_extended_fields(self) -> None:
+        """验证 DoclingImage 新增字段可正常赋值。"""
+        img = DoclingImage(
+            page_number=1,
+            caption="Figure 1",
+            filename="img_p1_0.png",
+            local_path="/tmp/img_p1_0.png",
+            width=800,
+            height=600,
+            base64_data="abc123",
+        )
+        assert img.filename == "img_p1_0.png"
+        assert img.local_path == "/tmp/img_p1_0.png"
+        assert img.width == 800
+        assert img.height == 600
+        assert img.base64_data == "abc123"
 
     def test_docling_formula_defaults(self) -> None:
         formula = DoclingFormula(latex=r"\sum")
@@ -146,6 +176,84 @@ class TestDoclingEngineConfigKey:
 
 
 # ============================================================
+# Caption 提取
+# ============================================================
+class TestSafeCaption:
+    """测试 _safe_caption 多层降级逻辑。"""
+
+    def test_caption_text_preferred(self) -> None:
+        """应优先使用 caption_text(doc)。"""
+        mock_item = MagicMock()
+        mock_item.caption_text.return_value = "Figure 1: Architecture"
+        mock_doc = MagicMock()
+
+        result = DoclingEngine._safe_caption(mock_item, mock_doc)
+        assert result == "Figure 1: Architecture"
+        mock_item.caption_text.assert_called_once_with(mock_doc)
+
+    def test_caption_text_empty_falls_through(self) -> None:
+        """caption_text 返回空字符串时应降级到 captions 列表。"""
+        mock_caption = MagicMock()
+        mock_caption.text = "Table 1"
+
+        mock_item = MagicMock()
+        mock_item.caption_text.return_value = ""
+        mock_item.captions = [mock_caption]
+        mock_doc = MagicMock()
+
+        result = DoclingEngine._safe_caption(mock_item, mock_doc)
+        assert result == "Table 1"
+
+    def test_fallback_to_captions_text(self) -> None:
+        """caption_text 不可用时应降级为 captions[0].text。"""
+        mock_caption = MagicMock()
+        mock_caption.text = "Table 1: Results"
+
+        mock_item = MagicMock(spec=[])
+        mock_item.captions = [mock_caption]
+
+        result = DoclingEngine._safe_caption(mock_item, None)
+        assert result == "Table 1: Results"
+
+    def test_fallback_to_ref_resolve(self) -> None:
+        """captions[0] 为 RefItem 时应通过 resolve(doc) 解析。"""
+        mock_resolved = MagicMock()
+        mock_resolved.text = "Resolved caption"
+
+        mock_ref = MagicMock(spec=[])
+        mock_ref.text = None  # RefItem 没有 .text
+        mock_ref.resolve = MagicMock(return_value=mock_resolved)
+
+        mock_item = MagicMock(spec=[])
+        mock_item.captions = [mock_ref]
+        mock_doc = MagicMock()
+
+        result = DoclingEngine._safe_caption(mock_item, mock_doc)
+        assert result == "Resolved caption"
+
+    def test_empty_captions_returns_empty(self) -> None:
+        """captions 为空列表时应返回空字符串。"""
+        mock_item = MagicMock(spec=[])
+        mock_item.captions = []
+
+        result = DoclingEngine._safe_caption(mock_item, None)
+        assert result == ""
+
+    def test_no_doc_skips_caption_text(self) -> None:
+        """doc 为 None 时不应调用 caption_text。"""
+        mock_caption = MagicMock()
+        mock_caption.text = "Direct text"
+
+        mock_item = MagicMock()
+        mock_item.captions = [mock_caption]
+
+        result = DoclingEngine._safe_caption(mock_item, None)
+        assert result == "Direct text"
+        # caption_text 不应被调用
+        mock_item.caption_text.assert_not_called()
+
+
+# ============================================================
 # 结构化数据提取（使用 mock）
 # ============================================================
 class TestDoclingResultExtraction:
@@ -171,15 +279,12 @@ class TestDoclingResultExtraction:
         assert "|" in tables[0].markdown
 
     def test_extract_tables_with_caption(self) -> None:
-        """应提取表格标题。"""
-        mock_caption = MagicMock()
-        mock_caption.text = "Table 1: Results"
-
+        """应通过 caption_text(doc) 提取表格标题。"""
         mock_table = MagicMock()
         mock_table.export_to_markdown.return_value = "| X |"
         mock_table.data.num_rows = 1
         mock_table.data.num_cols = 1
-        mock_table.captions = [mock_caption]
+        mock_table.caption_text.return_value = "Table 1: Results"
         mock_table.prov = []
 
         engine = DoclingEngine()
@@ -196,21 +301,52 @@ class TestDoclingResultExtraction:
         tables = engine._extract_tables(mock_doc)
         assert tables == []
 
-    def test_extract_images(self) -> None:
-        """应从 DoclingDocument.pictures 中提取图片。"""
+    def test_extract_images_saves_to_disk(self, tmp_path: Path) -> None:
+        """应从 DoclingDocument.pictures 中提取图片并保存到磁盘。"""
+        from PIL import Image
+
+        mock_pil_image = Image.new("RGB", (100, 50), "red")
+
         mock_pic = MagicMock()
         mock_pic.captions = []
         mock_pic.classification = "chart"
         mock_pic.prov = []
         mock_pic.image = None
+        mock_pic.get_image.return_value = mock_pil_image
 
-        engine = DoclingEngine()
+        engine = DoclingEngine(output_dir=str(tmp_path))
         mock_doc = MagicMock()
         mock_doc.pictures = [mock_pic]
 
         images = engine._extract_images(mock_doc)
         assert len(images) == 1
         assert images[0].classification == "chart"
+        assert images[0].width == 100
+        assert images[0].height == 50
+        assert images[0].filename is not None
+        assert images[0].local_path is not None
+        assert Path(images[0].local_path).exists()
+        assert images[0].base64_data is not None
+
+    def test_extract_images_get_image_failure_graceful(self, tmp_path: Path) -> None:
+        """get_image 失败时应降级为仅记录元数据。"""
+        mock_pic = MagicMock()
+        mock_pic.captions = []
+        mock_pic.classification = "photo"
+        mock_pic.prov = []
+        mock_pic.image = None
+        mock_pic.get_image.side_effect = RuntimeError("No image data")
+
+        engine = DoclingEngine(output_dir=str(tmp_path))
+        mock_doc = MagicMock()
+        mock_doc.pictures = [mock_pic]
+
+        images = engine._extract_images(mock_doc)
+        assert len(images) == 1
+        assert images[0].classification == "photo"
+        assert images[0].filename is None
+        assert images[0].local_path is None
+        assert images[0].width is None
 
     def test_extract_images_no_pictures_attr(self) -> None:
         """DoclingDocument 无 pictures 属性时应返回空列表。"""
@@ -218,6 +354,24 @@ class TestDoclingResultExtraction:
         mock_doc = MagicMock(spec=[])
         images = engine._extract_images(mock_doc)
         assert images == []
+
+    def test_extract_images_creates_output_dir(self) -> None:
+        """output_dir 为 None 时应自动创建临时目录。"""
+        mock_pic = MagicMock()
+        mock_pic.captions = []
+        mock_pic.classification = None
+        mock_pic.prov = []
+        mock_pic.image = None
+        mock_pic.get_image.return_value = None  # 无图片数据
+
+        engine = DoclingEngine(output_dir=None)
+        mock_doc = MagicMock()
+        mock_doc.pictures = [mock_pic]
+
+        images = engine._extract_images(mock_doc)
+        assert len(images) == 1
+        # output_dir 应已被设置
+        assert engine._output_dir is not None
 
     def test_extract_formulas_from_markdown(self) -> None:
         """应从 Markdown 文本中提取公式。"""
@@ -364,6 +518,74 @@ class TestPDFProcessorDoclingIntegration:
             assert result["enhanced_assets"]["code_blocks"]["count"] == 1
             assert "python" in result["enhanced_assets"]["code_blocks"]["languages"]
             assert result["metadata"]["title"] == "Test"
+        finally:
+            proc.cleanup()
+
+    def test_build_result_includes_image_details(self) -> None:
+        """enhanced_assets.images 应包含文件路径和尺寸信息。"""
+        from negentropy.perceives.pdf.processor import PDFProcessor
+
+        proc = PDFProcessor(enable_enhanced_features=False, prefer_docling=False)
+        try:
+            docling_result = DoclingConversionResult(
+                markdown="# Test",
+                images=[
+                    DoclingImage(
+                        page_number=0,
+                        caption="Fig 1",
+                        filename="img_p0_0.png",
+                        local_path="/tmp/img_p0_0.png",
+                        width=800,
+                        height=600,
+                    )
+                ],
+                page_count=1,
+            )
+            result = proc._build_result_from_docling(
+                docling_result,
+                pdf_source="/tmp/test.pdf",
+                include_metadata=True,
+                output_format="markdown",
+            )
+            img_item = result["enhanced_assets"]["images"]["items"][0]
+            assert img_item["filename"] == "img_p0_0.png"
+            assert img_item["local_path"] == "/tmp/img_p0_0.png"
+            assert img_item["width"] == 800
+            assert img_item["height"] == 600
+            assert img_item["mime_type"] == "image/png"
+            # files 列表
+            assert "img_p0_0.png" in result["enhanced_assets"]["images"]["files"]
+        finally:
+            proc.cleanup()
+
+    def test_build_result_includes_table_markdown(self) -> None:
+        """enhanced_assets.tables items 应包含 markdown 内容。"""
+        from negentropy.perceives.pdf.processor import PDFProcessor
+
+        proc = PDFProcessor(enable_enhanced_features=False, prefer_docling=False)
+        try:
+            docling_result = DoclingConversionResult(
+                markdown="# Test",
+                tables=[
+                    DoclingTable(
+                        markdown="| A | B |\n|---|---|\n| 1 | 2 |",
+                        rows=1,
+                        columns=2,
+                        caption="Table 1",
+                    )
+                ],
+                page_count=1,
+            )
+            result = proc._build_result_from_docling(
+                docling_result,
+                pdf_source="/tmp/test.pdf",
+                include_metadata=True,
+                output_format="markdown",
+            )
+            table_item = result["enhanced_assets"]["tables"]["items"][0]
+            assert "markdown" in table_item
+            assert "| A | B |" in table_item["markdown"]
+            assert table_item["caption"] == "Table 1"
         finally:
             proc.cleanup()
 

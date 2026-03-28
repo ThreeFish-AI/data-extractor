@@ -44,6 +44,12 @@ class DoclingImage:
     classification: Optional[str] = None
     bbox: Optional[Tuple[float, float, float, float]] = None
     image_ref: Any = None  # Docling ImageRef 对象
+    filename: Optional[str] = None  # 磁盘文件名（如 "img_p1_0.png"）
+    local_path: Optional[str] = None  # 磁盘绝对路径
+    width: Optional[int] = None  # 图片宽度（像素）
+    height: Optional[int] = None  # 图片高度（像素）
+    mime_type: str = "image/png"
+    base64_data: Optional[str] = None  # base64 编码（embed_images 模式用）
 
 
 @dataclass
@@ -263,12 +269,15 @@ class DoclingEngine:
         self,
         pdf_path: str,
         page_range: Optional[Tuple[int, int]] = None,
+        embed_images: bool = False,
     ) -> Optional[DoclingConversionResult]:
         """执行完整文档转换。
 
         Args:
             pdf_path: PDF 文件本地路径。
             page_range: 可选的页码范围 ``(start, end)``。
+            embed_images: 是否将图片以 base64 嵌入 Markdown（默认 False，
+                使用文件引用模式）。
 
         Returns:
             ``DoclingConversionResult`` 或 ``None``（当 Docling 不可用或转换失败时）。
@@ -283,24 +292,28 @@ class DoclingEngine:
             result = converter.convert(pdf_path)
             doc = result.document
 
-            # 1. 导出完整 Markdown
-            markdown = doc.export_to_markdown()
+            # 1. 先提取图片（保存到磁盘），供后续 REFERENCED 模式引用
+            images = self._extract_images(doc)
 
-            # 2. LaTeX 后处理（复用现有清洗逻辑）
+            # 2. 导出完整 Markdown（选择正确的 ImageRefMode）
+            markdown = self._export_markdown_with_image_mode(
+                doc, embed_images=embed_images
+            )
+
+            # 3. LaTeX 后处理（复用现有清洗逻辑）
             from .math_formula import DoclingFormulaEnricher
 
             markdown = DoclingFormulaEnricher.postprocess_latex(markdown)
 
-            # 3. 提取结构化元素
+            # 4. 提取结构化元素（表格、公式、代码块）
             tables = self._extract_tables(doc)
-            images = self._extract_images(doc)
             formulas = self._extract_formulas(doc, markdown)
             code_blocks = self._extract_code_blocks(doc)
 
-            # 4. 元数据
+            # 5. 元数据
             metadata = self._extract_metadata(doc)
 
-            # 5. 页数
+            # 6. 页数
             page_count = len(doc.pages) if hasattr(doc, "pages") and doc.pages else 0
 
             return DoclingConversionResult(
@@ -315,6 +328,32 @@ class DoclingEngine:
         except Exception as e:
             logger.warning("Docling 转换失败: %s", e)
             return None
+
+    def _export_markdown_with_image_mode(
+        self, doc: Any, *, embed_images: bool = False
+    ) -> str:
+        """根据配置选择 ImageRefMode 导出 Markdown。
+
+        - ``embed_images=True``  → ``ImageRefMode.EMBEDDED``（base64 内联）
+        - ``self._output_dir``   → ``ImageRefMode.REFERENCED``（文件路径引用）
+        - 降级                   → 默认 PLACEHOLDER 模式
+
+        当 ``docling_core`` 版本不支持 ``ImageRefMode`` 时，安全降级为
+        默认导出。
+        """
+        try:
+            from docling_core.types.doc import ImageRefMode  # type: ignore[import-untyped]
+
+            if embed_images:
+                return doc.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
+            elif self._output_dir:
+                return doc.export_to_markdown(image_mode=ImageRefMode.REFERENCED)
+        except ImportError:
+            logger.info("当前 docling_core 版本不支持 ImageRefMode，使用默认导出模式")
+        except Exception as e:
+            logger.warning("ImageRefMode 导出失败，降级为默认模式: %s", e)
+
+        return doc.export_to_markdown()
 
     # ------------------------------------------------------------------
     # 结构化元素提取
@@ -338,8 +377,8 @@ class DoclingEngine:
                     rows = getattr(data, "num_rows", 0)
                     cols = getattr(data, "num_cols", 0)
 
-                # 标题（captions 可能是 RefItem 列表，需安全提取 text）
-                caption = self._safe_caption(table_item)
+                # 标题（captions 可能是 RefItem 列表，需通过 doc 解析）
+                caption = self._safe_caption(table_item, doc)
 
                 # 页码
                 page_no = self._get_page_number(table_item)
@@ -359,25 +398,75 @@ class DoclingEngine:
         return tables
 
     def _extract_images(self, doc: Any) -> List[DoclingImage]:
-        """从 DoclingDocument 提取图片信息。"""
+        """从 DoclingDocument 提取图片并保存到磁盘。
+
+        对每个 ``PictureItem``，调用 ``pic.get_image(doc)`` 获取 PIL Image，
+        保存为 PNG 文件并记录路径、尺寸和 base64 数据。当 ``get_image`` 不可用
+        或失败时，降级为仅记录元数据。
+        """
         images: List[DoclingImage] = []
         if not hasattr(doc, "pictures"):
             return images
 
-        for pic in doc.pictures:
-            try:
-                caption = self._safe_caption(pic)
+        # 确保输出目录存在
+        output_dir = self._output_dir
+        if output_dir is None:
+            import tempfile
 
+            output_dir = Path(tempfile.mkdtemp(prefix="docling_images_"))
+            self._output_dir = output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        for idx, pic in enumerate(doc.pictures):
+            try:
+                caption = self._safe_caption(pic, doc)
                 classification = getattr(pic, "classification", None)
                 page_no = self._get_page_number(pic)
                 image_ref = getattr(pic, "image", None)
+
+                filename = None
+                local_path = None
+                width = None
+                height = None
+                base64_data = None
+
+                # 核心：获取 PIL Image 并保存到磁盘
+                try:
+                    get_image_fn = getattr(pic, "get_image", None)
+                    pil_image = get_image_fn(doc) if callable(get_image_fn) else None
+                    if pil_image is not None:
+                        width, height = pil_image.size
+                        filename = f"img_p{page_no or 0}_{idx}.png"
+                        local_path = str(output_dir / filename)
+                        pil_image.save(local_path, "PNG")
+
+                        # 生成 base64 数据（供 embed_images 模式使用）
+                        import io
+                        import base64 as b64mod
+
+                        buf = io.BytesIO()
+                        pil_image.save(buf, format="PNG")
+                        base64_data = b64mod.b64encode(buf.getvalue()).decode("ascii")
+
+                        logger.info(
+                            "保存 Docling 图片: %s (%dx%d)", filename, width, height
+                        )
+                except Exception as e:
+                    logger.warning("获取/保存 Docling 图片失败 (idx=%d): %s", idx, e)
 
                 images.append(
                     DoclingImage(
                         page_number=page_no,
                         caption=caption,
-                        classification=str(classification) if classification else None,
+                        classification=(
+                            str(classification) if classification else None
+                        ),
                         image_ref=image_ref,
+                        filename=filename,
+                        local_path=local_path,
+                        width=width,
+                        height=height,
+                        base64_data=base64_data,
                     )
                 )
             except Exception as e:
@@ -449,12 +538,29 @@ class DoclingEngine:
         return meta
 
     @staticmethod
-    def _safe_caption(item: Any) -> str:
+    def _safe_caption(item: Any, doc: Any = None) -> str:
         """安全提取 Docling 元素的 caption 文本。
 
-        captions 列表中的元素可能是 ``TextItem``（有 ``.text``）
-        或 ``RefItem``（无 ``.text``），需防御性处理。
+        优先使用 ``FloatingItem.caption_text(doc)``（Docling 推荐方式），
+        降级为手动遍历 ``captions`` 列表，最后尝试通过 ``RefItem.resolve(doc)``
+        解析引用。
+
+        Args:
+            item: Docling 文档元素（PictureItem / TableItem 等）。
+            doc: DoclingDocument 实例，用于解析 caption 引用。
         """
+        # 1. 优先：FloatingItem.caption_text(doc)
+        if doc is not None:
+            caption_text_fn = getattr(item, "caption_text", None)
+            if callable(caption_text_fn):
+                try:
+                    text = caption_text_fn(doc)
+                    if text:
+                        return str(text)
+                except Exception:
+                    pass
+
+        # 2. 降级：手动遍历 captions[0].text
         captions = getattr(item, "captions", None)
         if not captions:
             return ""
@@ -462,7 +568,18 @@ class DoclingEngine:
         text = getattr(first, "text", None)
         if text is not None:
             return str(text)
-        # RefItem: 尝试 cref / $ref 等其他属性
+
+        # 3. 降级：RefItem.resolve(doc)
+        if doc is not None:
+            resolve_fn = getattr(first, "resolve", None)
+            if callable(resolve_fn):
+                try:
+                    resolved = resolve_fn(doc)
+                    resolved_text = getattr(resolved, "text", None)
+                    if resolved_text:
+                        return str(resolved_text)
+                except Exception:
+                    pass
         return ""
 
     @staticmethod
