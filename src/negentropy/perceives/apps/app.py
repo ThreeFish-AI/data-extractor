@@ -54,7 +54,10 @@ def main() -> None:
 
         if binding_host == "0.0.0.0":  # nosec B104
             logger.info(
-                "Starting %s server on %s:%s", transport_type, binding_host, binding_port
+                "Starting %s server on %s:%s",
+                transport_type,
+                binding_host,
+                binding_port,
             )
             logger.info(
                 "Local endpoint: http://localhost:%s%s", binding_port, binding_path
@@ -67,7 +70,10 @@ def main() -> None:
             )
         else:
             logger.info(
-                "Starting %s server on %s:%s", transport_type, binding_host, binding_port
+                "Starting %s server on %s:%s",
+                transport_type,
+                binding_host,
+                binding_port,
             )
             endpoint_url = f"http://{binding_host}:{binding_port}{binding_path}"
             logger.info("%s endpoint: %s", transport_type, endpoint_url)
