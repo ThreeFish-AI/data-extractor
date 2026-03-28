@@ -1,7 +1,7 @@
-"""MCP 工具注册枢纽与兼容导出。"""
+"""MCP 工具注册枢纽。"""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastmcp import FastMCP
 
@@ -85,25 +85,14 @@ def create_pdf_processor(
     )
 
 
-def validate_url(url: str) -> Optional[str]:
-    """兼容导出：校验 URL 格式。"""
-    return _validate_url(url)
-
-
-def validate_page_range(
-    page_range: Optional[List[int]],
-) -> tuple[Optional[tuple], Optional[str]]:
-    """兼容导出：校验并转换 page_range。"""
-    return _validate_page_range(page_range)
-
-
-def normalize_extract_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    """兼容导出：规范化提取配置字典。"""
-    return _normalize_extract_config(config)
+# 直接赋值导出（消除纯转发的中间层）
+validate_url = _validate_url
+validate_page_range = _validate_page_range
+normalize_extract_config = _normalize_extract_config
 
 
 def record_error(e: Exception, url: str, method: str, duration_ms: int) -> str:
-    """兼容导出：记录失败指标并返回原始错误消息。"""
+    """记录失败指标并返回原始错误消息（绑定共享 metrics_collector 与 logger）。"""
     return _observability.record_error(
         e,
         url,
@@ -115,12 +104,12 @@ def record_error(e: Exception, url: str, method: str, duration_ms: int) -> str:
 
 
 def elapsed_ms(start_time: float) -> int:
-    """兼容导出：计算耗时。"""
+    """计算开始时间到当前的毫秒耗时。"""
     return _observability.elapsed_ms(start_time)
 
 
 class ToolTimer(_observability.ToolTimer):
-    """兼容导出：基于共享指标记录的计时器。"""
+    """基于共享指标记录的工具执行计时器。"""
 
     def __init__(self, url: str, method: str) -> None:
         super().__init__(

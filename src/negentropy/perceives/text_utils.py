@@ -1,15 +1,15 @@
-"""Text cleaning and extraction utilities."""
+"""文本清洗与提取工具集。"""
 
 import re
 from typing import List
 
 
 class TextCleaner:
-    """Clean and process extracted text."""
+    """清洗与处理提取的文本。"""
 
     @staticmethod
     def clean_text(text: str) -> str:
-        """Clean extracted text."""
+        """清洗提取的文本。"""
         if not text:
             return ""
 
@@ -24,13 +24,13 @@ class TextCleaner:
 
     @staticmethod
     def extract_emails(text: str) -> List[str]:
-        """Extract email addresses from text."""
+        """从文本中提取电子邮件地址。"""
         email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         return re.findall(email_pattern, text)
 
     @staticmethod
     def extract_phone_numbers(text: str) -> List[str]:
-        """Extract phone numbers from text."""
+        """从文本中提取电话号码。"""
         # Basic phone number patterns
         phone_patterns = [
             r"\b\d{3}-\d{3}-\d{4}\b",  # 123-456-7890

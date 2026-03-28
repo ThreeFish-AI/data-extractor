@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class FormHandler:
-    """Handle form interactions and submissions."""
+    """处理表单交互与提交。"""
 
     def __init__(self, driver_or_page: Any) -> None:
         self.driver_or_page = driver_or_page
@@ -26,12 +26,12 @@ class FormHandler:
         submit_button_selector: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Fill and optionally submit a form.
+        填充表单并可选提交。
 
         Args:
-            form_data: Dict mapping field selectors to values
-            submit: Whether to submit the form
-            submit_button_selector: Selector for submit button (if not using default)
+            form_data: 字段选择器到值的映射字典
+            submit: 是否提交表单
+            submit_button_selector: 提交按钮的选择器（不使用默认按钮时指定）
         """
         try:
             results = {}
@@ -51,7 +51,7 @@ class FormHandler:
             return {"success": False, "error": str(e)}
 
     async def _fill_field(self, selector: str, value: Any) -> Dict[str, Any]:
-        """Fill a single form field."""
+        """填充单个表单字段。"""
         try:
             if self.is_playwright:
                 return await self._fill_field_playwright(selector, value)
@@ -62,7 +62,7 @@ class FormHandler:
             return {"success": False, "error": str(e)}
 
     async def _fill_field_selenium(self, selector: str, value: Any) -> Dict[str, Any]:
-        """Fill field using Selenium."""
+        """使用 Selenium 填充字段。"""
         try:
             element = self.driver_or_page.find_element(By.CSS_SELECTOR, selector)
             tag_name = element.tag_name.lower()
@@ -100,7 +100,7 @@ class FormHandler:
             return {"success": False, "error": str(e)}
 
     async def _fill_field_playwright(self, selector: str, value: Any) -> Dict[str, Any]:
-        """Fill field using Playwright."""
+        """使用 Playwright 填充字段。"""
         try:
             element = await self.driver_or_page.query_selector(selector)
             if not element:
@@ -140,7 +140,7 @@ class FormHandler:
     async def _submit_form(
         self, submit_button_selector: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Submit the form."""
+        """提交表单。"""
         try:
             if self.is_playwright:
                 return await self._submit_form_playwright(submit_button_selector)
@@ -153,7 +153,7 @@ class FormHandler:
     async def _submit_form_selenium(
         self, submit_button_selector: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Submit form using Selenium."""
+        """使用 Selenium 提交表单。"""
         try:
             if submit_button_selector:
                 # Use specific submit button
@@ -204,7 +204,7 @@ class FormHandler:
     async def _submit_form_playwright(
         self, submit_button_selector: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Submit form using Playwright."""
+        """使用 Playwright 提交表单。"""
         try:
             if submit_button_selector:
                 # Use specific submit button

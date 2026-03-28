@@ -336,9 +336,9 @@ class TestPlaywrightStealth:
 
 
 class TestDataExtraction:
-    """测试整页数据提取门面（函数已迁至 content_extraction.py）。"""
+    """测试整页数据提取门面（函数位于 content_extraction/pages.py）。"""
 
-    @patch("negentropy.perceives.content_extraction.BeautifulSoup")
+    @patch("negentropy.perceives.content_extraction.pages.BeautifulSoup")
     @pytest.mark.asyncio
     async def test_selenium_data_extraction_default(self, mock_beautifulsoup):
         """测试 Selenium 默认数据提取。"""
@@ -363,7 +363,7 @@ class TestDataExtraction:
         assert result["content"]["text"] == "Test content"
         assert result["content"]["links"] == []
 
-    @patch("negentropy.perceives.content_extraction.BeautifulSoup")
+    @patch("negentropy.perceives.content_extraction.pages.BeautifulSoup")
     @pytest.mark.asyncio
     async def test_selenium_data_extraction_with_config(self, mock_beautifulsoup):
         """测试 Selenium 配置化数据提取。"""

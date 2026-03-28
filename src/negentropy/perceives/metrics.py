@@ -1,4 +1,4 @@
-"""Scraping metrics collection."""
+"""抓取指标收集与统计。"""
 
 from typing import Any, Dict, Optional
 
@@ -6,7 +6,7 @@ from .url_utils import URLValidator
 
 
 class MetricsCollector:
-    """Collect scraping metrics."""
+    """抓取指标收集器。"""
 
     def __init__(self) -> None:
         self.metrics: Dict[str, Any] = {
@@ -27,7 +27,7 @@ class MetricsCollector:
         method: str,
         error_category: Optional[str] = None,
     ) -> None:
-        """Record scraping request metrics."""
+        """记录抓取请求指标。"""
         self.metrics["total_requests"] += 1
         self.metrics["total_duration_ms"] += duration_ms
 
@@ -50,7 +50,7 @@ class MetricsCollector:
         self.metrics["domains_scraped"].add(domain)
 
     def get_stats(self) -> Dict[str, Any]:
-        """Get current metrics."""
+        """获取当前指标统计。"""
         stats = self.metrics.copy()
         stats["domains_scraped"] = list(stats["domains_scraped"])
         stats["success_rate"] = self.metrics["successful_requests"] / max(
@@ -65,7 +65,7 @@ class MetricsCollector:
         return stats
 
     def reset(self) -> None:
-        """Reset metrics."""
+        """重置所有指标。"""
         self.metrics = {
             "total_requests": 0,
             "successful_requests": 0,
