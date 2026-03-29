@@ -301,6 +301,16 @@ class PDFProcessor:
                         )
                     )
 
+                    # 图片引用规范化：统一路径为 ./images/filename
+                    if not embed_images_setting:
+                        from ..markdown.image_ref_normalizer import (
+                            normalize_image_references,
+                        )
+
+                        markdown_content = normalize_image_references(
+                            markdown_content, self.enhanced_processor.images
+                        )
+
                     # Add enhanced assets summary to result
                     extraction_result["enhanced_assets"] = (
                         self.enhanced_processor.get_extraction_summary()
