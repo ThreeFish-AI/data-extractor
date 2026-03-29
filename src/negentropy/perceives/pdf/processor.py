@@ -1171,6 +1171,16 @@ class PDFProcessor:
     ) -> Dict[str, Any]:
         """将 DoclingConversionResult 转换为项目标准输出格式。"""
         content = docling_result.markdown
+
+        # 安全网：清理残留的 <!-- formula-not-decoded --> 占位符
+        from ..markdown.formula_placeholder_resolver import (
+            has_formula_placeholders,
+            resolve_formula_placeholders,
+        )
+
+        if has_formula_placeholders(content):
+            content = resolve_formula_placeholders(content, remove_unresolved=True)
+
         text = content
 
         # 构建 enhanced_assets 摘要
