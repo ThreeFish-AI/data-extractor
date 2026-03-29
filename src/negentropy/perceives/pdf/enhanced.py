@@ -61,14 +61,8 @@ class ExtractedFormula:
     description: Optional[str] = None
 
 
-# Caption detection patterns
-_CAPTION_PATTERNS = [
-    re.compile(
-        r"^(Figure|Fig\.?|Image|Diagram|Chart|Graph|Illustration)\s*\d+", re.IGNORECASE
-    ),
-    re.compile(r"^(图|插图|示意图|架构图|流程图)\s*\d+", re.IGNORECASE),
-    re.compile(r"^(Table|表)\s*\d+", re.IGNORECASE),
-]
+# Caption detection patterns (共享定义，从 figure_text_filter 导入)
+from .figure_text_filter import CAPTION_PATTERNS as _CAPTION_PATTERNS
 
 
 class EnhancedPDFProcessor:

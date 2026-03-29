@@ -351,6 +351,9 @@ class DoclingEngine:
                 doc, embed_images=embed_images
             )
 
+            # 2.5 移除图内文字（figure-internal text filtering）
+            markdown = self._filter_figure_internal_texts(doc, markdown)
+
             # 3. LaTeX 后处理（复用现有清洗逻辑）
             from .math_formula import DoclingFormulaEnricher
 
@@ -426,6 +429,134 @@ class DoclingEngine:
             logger.warning("ImageRefMode 导出失败，降级为默认模式: %s", e)
 
         return doc.export_to_markdown()
+
+    # ------------------------------------------------------------------
+    # 图内文字过滤
+    # ------------------------------------------------------------------
+
+    def _filter_figure_internal_texts(self, doc: Any, markdown: str) -> str:
+        """识别并移除 Markdown 中混入正文的图内文字。
+
+        利用 ``doc.pictures`` 的边界框与 ``doc.iterate_items()`` 中各
+        TEXT/PARAGRAPH 元素的边界框进行空间重叠检测，将落在图区域内的
+        文本从导出的 Markdown 中移除。
+
+        Args:
+            doc: Docling ``DoclingDocument`` 实例。
+            markdown: ``export_to_markdown()`` 产出的原始 Markdown。
+
+        Returns:
+            过滤后的 Markdown 文本。
+        """
+        from .figure_text_filter import (
+            FigureRegion,
+            collect_figure_internal_texts,
+            remove_texts_from_markdown,
+        )
+
+        figure_regions = self._collect_figure_regions(doc)
+        if not figure_regions:
+            return markdown
+
+        # 收集文档元素列表
+        items: list = []
+        if hasattr(doc, "iterate_items"):
+            try:
+                items = list(doc.iterate_items())
+            except Exception as e:
+                logger.debug("iterate_items() 失败: %s", e)
+                return markdown
+
+        if not items:
+            return markdown
+
+        def _get_label(item_tuple):
+            item = item_tuple[0]
+            return str(getattr(item, "label", "")).lower()
+
+        def _get_text(item_tuple):
+            item = item_tuple[0]
+            return getattr(item, "text", "") or ""
+
+        def _get_page_no(item_tuple):
+            item = item_tuple[0]
+            return self._get_page_number(item)
+
+        def _get_bbox(item_tuple):
+            item = item_tuple[0]
+            prov = getattr(item, "prov", None)
+            if prov and len(prov) > 0:
+                return self._extract_bbox_tuple(getattr(prov[0], "bbox", None))
+            return None
+
+        texts_to_remove = collect_figure_internal_texts(
+            items,
+            figure_regions,
+            get_label=_get_label,
+            get_text=_get_text,
+            get_page_no=_get_page_no,
+            get_bbox=_get_bbox,
+        )
+
+        if texts_to_remove:
+            logger.info("检测到 %d 段图内文字，将从 Markdown 中移除", len(texts_to_remove))
+            markdown = remove_texts_from_markdown(markdown, texts_to_remove)
+
+        return markdown
+
+    def _collect_figure_regions(self, doc: Any) -> List["FigureRegion"]:
+        """从文档中提取所有图片/图表的边界框。"""
+        from .figure_text_filter import FigureRegion
+
+        regions: List[FigureRegion] = []
+        if not hasattr(doc, "pictures"):
+            return regions
+
+        for pic in doc.pictures:
+            prov = getattr(pic, "prov", None)
+            if not prov or len(prov) == 0:
+                continue
+            page_no = getattr(prov[0], "page_no", None)
+            bbox_obj = getattr(prov[0], "bbox", None)
+            if page_no is None or bbox_obj is None:
+                continue
+            bbox = self._extract_bbox_tuple(bbox_obj)
+            if bbox:
+                caption = self._safe_caption(pic, doc)
+                regions.append(
+                    FigureRegion(page_no=page_no, bbox=bbox, caption=caption)
+                )
+
+        return regions
+
+    @staticmethod
+    def _extract_bbox_tuple(
+        bbox_obj: Any,
+    ) -> Optional[Tuple[float, float, float, float]]:
+        """从 Docling BoundingBox 对象中提取 (x0, y0, x1, y1) 元组。
+
+        兼容多种属性命名：``l/t/r/b`` 或 ``x0/y0/x1/y1``。
+        """
+        if bbox_obj is None:
+            return None
+
+        # 尝试 Docling BoundingBox: l (left), t (top), r (right), b (bottom)
+        l = getattr(bbox_obj, "l", None)
+        t = getattr(bbox_obj, "t", None)
+        r = getattr(bbox_obj, "r", None)
+        b = getattr(bbox_obj, "b", None)
+        if all(v is not None for v in (l, t, r, b)):
+            return (float(l), float(t), float(r), float(b))
+
+        # 尝试 x0/y0/x1/y1
+        x0 = getattr(bbox_obj, "x0", None)
+        y0 = getattr(bbox_obj, "y0", None)
+        x1 = getattr(bbox_obj, "x1", None)
+        y1 = getattr(bbox_obj, "y1", None)
+        if all(v is not None for v in (x0, y0, x1, y1)):
+            return (float(x0), float(y0), float(x1), float(y1))
+
+        return None
 
     # ------------------------------------------------------------------
     # 结构化元素提取

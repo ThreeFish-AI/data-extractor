@@ -554,6 +554,42 @@ class PDFProcessor:
                                     table_block_nos.add(block[5])
                                     break
 
+                # Pre-compute which text blocks overlap with image/figure regions.
+                # 图内文字过滤：与 table_block_nos 相同的模式，将落在图片边界
+                # 框内的文本块排除，防止图表标注混入正文。
+                figure_block_nos: set = set()
+                if page_image_map:
+                    from .figure_text_filter import is_caption_text, is_text_inside_figure
+
+                    # 收集图片边界框
+                    image_bboxes = []
+                    for block in blocks:
+                        if block[6] == 1:  # image block
+                            image_bboxes.append(
+                                (block[0], block[1], block[2], block[3])
+                            )
+                    # 同时使用 ExtractedImage 的精确位置
+                    for _bno, img in page_image_map.items():
+                        pos = img.position
+                        if pos:
+                            image_bboxes.append(
+                                (pos["x0"], pos["y0"], pos["x1"], pos["y1"])
+                            )
+
+                    for block in blocks:
+                        if block[6] != 0:
+                            continue
+                        block_text = block[4].strip() if block[4] else ""
+                        if not block_text:
+                            continue
+                        if is_caption_text(block_text):
+                            continue
+                        text_bbox = (block[0], block[1], block[2], block[3])
+                        for img_bbox in image_bboxes:
+                            if is_text_inside_figure(text_bbox, img_bbox):
+                                figure_block_nos.add(block[5])
+                                break
+
                 # Build unified element list: (y_position, content)
                 # to maintain correct vertical ordering
                 page_elements: list = []
@@ -581,6 +617,8 @@ class PDFProcessor:
                         if block[6] == 0:  # text block
                             if block_no in table_block_nos:
                                 continue  # Skip text covered by a table
+                            if block_no in figure_block_nos:
+                                continue  # Skip text inside a figure/chart
                             block_text = block[4].strip()
                             if block_text:
                                 if is_algorithm_block(block_text):
