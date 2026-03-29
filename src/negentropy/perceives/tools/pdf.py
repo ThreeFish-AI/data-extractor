@@ -40,6 +40,8 @@ async def convert_pdf_to_markdown(
                 "auto"（自动选择最佳引擎，优先 Docling）、
                 "smart"（LLM 编排多引擎并行处理 + 择优融合，最高质量，需配置 LLM API Key）、
                 "docling"（Docling 引擎，AI 布局分析 + TableFormer 表格 + 代码检测，适合复杂文档）、
+                "mineru"（MinerU 引擎，基于深度学习的文档结构分析，擅长学术论文与多栏排版，支持公式与表格提取）、
+                "marker"（Marker 引擎，基于 Nougat 模型，擅长学术文档转换，保留公式与结构化排版）、
                 "pymupdf"（PyMuPDF引擎，快速处理）、
                 "pypdf"（PyPDF引擎，适合简单文本）""",
         ),
@@ -79,6 +81,10 @@ async def convert_pdf_to_markdown(
 
     This tool can process PDF files from URLs or local file paths:
     - auto: Automatically choose the best extraction method
+    - smart: LLM-orchestrated multi-engine parallel processing with quality fusion
+    - docling: Docling engine with AI layout analysis and TableFormer tables
+    - mineru: MinerU engine with deep learning-based document structure analysis
+    - marker: Marker engine based on Nougat model for academic document conversion
     - pymupdf: Use PyMuPDF (fitz) library for extraction
     - pypdf: Use pypdf library for extraction
 
@@ -225,6 +231,10 @@ async def batch_convert_pdfs_to_markdown(
         Field(
             description="""统一的PDF提取方法：
                 "auto"（智能选择最佳引擎）、
+                "smart"（LLM 编排多引擎并行处理 + 择优融合，需配置 LLM API Key）、
+                "docling"（AI 布局分析 + TableFormer 表格，适合复杂文档）、
+                "mineru"（基于深度学习的文档结构分析，擅长学术论文与多栏排版）、
+                "marker"（基于 Nougat 模型，擅长学术文档转换，保留公式与结构化排版）、
                 "pymupdf"（适合复杂排版和图表）、
                 "pypdf"（适合简单纯文本文档）""",
         ),

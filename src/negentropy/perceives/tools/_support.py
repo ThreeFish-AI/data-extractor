@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 ScrapeMethod = Literal["auto", "simple", "scrapy", "selenium"]
 BrowserMethod = Literal["selenium", "playwright"]
-PDFMethod = Literal["auto", "pymupdf", "pypdf", "docling", "smart"]
+PDFMethod = Literal["auto", "pymupdf", "pypdf", "docling", "smart", "mineru", "marker"]
 PDFOutputFormat = Literal["markdown", "text"]
 StructuredDataType = Literal[
     "all", "contact", "social", "content", "products", "addresses"

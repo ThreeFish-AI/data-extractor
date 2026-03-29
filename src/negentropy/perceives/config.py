@@ -207,6 +207,34 @@ class NegentropyPerceivesSettings(BaseSettings):
         default=True, description="启用 Docling 数学公式提取"
     )
 
+    # ── MinerU PDF 引擎 ──────────────────────────────────────
+    mineru_enabled: bool = Field(
+        default=False,
+        description="启用 MinerU 作为 PDF 提取引擎（Apache 2.0，最佳 LaTeX 公式提取，CDM 90.85）",
+    )
+    mineru_device: str = Field(
+        default="auto",
+        description="MinerU 推理设备：auto / cpu / mlx (Apple Silicon) / cuda",
+    )
+    mineru_backend: str = Field(
+        default="auto",
+        description="MinerU 后端：auto（优先 MLX on Apple Silicon）/ pipeline / vlm",
+    )
+
+    # ── Marker PDF 引擎 ──────────────────────────────────────
+    marker_enabled: bool = Field(
+        default=False,
+        description="启用 Marker 作为 PDF 提取引擎（GPL-3.0，最佳整体准确率 95.67）",
+    )
+    marker_llm_enhanced: bool = Field(
+        default=False,
+        description="启用 Marker LLM 增强模式（需额外 LLM 配置）",
+    )
+    marker_license_acknowledged: bool = Field(
+        default=False,
+        description="确认 Marker GPL-3.0 许可证条款（商业使用需评估）",
+    )
+
     model_config = {
         "env_file": _resolve_env_files(),
         "env_file_encoding": "utf-8",

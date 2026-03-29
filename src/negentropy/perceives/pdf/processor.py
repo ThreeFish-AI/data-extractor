@@ -28,8 +28,27 @@ from .math_formula import (
     MathRegion,
 )
 from .docling_engine import DoclingEngine, DoclingConversionResult
+from .mineru_engine import MinerUEngine, MinerUConversionResult
+from .marker_engine import MarkerEngine, MarkerConversionResult
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# 引擎优先级与降级链
+# ---------------------------------------------------------------------------
+
+# 每个 "auto" 模式的降级链：按优先级排列，前面的引擎不可用或失败时自动降级
+_ENGINE_FALLBACK_CHAIN = [
+    "docling",   # 最佳整体质量（MIT 许可证）
+    "mineru",    # 最佳 LaTeX 公式提取（Apache 2.0）
+    "marker",    # 最佳整体准确率（GPL-3.0，需确认许可证）
+    "pymupdf",   # 快速文本提取（始终可用）
+    "pypdf",     # 基础降级（始终可用）
+]
+
+# 简化降级链（不包含 MinerU/Marker，保持向后兼容）
+_SIMPLE_FALLBACK_CHAIN = ["docling", "pymupdf", "pypdf"]
 
 
 def _import_fitz():
@@ -59,7 +78,7 @@ class PDFProcessor:
             output_dir: Directory to save extracted images and assets
             prefer_docling: Whether to prefer Docling engine when available (default: True)
         """
-        self.supported_methods = ["pymupdf", "pypdf", "auto", "docling", "smart"]
+        self.supported_methods = ["pymupdf", "pypdf", "auto", "docling", "smart", "mineru", "marker"]
         self.temp_dir = tempfile.mkdtemp(prefix="pdf_extractor_")
         self._output_dir = output_dir
         self.enable_enhanced_features = enable_enhanced_features
@@ -73,6 +92,9 @@ class PDFProcessor:
 
         # Docling 引擎（延迟初始化，仅当 prefer_docling=True 且已安装时）
         self._docling_engine: Optional[DoclingEngine] = None
+        self._mineru_engine: Optional[MinerUEngine] = None
+        self._marker_engine: Optional[MarkerEngine] = None
+
         if prefer_docling and DoclingEngine.is_available():
             from ..config import settings
 
@@ -87,6 +109,12 @@ class PDFProcessor:
                 layout_batch_size=settings.accelerator_layout_batch_size,
                 table_batch_size=settings.accelerator_table_batch_size,
             )
+
+        # MinerU 引擎（延迟初始化，仅当配置启用且已安装时）
+        self._init_mineru_engine()
+
+        # Marker 引擎（延迟初始化，仅当配置启用且已安装时）
+        self._init_marker_engine()
 
         # Page-level image maps populated during enhanced extraction,
         # consumed during text extraction for inline image placement.
@@ -105,6 +133,116 @@ class PDFProcessor:
         # Page-level math regions detected during formula extraction.
         # Structure: {page_num: [MathRegion, ...]}
         self._page_math_regions: Dict[int, List[MathRegion]] = {}
+
+    # ------------------------------------------------------------------
+    # 引擎初始化辅助方法
+    # ------------------------------------------------------------------
+
+    def _init_mineru_engine(self) -> None:
+        """初始化 MinerU 引擎（仅当配置启用且已安装时）。"""
+        try:
+            from ..config import settings
+
+            if settings.mineru_enabled and MinerUEngine.is_available():
+                self._mineru_engine = MinerUEngine(
+                    output_dir=self._output_dir,
+                    device=settings.mineru_device,
+                    backend=settings.mineru_backend,
+                )
+                logger.info("MinerU 引擎已初始化")
+        except Exception as e:
+            logger.warning("MinerU 引擎初始化失败: %s", e)
+            self._mineru_engine = None
+
+    def _init_marker_engine(self) -> None:
+        """初始化 Marker 引擎（仅当配置启用且已安装时）。"""
+        try:
+            from ..config import settings
+
+            if settings.marker_enabled and MarkerEngine.is_available():
+                if not settings.marker_license_acknowledged:
+                    logger.warning(
+                        "Marker 引擎已安装且已启用，但 GPL-3.0 许可证未确认。"
+                        "请设置 NEGENTROPY_PERCEIVES_MARKER_LICENSE_ACKNOWLEDGED=true "
+                        "以启用 Marker 引擎。"
+                    )
+                    return
+                self._marker_engine = MarkerEngine(
+                    output_dir=self._output_dir,
+                    llm_enhanced=settings.marker_llm_enhanced,
+                )
+                logger.info("Marker 引擎已初始化")
+        except Exception as e:
+            logger.warning("Marker 引擎初始化失败: %s", e)
+            self._marker_engine = None
+
+    # ------------------------------------------------------------------
+    # 引擎可用性检测与动态选择
+    # ------------------------------------------------------------------
+
+    def _get_available_engines(self) -> List[str]:
+        """获取当前可用的引擎列表（按优先级排序）。
+
+        Returns:
+            可用引擎名称列表，按降级链优先级排序。
+        """
+        available: List[str] = []
+
+        for engine_name in _ENGINE_FALLBACK_CHAIN:
+            if self._is_engine_available(engine_name):
+                available.append(engine_name)
+
+        return available
+
+    def _is_engine_available(self, engine_name: str) -> bool:
+        """检测指定引擎是否可用。
+
+        Args:
+            engine_name: 引擎名称。
+
+        Returns:
+            引擎是否可用。
+        """
+        if engine_name == "docling":
+            return self._docling_engine is not None
+        elif engine_name == "mineru":
+            return self._mineru_engine is not None
+        elif engine_name == "marker":
+            return self._marker_engine is not None
+        elif engine_name == "pymupdf":
+            try:
+                from ._imports import import_fitz
+                import_fitz()
+                return True
+            except ImportError:
+                return False
+        elif engine_name == "pypdf":
+            try:
+                from ._imports import import_pypdf
+                import_pypdf()
+                return True
+            except ImportError:
+                return False
+        return False
+
+    def _select_engine(self, method: str) -> Optional[str]:
+        """根据 method 参数动态选择引擎。
+
+        Args:
+            method: "auto" 表示自动选择，其他值表示显式指定引擎。
+
+        Returns:
+            选中的引擎名称，或 None（无法选择时）。
+        """
+        if method != "auto":
+            # 显式指定引擎
+            if self._is_engine_available(method):
+                return method
+            return None
+
+        # auto 模式：按降级链选择第一个可用引擎
+        available = self._get_available_engines()
+        return available[0] if available else None
 
     async def process_pdf(
         self,
@@ -125,7 +263,7 @@ class PDFProcessor:
 
         Args:
             pdf_source: URL or local file path to PDF
-            method: Extraction method: auto, pymupdf, pypdf (default: auto)
+            method: Extraction method: auto, pymupdf, pypdf, docling, smart, mineru, marker (default: auto)
             include_metadata: Include PDF metadata in result (default: True)
             page_range: Tuple of (start_page, end_page) for partial extraction (optional)
             output_format: Output format: markdown, text (default: markdown)
@@ -242,6 +380,68 @@ class PDFProcessor:
                     "success": False,
                     "error": "Docling 引擎不可用，请安装 docling 可选依赖: "
                     "uv pip install negentropy-perceives[docling]",
+                    "source": pdf_source,
+                }
+
+            # ── MinerU 引擎路径 ──
+            # 当 MinerU 可用且 method 为 auto/mineru 时，使用 MinerU 引擎
+            if self._mineru_engine and method in ("auto", "mineru"):
+                try:
+                    logger.info("使用 MinerU 引擎转换 PDF: %s", pdf_source)
+                    page_range_tuple = page_range if page_range else None
+                    mineru_result = self._mineru_engine.convert(
+                        str(pdf_path),
+                        page_range=page_range_tuple,
+                    )
+                    if mineru_result and mineru_result.markdown:
+                        return self._build_result_from_mineru(
+                            mineru_result,
+                            pdf_source=pdf_source,
+                            include_metadata=include_metadata,
+                            output_format=output_format,
+                        )
+                    else:
+                        logger.warning("MinerU 返回空结果，降级至下一引擎")
+                except Exception as e:
+                    logger.warning("MinerU 转换失败，降级至下一引擎: %s", e)
+
+            # 若显式指定 mineru 但不可用，返回错误
+            if method == "mineru" and not self._mineru_engine:
+                return {
+                    "success": False,
+                    "error": "MinerU 引擎不可用，请安装 mineru 可选依赖: "
+                    "uv pip install negentropy-perceives[mineru]",
+                    "source": pdf_source,
+                }
+
+            # ── Marker 引擎路径 ──
+            # 当 Marker 可用且 method 为 auto/marker 时，使用 Marker 引擎
+            if self._marker_engine and method in ("auto", "marker"):
+                try:
+                    logger.info("使用 Marker 引擎转换 PDF: %s", pdf_source)
+                    marker_result = self._marker_engine.convert(
+                        str(pdf_path),
+                        embed_images=embed_images,
+                    )
+                    if marker_result and marker_result.markdown:
+                        return self._build_result_from_marker(
+                            marker_result,
+                            pdf_source=pdf_source,
+                            include_metadata=include_metadata,
+                            output_format=output_format,
+                        )
+                    else:
+                        logger.warning("Marker 返回空结果，降级至下一引擎")
+                except Exception as e:
+                    logger.warning("Marker 转换失败，降级至下一引擎: %s", e)
+
+            # 若显式指定 marker 但不可用，返回错误
+            if method == "marker" and not self._marker_engine:
+                return {
+                    "success": False,
+                    "error": "Marker 引擎不可用，请安装 marker 可选依赖: "
+                    "uv pip install negentropy-perceives[marker]。"
+                    "注意：Marker 使用 GPL-3.0 许可证。",
                     "source": pdf_source,
                 }
 
@@ -1300,6 +1500,204 @@ class PDFProcessor:
 
         if include_metadata:
             result["metadata"] = docling_result.metadata
+
+        return result
+
+    def _build_result_from_mineru(
+        self,
+        mineru_result: MinerUConversionResult,
+        pdf_source: str,
+        include_metadata: bool,
+        output_format: str,
+    ) -> Dict[str, Any]:
+        """将 MinerUConversionResult 转换为项目标准输出格式。"""
+        content = mineru_result.markdown
+
+        # 安全网：清理残留的公式占位符
+        from ..markdown.formula_placeholder_resolver import (
+            has_formula_placeholders,
+            resolve_formula_placeholders,
+        )
+
+        if has_formula_placeholders(content):
+            content = resolve_formula_placeholders(content, remove_unresolved=True)
+
+        text = content
+
+        # 构建 enhanced_assets 摘要
+        enhanced_assets: Dict[str, Any] = {}
+
+        if mineru_result.images:
+            enhanced_assets["images"] = {
+                "count": len(mineru_result.images),
+                "items": [
+                    {
+                        "caption": img.caption or "",
+                        "page": img.page_number,
+                        "filename": img.filename,
+                        "local_path": img.local_path,
+                        "width": img.width,
+                        "height": img.height,
+                        "mime_type": img.mime_type,
+                    }
+                    for img in mineru_result.images
+                ],
+                "files": [
+                    img.filename for img in mineru_result.images if img.filename
+                ],
+            }
+
+        if mineru_result.tables:
+            enhanced_assets["tables"] = {
+                "count": len(mineru_result.tables),
+                "items": [
+                    {
+                        "rows": t.rows,
+                        "columns": t.columns,
+                        "caption": t.caption or "",
+                        "page": t.page_number,
+                        "markdown": t.markdown,
+                    }
+                    for t in mineru_result.tables
+                ],
+            }
+
+        if mineru_result.formulas:
+            enhanced_assets["formulas"] = {
+                "count": len(mineru_result.formulas),
+                "block_count": sum(
+                    1 for f in mineru_result.formulas if f.formula_type == "block"
+                ),
+                "inline_count": sum(
+                    1 for f in mineru_result.formulas if f.formula_type == "inline"
+                ),
+            }
+
+        # MinerU 不支持代码块检测，跳过
+
+        # 输出目录
+        if self._mineru_engine and self._mineru_engine._output_dir:
+            enhanced_assets["output_directory"] = str(self._mineru_engine._output_dir)
+
+        result: Dict[str, Any] = {
+            "success": True,
+            "text": text,
+            "source": pdf_source,
+            "method_used": "mineru",
+            "output_format": output_format,
+            "pages_processed": mineru_result.page_count,
+            "word_count": len(text.split()),
+            "character_count": len(text),
+            "enhanced_assets": enhanced_assets,
+        }
+
+        if output_format == "markdown":
+            result["markdown"] = content
+
+        if include_metadata:
+            result["metadata"] = mineru_result.metadata
+
+        return result
+
+    def _build_result_from_marker(
+        self,
+        marker_result: MarkerConversionResult,
+        pdf_source: str,
+        include_metadata: bool,
+        output_format: str,
+    ) -> Dict[str, Any]:
+        """将 MarkerConversionResult 转换为项目标准输出格式。"""
+        content = marker_result.markdown
+
+        # 安全网：清理残留的公式占位符
+        from ..markdown.formula_placeholder_resolver import (
+            has_formula_placeholders,
+            resolve_formula_placeholders,
+        )
+
+        if has_formula_placeholders(content):
+            content = resolve_formula_placeholders(content, remove_unresolved=True)
+
+        text = content
+
+        # 构建 enhanced_assets 摘要
+        enhanced_assets: Dict[str, Any] = {}
+
+        if marker_result.images:
+            enhanced_assets["images"] = {
+                "count": len(marker_result.images),
+                "items": [
+                    {
+                        "caption": img.caption or "",
+                        "page": img.page_number,
+                        "filename": img.filename,
+                        "local_path": img.local_path,
+                        "width": img.width,
+                        "height": img.height,
+                        "mime_type": img.mime_type,
+                    }
+                    for img in marker_result.images
+                ],
+                "files": [
+                    img.filename for img in marker_result.images if img.filename
+                ],
+            }
+
+        if marker_result.tables:
+            enhanced_assets["tables"] = {
+                "count": len(marker_result.tables),
+                "items": [
+                    {
+                        "rows": t.rows,
+                        "columns": t.columns,
+                        "caption": t.caption or "",
+                        "page": t.page_number,
+                        "markdown": t.markdown,
+                    }
+                    for t in marker_result.tables
+                ],
+            }
+
+        if marker_result.formulas:
+            enhanced_assets["formulas"] = {
+                "count": len(marker_result.formulas),
+                "block_count": sum(
+                    1 for f in marker_result.formulas if f.formula_type == "block"
+                ),
+                "inline_count": sum(
+                    1 for f in marker_result.formulas if f.formula_type == "inline"
+                ),
+            }
+
+        if marker_result.code_blocks:
+            enhanced_assets["code_blocks"] = {
+                "count": len(marker_result.code_blocks),
+                "languages": list(
+                    {cb.language for cb in marker_result.code_blocks if cb.language}
+                ),
+            }
+
+        # 输出目录
+        if self._marker_engine and self._marker_engine._output_dir:
+            enhanced_assets["output_directory"] = str(self._marker_engine._output_dir)
+
+        result: Dict[str, Any] = {
+            "success": True,
+            "text": text,
+            "source": pdf_source,
+            "method_used": "marker",
+            "output_format": output_format,
+            "pages_processed": marker_result.page_count,
+            "word_count": len(text.split()),
+            "character_count": len(text),
+            "enhanced_assets": enhanced_assets,
+        }
+
+        if output_format == "markdown":
+            result["markdown"] = content
+
+        if include_metadata:
+            result["metadata"] = marker_result.metadata
 
         return result
 
