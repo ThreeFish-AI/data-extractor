@@ -356,6 +356,12 @@ class DoclingEngine:
 
             markdown = DoclingFormulaEnricher.postprocess_latex(markdown)
 
+            # 3.5 图片引用规范化：替换占位符、统一路径格式
+            if not embed_images:
+                from ..markdown.image_ref_normalizer import normalize_image_references
+
+                markdown = normalize_image_references(markdown, images)
+
             # 4. 提取结构化元素（表格、公式、代码块）
             tables = self._extract_tables(doc)
             formulas = self._extract_formulas(doc, markdown)
