@@ -9,6 +9,7 @@ import unicodedata
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 from dataclasses import dataclass
+from .figure_text_filter import CAPTION_PATTERNS as _CAPTION_PATTERNS
 
 # PyMuPDF imports for PDF processing
 try:
@@ -59,10 +60,6 @@ class ExtractedFormula:
     page_number: Optional[int] = None
     position: Optional[Dict[str, float]] = None
     description: Optional[str] = None
-
-
-# Caption detection patterns (共享定义，从 figure_text_filter 导入)
-from .figure_text_filter import CAPTION_PATTERNS as _CAPTION_PATTERNS
 
 
 class EnhancedPDFProcessor:
