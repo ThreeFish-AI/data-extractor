@@ -510,7 +510,9 @@ class DoclingEngine:
 
     def _collect_figure_regions(self, doc: Any) -> List["FigureRegion"]:
         """从文档中提取所有图片/图表的边界框。"""
-        regions: List["FigureRegion"] = []
+        from .figure_text_filter import FigureRegion
+
+        regions: List[FigureRegion] = []
         if not hasattr(doc, "pictures"):
             return regions
 
