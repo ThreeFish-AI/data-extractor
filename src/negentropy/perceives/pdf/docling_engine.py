@@ -356,6 +356,21 @@ class DoclingEngine:
 
             markdown = DoclingFormulaEnricher.postprocess_latex(markdown)
 
+            # 3.1 公式占位符解析：替换 <!-- formula-not-decoded -->
+            from ..markdown.formula_placeholder_resolver import (
+                extract_fallback_formulas,
+                has_formula_placeholders,
+                resolve_formula_placeholders,
+            )
+
+            if has_formula_placeholders(markdown):
+                fallback_regions = extract_fallback_formulas(
+                    pdf_path, page_range=page_range
+                )
+                markdown = resolve_formula_placeholders(
+                    markdown, fallback_formulas=fallback_regions
+                )
+
             # 3.5 图片引用规范化：替换占位符、统一路径格式
             if not embed_images:
                 from ..markdown.image_ref_normalizer import normalize_image_references
