@@ -559,7 +559,10 @@ class PDFProcessor:
                 # 框内的文本块排除，防止图表标注混入正文。
                 figure_block_nos: set = set()
                 if page_image_map:
-                    from .figure_text_filter import is_caption_text, is_text_inside_figure
+                    from .figure_text_filter import (
+                        is_caption_text,
+                        is_text_inside_figure,
+                    )
 
                     # 收集图片边界框
                     image_bboxes = []

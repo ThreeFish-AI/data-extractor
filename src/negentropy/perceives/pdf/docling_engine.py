@@ -13,7 +13,10 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from .figure_text_filter import FigureRegion
 
 logger = logging.getLogger(__name__)
 
@@ -449,7 +452,6 @@ class DoclingEngine:
             过滤后的 Markdown 文本。
         """
         from .figure_text_filter import (
-            FigureRegion,
             collect_figure_internal_texts,
             remove_texts_from_markdown,
         )
@@ -499,7 +501,9 @@ class DoclingEngine:
         )
 
         if texts_to_remove:
-            logger.info("检测到 %d 段图内文字，将从 Markdown 中移除", len(texts_to_remove))
+            logger.info(
+                "检测到 %d 段图内文字，将从 Markdown 中移除", len(texts_to_remove)
+            )
             markdown = remove_texts_from_markdown(markdown, texts_to_remove)
 
         return markdown
@@ -541,12 +545,12 @@ class DoclingEngine:
             return None
 
         # 尝试 Docling BoundingBox: l (left), t (top), r (right), b (bottom)
-        l = getattr(bbox_obj, "l", None)
-        t = getattr(bbox_obj, "t", None)
-        r = getattr(bbox_obj, "r", None)
-        b = getattr(bbox_obj, "b", None)
-        if all(v is not None for v in (l, t, r, b)):
-            return (float(l), float(t), float(r), float(b))
+        left = getattr(bbox_obj, "l", None)
+        top = getattr(bbox_obj, "t", None)
+        right = getattr(bbox_obj, "r", None)
+        bottom = getattr(bbox_obj, "b", None)
+        if all(v is not None for v in (left, top, right, bottom)):
+            return (float(left), float(top), float(right), float(bottom))
 
         # 尝试 x0/y0/x1/y1
         x0 = getattr(bbox_obj, "x0", None)

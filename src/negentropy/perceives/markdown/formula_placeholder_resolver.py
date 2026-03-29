@@ -191,7 +191,7 @@ def _salvage_unicode_context(
     转为 LaTeX 行内公式。最后根据 *remove_unresolved* 决定是否
     清除残留占位符。
     """
-    from ..pdf.math_formula import has_math_unicode, unicode_to_latex
+    from ..pdf.math_formula import has_math_unicode
 
     # 匹配占位符 + 可选空行 + 下一文本行
     pattern = re.compile(
