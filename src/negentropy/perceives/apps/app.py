@@ -88,7 +88,10 @@ def main() -> None:
             host=binding_host,
             port=binding_port,
             path=binding_path,
-            uvicorn_config={"log_config": uvicorn_log_config},
+            uvicorn_config={
+                "log_config": uvicorn_log_config,
+                "timeout_graceful_shutdown": 5,
+            },
         )
     else:
         logger.info("Starting STDIO server")

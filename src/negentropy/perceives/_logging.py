@@ -2,6 +2,7 @@
 
 import logging
 import logging.config
+import warnings
 from typing import Any
 
 # 统一格式常量（与 pyproject.toml [tool.pytest.ini_options] log_cli_format 风格对齐）
@@ -21,7 +22,35 @@ _THIRD_PARTY_OVERRIDES: dict[str, str] = {
     "undetected_chromedriver": "WARNING",
     "scrapy": "WARNING",
     "playwright": "WARNING",
+    "mcp.server.lowlevel": "WARNING",
+    "mcp.server.lowlevel.server": "WARNING",
 }
+
+
+def _configure_warning_filters() -> None:
+    """抑制第三方依赖链中已知无害的 DeprecationWarning。
+
+    这些警告源自 Docling 的传递依赖（SWIG 绑定、PyTorch），会被
+    MCP 低层服务器的 ``warnings.catch_warnings(record=True)`` 捕获并
+    以 INFO 级别重新记录。在 warnings 模块层面过滤可从源头阻断。
+    """
+    # SWIG 类型（Docling → Poppler/pdfium 绑定）
+    warnings.filterwarnings(
+        "ignore",
+        message=r"builtin type Swig.*has no __module__ attribute",
+        category=DeprecationWarning,
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message=r"builtin type swigvarlink has no __module__ attribute",
+        category=DeprecationWarning,
+    )
+    # torch.jit.script_method（PyTorch，Docling ML 模型使用）
+    warnings.filterwarnings(
+        "ignore",
+        message=r"`torch\.jit\.script_method` is deprecated",
+        category=DeprecationWarning,
+    )
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -30,10 +59,13 @@ def setup_logging(log_level: str = "INFO") -> None:
     - 设置 root logger 的级别与格式
     - 将所有日志输出到 stderr（避免 STDIO 传输模式下污染 MCP 协议流）
     - 压制高 verbosity 第三方库的日志级别
+    - 抑制已知无害的 DeprecationWarning
 
     Args:
         log_level: 应用日志级别（来自 settings.log_level）
     """
+    _configure_warning_filters()
+
     level = getattr(logging, log_level.upper(), logging.INFO)
 
     config: dict[str, Any] = {

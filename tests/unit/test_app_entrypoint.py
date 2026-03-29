@@ -59,6 +59,7 @@ class TestAppMain:
         assert call_kwargs["path"] == "/mcp"
         assert "uvicorn_config" in call_kwargs
         assert "log_config" in call_kwargs["uvicorn_config"]
+        assert call_kwargs["uvicorn_config"]["timeout_graceful_shutdown"] == 5
 
     def test_main_stdio_mode_no_uvicorn_config(self, caplog, monkeypatch):
         """STDIO 模式下不传入 uvicorn_config。"""
