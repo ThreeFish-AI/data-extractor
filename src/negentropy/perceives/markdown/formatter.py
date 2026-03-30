@@ -4,9 +4,66 @@ import logging
 import os
 import re
 import uuid
-from typing import Dict, Optional, Tuple
+from enum import Enum, auto
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# 行类型分类：用于段落间距归一化
+# ---------------------------------------------------------------------------
+
+class _LineType(Enum):
+    """Markdown 行级元素类型。"""
+    EMPTY = auto()
+    HEADING = auto()
+    LIST_ITEM = auto()
+    TABLE_ROW = auto()
+    BLOCKQUOTE = auto()
+    CODE_FENCE = auto()
+    HR = auto()
+    CODEBLOCK_PLACEHOLDER = auto()
+    PLAIN_TEXT = auto()
+
+
+_LINE_PATTERNS: List[Tuple[re.Pattern, _LineType]] = [
+    (re.compile(r"^\s*$"), _LineType.EMPTY),
+    (re.compile(r"^#{1,6}\s"), _LineType.HEADING),
+    (re.compile(r"^\s*[-*+]\s"), _LineType.LIST_ITEM),
+    (re.compile(r"^\s*\d+\.\s"), _LineType.LIST_ITEM),
+    (re.compile(r"^\s*\|.*\|\s*$"), _LineType.TABLE_ROW),
+    (re.compile(r"^\s*>"), _LineType.BLOCKQUOTE),
+    (re.compile(r"^```"), _LineType.CODE_FENCE),
+    (re.compile(r"^---+\s*$|^\*\*\*+\s*$|^___+\s*$"), _LineType.HR),
+    (re.compile(r"^%%CODEBLOCK_"), _LineType.CODEBLOCK_PLACEHOLDER),
+]
+
+# 同构序列：这些行类型相邻时保持单个 \n
+_HOMOGENEOUS_PAIRS = frozenset({
+    (_LineType.LIST_ITEM, _LineType.LIST_ITEM),
+    (_LineType.TABLE_ROW, _LineType.TABLE_ROW),
+    (_LineType.BLOCKQUOTE, _LineType.BLOCKQUOTE),
+})
+
+
+def _classify_line(line: str) -> _LineType:
+    """将 Markdown 行分类为对应的块级元素类型。"""
+    for pattern, line_type in _LINE_PATTERNS:
+        if pattern.match(line):
+            return line_type
+    return _LineType.PLAIN_TEXT
+
+
+def _is_list_continuation(line: str) -> bool:
+    """判断行是否为列表项的缩进续行（非新列表标记的缩进文本）。"""
+    if not line or not line[0].isspace():
+        return False
+    stripped = line.lstrip()
+    # 本身是新列表标记则不算续行
+    if re.match(r"^[-*+]\s", stripped) or re.match(r"^\d+\.\s", stripped):
+        return False
+    return True
 
 # Default formatting options
 DEFAULT_FORMATTING_OPTIONS: Dict[str, bool] = {
@@ -65,6 +122,9 @@ class MarkdownFormatter:
 
             if self.options.get("apply_typography", True):
                 markdown_content = self._apply_typography_fixes(markdown_content)
+
+            if self.options.get("fix_spacing", True):
+                markdown_content = self._normalize_paragraph_breaks(markdown_content)
 
             markdown_content = self._basic_cleanup(markdown_content)
 
@@ -306,8 +366,8 @@ class MarkdownFormatter:
                     fixed_lines.append(line)
                 text = "\n".join(fixed_lines)
 
-                text = re.sub(r"\s+([.!?:;,])", r"\1", text)
-                text = re.sub(r"([.!?])\s*([A-Z])", r"\1 \2", text)
+                text = re.sub(r"[^\S\n]+([.!?:;,])", r"\1", text)
+                text = re.sub(r"([.!?])[^\S\n]*([A-Z])", r"\1 \2", text)
 
                 return text
 
@@ -315,6 +375,76 @@ class MarkdownFormatter:
         except Exception as e:
             logger.warning(f"Error applying typography fixes: {str(e)}")
             return markdown_content
+
+    def _normalize_paragraph_breaks(self, markdown_content: str) -> str:
+        """归一化段落间距：确保块级元素间以 ``\\n\\n`` 分隔。
+
+        Web 页面依赖 CSS 控制段内折行，因此 MarkItDown 产出的连续纯文本行
+        代表独立段落，应以 ``\\n\\n`` 分隔。同构序列（列表项、表格行、引用行）
+        内部保持单个 ``\\n``，代码块内容完全不修改。
+        """
+        lines = markdown_content.split("\n")
+        if len(lines) <= 1:
+            return markdown_content
+
+        result: List[str] = [lines[0]]
+        inside_code_fence = lines[0].strip().startswith("```")
+
+        for i in range(1, len(lines)):
+            prev_line = lines[i - 1]
+            curr_line = lines[i]
+            curr_stripped = curr_line.strip()
+
+            # 代码围栏状态切换
+            if curr_stripped.startswith("```"):
+                if inside_code_fence:
+                    # 关闭代码围栏
+                    result.append(curr_line)
+                    inside_code_fence = False
+                    continue
+                else:
+                    # 打开代码围栏：确保前方有空行
+                    prev_type = _classify_line(prev_line)
+                    if prev_type != _LineType.EMPTY and result and result[-1].strip() != "":
+                        result.append("")
+                    inside_code_fence = True
+                    result.append(curr_line)
+                    continue
+
+            # 代码块内部：原样保留
+            if inside_code_fence:
+                result.append(curr_line)
+                continue
+
+            prev_type = _classify_line(prev_line)
+            curr_type = _classify_line(curr_line)
+
+            # 空行直接追加，无需插入
+            if prev_type == _LineType.EMPTY or curr_type == _LineType.EMPTY:
+                result.append(curr_line)
+                continue
+
+            # 列表项缩进续行：保持紧凑
+            if prev_type == _LineType.LIST_ITEM and _is_list_continuation(curr_line):
+                result.append(curr_line)
+                continue
+
+            # 列表续行后紧跟新列表项：属于同一列表，保持紧凑
+            if _is_list_continuation(prev_line) and curr_type == _LineType.LIST_ITEM:
+                result.append(curr_line)
+                continue
+
+            # 同构序列：保持单个 \n
+            if (prev_type, curr_type) in _HOMOGENEOUS_PAIRS:
+                result.append(curr_line)
+                continue
+
+            # 其他情况：确保 \n\n 分隔（仅在前一行非空时插入空行）
+            if result and result[-1].strip() != "":
+                result.append("")
+            result.append(curr_line)
+
+        return "\n".join(result)
 
     def _basic_cleanup(self, markdown_content: str) -> str:
         """Apply basic cleanup operations."""
