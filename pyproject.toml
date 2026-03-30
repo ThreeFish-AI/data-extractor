@@ -15,7 +15,7 @@ name = "negentropy-perceives"
 version = "0.2.0"
 description = "A commercial-grade MCP Server built on FastMCP, offering robust capabilities to read, extract, and localize (into Markdown) content from web pages and PDFs with both text and images. It is purpose-built for long-term deployment in enterprise environments."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 authors = [{ name = "ThreeFish-AI", email = "threefish.ai@gmail.com" }]
 license = "MIT"
 keywords = ["mcp", "web-crawler", "scrapy", "pdf", "markdown"]
@@ -62,10 +62,13 @@ docling = [
 llm = [
     "litellm>=1.70.0",
 ]
-all = [
-    "docling>=2.70.0",
-    "litellm>=1.70.0",
-]
+# ── 可选 PDF 引擎 (需单独安装，pillow 版本冲突不可共存) ──
+# MinerU (Apache 2.0): 最佳 LaTeX 公式提取 (CDM 90.85), Apple Silicon MLX 加速
+#   安装: uv pip install mineru
+# Marker (GPL-3.0): 最佳整体准确率 (95.67), 注意商业使用许可限制
+#   安装: uv pip install marker-pdf
+# 注意：mineru (pillow>=11) 与 marker-pdf (pillow<11) 存在依赖冲突，二者不可同时安装。
+# 安装后代码通过 is_available() 自动检测，无需额外配置。
 
 [project.scripts]
 negentropy-perceives = "negentropy.perceives.apps.app:main"

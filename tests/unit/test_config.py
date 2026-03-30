@@ -469,3 +469,186 @@ class TestDescribeConfigSources:
         result = describe_config_sources()
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+# ============================================================
+# MinerU 引擎配置字段验证
+# ============================================================
+class TestMinerUConfigFields:
+    """测试 MinerU 引擎相关配置字段。"""
+
+    def test_mineru_enabled_default(self):
+        """MinerU 引擎默认禁用。"""
+        config = NegentropyPerceivesSettings()
+        assert config.mineru_enabled is False
+
+    def test_mineru_enabled_env_override(self):
+        """环境变量 NEGENTROPY_PERCEIVES_MINERU_ENABLED=true 应启用 MinerU。"""
+        with patch.dict(
+            os.environ, {"NEGENTROPY_PERCEIVES_MINERU_ENABLED": "true"}
+        ):
+            config = NegentropyPerceivesSettings()
+            assert config.mineru_enabled is True
+
+    def test_mineru_device_default(self):
+        """MinerU 推理设备默认为 auto。"""
+        config = NegentropyPerceivesSettings()
+        assert config.mineru_device == "auto"
+
+    def test_mineru_device_valid_values(self):
+        """MinerU 推理设备合法值。"""
+        for device in ("auto", "cpu", "mlx", "cuda"):
+            config = NegentropyPerceivesSettings(mineru_device=device)
+            assert config.mineru_device == device
+
+    def test_mineru_device_env_override(self):
+        """环境变量覆盖 MinerU 推理设备。"""
+        with patch.dict(
+            os.environ, {"NEGENTROPY_PERCEIVES_MINERU_DEVICE": "mlx"}
+        ):
+            config = NegentropyPerceivesSettings()
+            assert config.mineru_device == "mlx"
+
+    def test_mineru_backend_default(self):
+        """MinerU 后端默认为 auto。"""
+        config = NegentropyPerceivesSettings()
+        assert config.mineru_backend == "auto"
+
+    def test_mineru_backend_valid_values(self):
+        """MinerU 后端合法值。"""
+        for backend in ("auto", "pipeline", "vlm"):
+            config = NegentropyPerceivesSettings(mineru_backend=backend)
+            assert config.mineru_backend == backend
+
+    def test_mineru_backend_env_override(self):
+        """环境变量覆盖 MinerU 后端。"""
+        with patch.dict(
+            os.environ, {"NEGENTROPY_PERCEIVES_MINERU_BACKEND": "pipeline"}
+        ):
+            config = NegentropyPerceivesSettings()
+            assert config.mineru_backend == "pipeline"
+
+
+# ============================================================
+# Marker 引擎配置字段验证
+# ============================================================
+class TestMarkerConfigFields:
+    """测试 Marker 引擎相关配置字段。"""
+
+    def test_marker_enabled_default(self):
+        """Marker 引擎默认禁用。"""
+        config = NegentropyPerceivesSettings()
+        assert config.marker_enabled is False
+
+    def test_marker_enabled_env_override(self):
+        """环境变量覆盖 Marker 启用状态。"""
+        with patch.dict(
+            os.environ, {"NEGENTROPY_PERCEIVES_MARKER_ENABLED": "true"}
+        ):
+            config = NegentropyPerceivesSettings()
+            assert config.marker_enabled is True
+
+    def test_marker_llm_enhanced_default(self):
+        """Marker LLM 增强模式默认禁用。"""
+        config = NegentropyPerceivesSettings()
+        assert config.marker_llm_enhanced is False
+
+    def test_marker_llm_enhanced_config(self):
+        """Marker LLM 增强模式配置。"""
+        config = NegentropyPerceivesSettings(
+            marker_llm_enhanced=True,
+            marker_license_acknowledged=True,
+        )
+        assert config.marker_llm_enhanced is True
+        assert config.marker_license_acknowledged is True
+
+    def test_marker_llm_enhanced_env_override(self):
+        """环境变量覆盖 Marker LLM 增强模式。"""
+        with patch.dict(
+            os.environ,
+            {
+                "NEGENTROPY_PERCEIVES_MARKER_LLM_ENHANCED": "true",
+                "NEGENTROPY_PERCEIVES_MARKER_LICENSE_ACKNOWLEDGED": "true",
+            },
+        ):
+            config = NegentropyPerceivesSettings()
+            assert config.marker_llm_enhanced is True
+            assert config.marker_license_acknowledged is True
+
+    def test_marker_license_acknowledged_default(self):
+        """Marker GPL-3.0 许可证确认默认不确认。"""
+        config = NegentropyPerceivesSettings()
+        assert config.marker_license_acknowledged is False
+
+    def test_marker_license_acknowledged_env_override(self):
+        """环境变量覆盖 Marker 许可证确认。"""
+        with patch.dict(
+            os.environ,
+            {"NEGENTROPY_PERCEIVES_MARKER_LICENSE_ACKNOWLEDGED": "true"},
+        ):
+            config = NegentropyPerceivesSettings()
+            assert config.marker_license_acknowledged is True
+
+
+# ============================================================
+# 多引擎配置集成验证
+# ============================================================
+class TestMultiEngineConfigIntegration:
+    """测试多引擎配置集成验证。"""
+
+    def test_all_engine_configs_default(self):
+        """Docling、MinerU、Marker 默认值验证。"""
+        config = NegentropyPerceivesSettings()
+        # 各引擎默认禁用
+        assert config.docling_enabled is False
+        assert config.mineru_enabled is False
+        assert config.marker_enabled is False
+
+    def test_all_engine_configs_enabled(self):
+        """各引擎可独立启用。"""
+        config = NegentropyPerceivesSettings(
+            docling_enabled=True,
+            mineru_enabled=True,
+            marker_enabled=True,
+        )
+        assert config.docling_enabled is True
+        assert config.mineru_enabled is True
+        assert config.marker_enabled is True
+
+    def test_all_engine_configs_env_override(self):
+        """环境变量可同时启用所有引擎。"""
+        with patch.dict(
+            os.environ,
+            {
+                "NEGENTROPY_PERCEIVES_DOCLING_ENABLED": "true",
+                "NEGENTROPY_PERCEIVES_MINERU_ENABLED": "true",
+                "NEGENTROPY_PERCEIVES_MARKER_ENABLED": "true",
+            },
+        ):
+            config = NegentropyPerceivesSettings()
+            assert config.docling_enabled is True
+            assert config.mineru_enabled is True
+            assert config.marker_enabled is True
+
+    def test_get_docling_settings_returns_dict(self):
+        """get_docling_settings() 应返回正确的 Docling 配置。"""
+        config = NegentropyPerceivesSettings(
+            docling_enabled=True,
+            docling_ocr_enabled=False,
+            docling_table_extraction_enabled=False,
+            docling_formula_extraction_enabled=True,
+            accelerator_device="mps",
+            accelerator_num_threads=8,
+            accelerator_ocr_batch_size=2,
+            accelerator_layout_batch_size=10,
+            accelerator_table_batch_size=15,
+        )
+        ds = config.get_docling_settings()
+        assert ds["device"] == "mps"
+        assert ds["num_threads"] == 8
+        assert ds["enable_ocr"] is False
+        assert ds["enable_table_extraction"] is False
+        assert ds["enable_formula_extraction"] is True
+        assert ds["ocr_batch_size"] == 2
+        assert ds["layout_batch_size"] == 10
+        assert ds["table_batch_size"] == 15

@@ -7,8 +7,10 @@
 - 三阶段编排流程（mock LLM + mock 引擎）
 - 启发式融合回退
 - 降级策略验证
+- 多引擎编排（docling + mineru + marker + pymupdf）
 """
 
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,6 +26,14 @@ from negentropy.perceives.pdf.llm_orchestrator import (
     PDFCharacteristics,
     _DEFAULT_PLAN,
     _extract_quality_signals,
+)
+from negentropy.perceives.pdf.marker_engine import (
+    MarkerConversionResult,
+    MarkerEngine,
+)
+from negentropy.perceives.pdf.mineru_engine import (
+    MinerUConversionResult,
+    MinerUEngine,
 )
 
 # 测试 PDF 路径
@@ -435,3 +445,327 @@ class TestPDFProcessorSmartMethod:
             )
             # 降级到 auto 后会因文件不存在而返回错误
             assert result.get("success") is False
+
+
+# ============================================================
+# 多引擎编排测试（docling + mineru + marker + pymupdf）
+# ============================================================
+class TestMultiEngineOrchestration:
+    """验证包含 docling + mineru + marker + pymupdf 的多引擎编排流程。"""
+
+    @pytest.mark.asyncio
+    async def test_four_engine_plan_analysis(self) -> None:
+        """四引擎编排计划应正确解析。"""
+        mock_client = MagicMock(spec=LLMClient)
+        orchestrator = LLMOrchestrator(llm_client=mock_client)
+
+        # 模拟 LLM 返回四引擎计划
+        llm_response = MagicMock(spec=LLMResponse)
+        llm_response.content = json.dumps({
+            "engine_tasks": [
+                {"engine": "docling", "focus": "全文档高保真转换", "priority": 8},
+                {"engine": "mineru", "focus": "LaTeX 公式提取", "priority": 7},
+                {"engine": "marker", "focus": "整体结构", "priority": 6},
+                {"engine": "pymupdf", "focus": "快速文本提取", "priority": 5},
+            ],
+            "synthesis_strategy": "merge",
+            "reasoning": "四引擎策略",
+        })
+
+        with patch.object(
+            orchestrator, "_quick_scan",
+            return_value=PDFCharacteristics(page_count=10, has_formulas=True),
+        ), patch.object(
+            orchestrator, "_llm_plan",
+            return_value=OrchestrationPlan(
+                characteristics=PDFCharacteristics(page_count=10, has_formulas=True),
+                engine_tasks=[
+                    EngineTask(engine="docling", focus="full", priority=8),
+                    EngineTask(engine="mineru", focus="formulas", priority=7),
+                    EngineTask(engine="marker", focus="structure", priority=6),
+                    EngineTask(engine="pymupdf", focus="text", priority=5),
+                ],
+                synthesis_strategy="merge",
+                reasoning="四引擎策略",
+            ),
+        ):
+            plan = await orchestrator._analyze_pdf(Path("/fake.pdf"), None)
+            assert len(plan.engine_tasks) == 4
+            assert plan.synthesis_strategy == "merge"
+
+    @pytest.mark.asyncio
+    async def test_heuristic_synthesize_four_engines(self) -> None:
+        """四引擎启发式融合应正确选择最佳引擎。"""
+        mock_client = MagicMock(spec=LLMClient)
+        orchestrator = LLMOrchestrator(llm_client=mock_client)
+
+        plan = OrchestrationPlan(
+            characteristics=PDFCharacteristics(page_count=10, has_formulas=True),
+            engine_tasks=[
+                EngineTask(engine="docling", focus="full", priority=8),
+                EngineTask(engine="mineru", focus="formulas", priority=7),
+                EngineTask(engine="marker", focus="structure", priority=6),
+                EngineTask(engine="pymupdf", focus="text", priority=5),
+            ],
+            synthesis_strategy="merge",
+        )
+
+        docling_result = EngineResult(
+            engine="docling",
+            success=True,
+            content="# Docling\n\nRich content with tables and formulas",
+            quality_signals={
+                "word_count": 1000,
+                "heading_count": 10,
+                "formula_block_count": 5,
+                "formula_inline_count": 10,
+                "table_lines": 20,
+                "code_fence_count": 3,
+                "image_count": 5,
+            },
+        )
+        mineru_result = EngineResult(
+            engine="mineru",
+            success=True,
+            content="# MinerU\n\n$$E = mc^2$$",
+            quality_signals={
+                "word_count": 900,
+                "heading_count": 8,
+                "formula_block_count": 10,
+                "formula_inline_count": 5,
+                "table_lines": 10,
+                "code_fence_count": 2,
+                "image_count": 3,
+            },
+        )
+        marker_result = EngineResult(
+            engine="marker",
+            success=True,
+            content="# Marker\n\n| A | B |\n|---|---|",
+            quality_signals={
+                "word_count": 800,
+                "heading_count": 5,
+                "formula_block_count": 3,
+                "formula_inline_count": 2,
+                "table_lines": 5,
+                "code_fence_count": 1,
+                "image_count": 2,
+            },
+        )
+        pymupdf_result = EngineResult(
+            engine="pymupdf",
+            success=True,
+            content="PyMuPDF plain text",
+            quality_signals={
+                "word_count": 500,
+                "heading_count": 2,
+                "formula_block_count": 0,
+                "formula_inline_count": 0,
+                "table_lines": 0,
+                "code_fence_count": 0,
+                "image_count": 0,
+            },
+        )
+
+        decision = orchestrator._heuristic_synthesize(
+            [docling_result, mineru_result, marker_result, pymupdf_result],
+            plan,
+        )
+        # docling 应得最高分
+        assert decision["primary_engine"] == "docling"
+
+    @pytest.mark.asyncio
+    async def test_mineru_as_formula_supplement(self) -> None:
+        """MinerU 公式更多时应被检测为公式补充源。"""
+        mock_client = MagicMock(spec=LLMClient)
+        orchestrator = LLMOrchestrator(llm_client=mock_client)
+
+        plan = OrchestrationPlan(
+            characteristics=PDFCharacteristics(page_count=10, has_formulas=True),
+            engine_tasks=[
+                EngineTask(engine="docling", focus="full", priority=8),
+                EngineTask(engine="mineru", focus="formulas", priority=7),
+            ],
+            synthesis_strategy="merge",
+        )
+
+        # docling 综合评分需高于 mineru
+        # 启发式评分公式:
+        #   score = word_count*0.001 + heading_count*5 + table_lines*3
+        #           + formula_block_count*10 + formula_inline_count*2
+        #           + code_fence_count*5 + image_count*3 + priority*2
+        # docling: 8.0 + 50 + 60 + 20 + 6 + 25 + 15 + 16 = 200
+        # mineru:  0.5 + 15 + 0 + 150 + 20 + 0 + 0 + 14 = 199.5
+        docling_result = EngineResult(
+            engine="docling",
+            success=True,
+            content="# Docling\n\nSome content",
+            quality_signals={
+                "word_count": 8000,
+                "heading_count": 10,
+                "formula_block_count": 2,
+                "formula_inline_count": 3,
+                "table_lines": 20,
+                "code_fence_count": 5,
+                "image_count": 5,
+            },
+        )
+        mineru_result = EngineResult(
+            engine="mineru",
+            success=True,
+            content="# MinerU\n\n$$x^2$$ $$y^2$$",
+            quality_signals={
+                "word_count": 500,
+                "heading_count": 3,
+                "formula_block_count": 15,
+                "formula_inline_count": 10,
+                "table_lines": 0,
+                "code_fence_count": 0,
+                "image_count": 0,
+            },
+        )
+
+        decision = orchestrator._heuristic_synthesize(
+            [docling_result, mineru_result],
+            plan,
+        )
+        # docling 仍为主体（结构化内容更丰富）
+        assert decision["primary_engine"] == "docling"
+        # MinerU 公式维度更强，应被检测为补充源
+        formula_supplements = [
+            s for s in decision["supplements"]
+            if s["content_type"] == "formulas"
+        ]
+        assert len(formula_supplements) == 1
+
+    @pytest.mark.asyncio
+    async def test_partial_engine_failures(self) -> None:
+        """部分引擎失败时仍能合成结果。"""
+        mock_client = MagicMock(spec=LLMClient)
+        orchestrator = LLMOrchestrator(llm_client=mock_client)
+
+        plan = OrchestrationPlan(
+            characteristics=PDFCharacteristics(page_count=5),
+            engine_tasks=[
+                EngineTask(engine="docling", focus="full", priority=8),
+                EngineTask(engine="mineru", focus="formulas", priority=7),
+                EngineTask(engine="marker", focus="structure", priority=6),
+                EngineTask(engine="pymupdf", focus="text", priority=5),
+            ],
+            synthesis_strategy="best_of",
+        )
+
+        docling_result = EngineResult(
+            engine="docling",
+            success=True,
+            content="# Docling content",
+            quality_signals={"word_count": 100, "heading_count": 5},
+        )
+        mineru_failed = EngineResult(
+            engine="mineru",
+            success=False,
+            error="MinerU not installed",
+        )
+        marker_failed = EngineResult(
+            engine="marker",
+            success=False,
+            error="Marker not installed",
+        )
+        pymupdf_result = EngineResult(
+            engine="pymupdf",
+            success=True,
+            content="PyMuPDF fallback text",
+            quality_signals={"word_count": 50, "heading_count": 1},
+        )
+
+        with (
+            patch.object(orchestrator, "_analyze_pdf", return_value=plan),
+            patch.object(
+                orchestrator,
+                "_execute_engines",
+                return_value=[docling_result, mineru_failed, marker_failed, pymupdf_result],
+            ),
+        ):
+            result = await orchestrator.orchestrate(Path("/fake.pdf"))
+
+        # 应有内容（至少一个引擎成功）
+        assert result.content != ""
+        assert "docling" in result.engines_used
+
+        # 失败的引擎不应在 engines_used 中
+        assert "mineru" not in result.engines_used
+        assert "marker" not in result.engines_used
+
+    @pytest.mark.asyncio
+    async def test_execute_mineru_and_marker_engines(self) -> None:
+        """验证 _execute_engines 能正确调度 mineru 和 marker 引擎。"""
+        mock_client = MagicMock(spec=LLMClient)
+
+        orchestrator = LLMOrchestrator(llm_client=mock_client)
+
+        plan = OrchestrationPlan(
+            characteristics=PDFCharacteristics(page_count=3),
+            engine_tasks=[
+                EngineTask(engine="mineru", focus="formulas", priority=7),
+                EngineTask(engine="marker", focus="structure", priority=6),
+            ],
+        )
+
+        mineru_engine_result = EngineResult(
+            engine="mineru",
+            success=True,
+            content="# MinerU\n$$E=mc^2$$",
+            quality_signals={"word_count": 50},
+        )
+        marker_engine_result = EngineResult(
+            engine="marker",
+            success=True,
+            content="# Marker\n| A | B |",
+            quality_signals={"word_count": 50},
+        )
+
+        with (
+            patch.object(orchestrator, "_run_mineru", return_value=mineru_engine_result),
+            patch.object(orchestrator, "_run_marker", return_value=marker_engine_result),
+        ):
+            results = await orchestrator._execute_engines(
+                Path("/fake.pdf"), plan, None,
+            )
+
+        assert len(results) == 2
+        # 检查 mineru 结果
+        mineru_res = next((r for r in results if r.engine == "mineru"), None)
+        assert mineru_res is not None
+        assert mineru_res.success is True
+        assert "$$E=mc^2$$" in mineru_res.content
+
+        # 检查 marker 结果
+        marker_res = next((r for r in results if r.engine == "marker"), None)
+        assert marker_res is not None
+        assert marker_res.success is True
+        assert "| A | B |" in marker_res.content
+
+    @pytest.mark.asyncio
+    async def test_execute_unavailable_engines_graceful(self) -> None:
+        """不可用的引擎应优雅地返回失败结果。"""
+        mock_client = MagicMock(spec=LLMClient)
+        orchestrator = LLMOrchestrator(llm_client=mock_client)
+
+        plan = OrchestrationPlan(
+            characteristics=PDFCharacteristics(),
+            engine_tasks=[
+                EngineTask(engine="mineru", focus="formulas", priority=7),
+                EngineTask(engine="marker", focus="structure", priority=6),
+            ],
+        )
+
+        with (
+            patch.object(MinerUEngine, "is_available", return_value=False),
+            patch.object(MarkerEngine, "is_available", return_value=False),
+        ):
+            results = await orchestrator._execute_engines(
+                Path("/fake.pdf"), plan, None,
+            )
+
+        assert len(results) == 2
+        assert all(not r.success for r in results)

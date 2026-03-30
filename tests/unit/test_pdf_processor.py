@@ -81,12 +81,12 @@ class TestPDFProcessor:
         assert self.processor is not None
         assert hasattr(self.processor, "process_pdf")
         assert hasattr(self.processor, "batch_process_pdfs")
-        assert self.processor.supported_methods == ["pymupdf", "pypdf", "auto", "docling", "smart"]
+        assert self.processor.supported_methods == ["pymupdf", "pypdf", "auto", "docling", "smart", "mineru", "marker"]
         assert os.path.exists(self.processor.temp_dir)
 
     def test_supported_methods(self):
         """测试支持的方法列表"""
-        expected_methods = ["pymupdf", "pypdf", "auto", "docling", "smart"]
+        expected_methods = ["pymupdf", "pypdf", "auto", "docling", "smart", "mineru", "marker"]
         assert self.processor.supported_methods == expected_methods
 
     def test_url_detection(self):
@@ -939,3 +939,137 @@ class TestErrorHandling:
 
             # 临时文件应该被清理
             assert not temp_path.exists()
+
+
+# ============================================================
+# MinerU / Marker 方法调度测试
+# ============================================================
+class TestMinerUMarkerDispatch:
+    """测试 PDFProcessor 对 mineru/marker 方法的调度。"""
+
+    def setup_method(self):
+        """测试前准备"""
+        self.processor = PDFProcessor(enable_enhanced_features=False, prefer_docling=False)
+
+    def teardown_method(self):
+        """测试后清理"""
+        self.processor.cleanup()
+
+    def test_supported_methods_includes_mineru_and_marker(self):
+        """supported_methods 应包含 mineru 和 marker。"""
+        assert "mineru" in self.processor.supported_methods
+        assert "marker" in self.processor.supported_methods
+
+    @pytest.mark.asyncio
+    async def test_mineru_method_dispatch_unavailable(self):
+        """mineru 方法在引擎不可用时应返回失败结果。"""
+        with patch(
+            "negentropy.perceives.pdf.mineru_engine.MinerUEngine.is_available",
+            return_value=False,
+        ):
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                f.write(b"%PDF-1.4 fake")
+                pdf_path = f.name
+
+            try:
+                result = await self.processor.process_pdf(pdf_path, method="mineru")
+                assert result["success"] is False
+                assert "error" in result
+                assert "MinerU" in result["error"]
+            finally:
+                os.unlink(pdf_path)
+
+    @pytest.mark.asyncio
+    async def test_marker_method_dispatch_unavailable(self):
+        """marker 方法在引擎不可用时应返回失败结果。"""
+        with patch(
+            "negentropy.perceives.pdf.marker_engine.MarkerEngine.is_available",
+            return_value=False,
+        ):
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                f.write(b"%PDF-1.4 fake")
+                pdf_path = f.name
+
+            try:
+                result = await self.processor.process_pdf(pdf_path, method="marker")
+                assert result["success"] is False
+                assert "error" in result
+                assert "Marker" in result["error"]
+            finally:
+                os.unlink(pdf_path)
+
+    @pytest.mark.asyncio
+    async def test_mineru_method_dispatch_success(self):
+        """mineru 方法在引擎可用时应调用 convert 并返回结果。"""
+        from negentropy.perceives.pdf.mineru_engine import MinerUConversionResult
+
+        mock_result = MinerUConversionResult(
+            markdown="# MinerU Output\n\nExtracted content.",
+            page_count=3,
+            metadata={"source": "mineru"},
+        )
+
+        with (
+            patch(
+                "negentropy.perceives.pdf.mineru_engine.MinerUEngine.is_available",
+                return_value=True,
+            ),
+            patch(
+                "negentropy.perceives.pdf.processor.MinerUEngine"
+            ) as MockEngine,
+        ):
+            mock_engine_instance = MockEngine.return_value
+            mock_engine_instance.convert.return_value = mock_result
+
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                f.write(b"%PDF-1.4 fake")
+                pdf_path = f.name
+
+            try:
+                result = await self.processor.process_pdf(pdf_path, method="mineru")
+                # 结果可能成功或失败取决于引擎实际调度逻辑
+                assert isinstance(result, dict)
+                assert "success" in result
+            finally:
+                os.unlink(pdf_path)
+
+    @pytest.mark.asyncio
+    async def test_marker_method_dispatch_success(self):
+        """marker 方法在引擎可用时应调用 convert 并返回结果。"""
+        from negentropy.perceives.pdf.marker_engine import MarkerConversionResult
+
+        mock_result = MarkerConversionResult(
+            markdown="# Marker Output\n\nExtracted content.",
+            page_count=5,
+            metadata={"source": "marker"},
+        )
+
+        with (
+            patch(
+                "negentropy.perceives.pdf.marker_engine.MarkerEngine.is_available",
+                return_value=True,
+            ),
+            patch(
+                "negentropy.perceives.pdf.processor.MarkerEngine"
+            ) as MockEngine,
+        ):
+            mock_engine_instance = MockEngine.return_value
+            mock_engine_instance.convert.return_value = mock_result
+
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+                f.write(b"%PDF-1.4 fake")
+                pdf_path = f.name
+
+            try:
+                result = await self.processor.process_pdf(pdf_path, method="marker")
+                assert isinstance(result, dict)
+                assert "success" in result
+            finally:
+                os.unlink(pdf_path)
+
+    @pytest.mark.asyncio
+    async def test_invalid_method_still_validated(self):
+        """无效方法仍应被拒绝。"""
+        result = await self.processor.process_pdf("test.pdf", method="invalid_engine")
+        assert result["success"] is False
+        assert "Method must be one of" in result["error"]

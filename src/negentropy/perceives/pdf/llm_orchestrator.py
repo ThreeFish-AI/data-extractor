@@ -48,7 +48,7 @@ class PDFCharacteristics:
 class EngineTask:
     """单个引擎的执行任务描述。"""
 
-    engine: str  # "docling" | "pymupdf" | "pypdf"
+    engine: str  # "docling" | "pymupdf" | "pypdf" | "mineru" | "marker"
     focus: str  # 该引擎的侧重点描述
     priority: int = 0  # 优先级权重（0-10，用于融合阶段）
 
@@ -447,15 +447,25 @@ class LLMOrchestrator:
         engine_tasks = []
         for task_data in data.get("engine_tasks", []):
             engine = task_data.get("engine", "")
-            if engine in ("docling", "pymupdf", "pypdf"):
+            if engine in ("docling", "pymupdf", "pypdf", "mineru", "marker"):
                 # 过滤不可用的引擎
                 if engine == "docling" and not (
                     self._docling_engine
                     and hasattr(self._docling_engine, "is_available")
                     and self._docling_engine.is_available()
                 ):
-                    logger.info("LLM 计划中包含 docling 但不可用，跳过")
+                    logger.info("LLM 计划中包含 docling 但不可用,跳过")
                     continue
+                if engine == "mineru":
+                    from .mineru_engine import MinerUEngine
+                    if not MinerUEngine.is_available():
+                        logger.info("LLM 计划中包含 mineru 但不可用,跳过")
+                        continue
+                if engine == "marker":
+                    from .marker_engine import MarkerEngine
+                    if not MarkerEngine.is_available():
+                        logger.info("LLM 计划中包含 marker 但不可用,跳过")
+                        continue
                 engine_tasks.append(
                     EngineTask(
                         engine=engine,
@@ -498,6 +508,14 @@ class LLMOrchestrator:
                 tasks.append(self._run_pymupdf(pdf_path, page_range))
             elif engine_task.engine == "pypdf":
                 tasks.append(self._run_pypdf(pdf_path, page_range))
+            elif engine_task.engine == "mineru":
+                tasks.append(self._run_mineru(pdf_path, page_range))
+            elif engine_task.engine == "marker":
+                tasks.append(self._run_marker(pdf_path, page_range))
+            elif engine_task.engine == "mineru":
+                tasks.append(self._run_mineru(pdf_path, page_range))
+            elif engine_task.engine == "marker":
+                tasks.append(self._run_marker(pdf_path, page_range))
 
         if not tasks:
             return []
@@ -648,6 +666,168 @@ class LLMOrchestrator:
         except Exception as e:
             logger.warning("PyMuPDF 引擎执行失败: %s", e)
             return EngineResult(engine="pymupdf", success=False, error=str(e))
+
+    async def _run_mineru(
+        self, pdf_path: Path, page_range: Optional[tuple]
+    ) -> EngineResult:
+        """执行 MinerU 引擎。"""
+        try:
+            from .mineru_engine import MinerUEngine
+
+            if not MinerUEngine.is_available():
+                return EngineResult(
+                    engine="mineru", success=False, error="MinerU 未安装"
+                )
+
+            engine = MinerUEngine(output_dir=str(self._output_dir) if self._output_dir else None)
+            result = await asyncio.to_thread(
+                engine.convert, str(pdf_path), page_range
+            )
+            if not result or not result.markdown:
+                return EngineResult(
+                    engine="mineru", success=False, error="MinerU 返回空结果"
+                )
+
+            quality = _extract_quality_signals(result.markdown)
+
+            # 构建 enhanced_assets
+            enhanced_assets: Dict[str, Any] = {}
+            if result.images:
+                enhanced_assets["images"] = {
+                    "count": len(result.images),
+                    "items": [
+                        {
+                            "caption": img.caption or "",
+                            "page": img.page_number,
+                            "filename": img.filename,
+                            "local_path": img.local_path,
+                        }
+                        for img in result.images
+                    ],
+                }
+            if result.tables:
+                enhanced_assets["tables"] = {
+                    "count": len(result.tables),
+                    "items": [
+                        {
+                            "rows": t.rows,
+                            "columns": t.columns,
+                            "caption": t.caption or "",
+                            "page": t.page_number,
+                        }
+                        for t in result.tables
+                    ],
+                }
+            if result.formulas:
+                enhanced_assets["formulas"] = {
+                    "count": len(result.formulas),
+                    "block_count": sum(
+                        1 for f in result.formulas if f.formula_type == "block"
+                    ),
+                    "inline_count": sum(
+                        1 for f in result.formulas if f.formula_type == "inline"
+                    ),
+                }
+
+            return EngineResult(
+                engine="mineru",
+                success=True,
+                content=result.markdown,
+                metadata={
+                    "page_count": result.page_count,
+                    "enhanced_assets": enhanced_assets,
+                    "mineru_metadata": result.metadata,
+                },
+                quality_signals=quality,
+            )
+        except Exception as e:
+            logger.warning("MinerU 引擎执行失败: %s", e)
+            return EngineResult(engine="mineru", success=False, error=str(e))
+
+    async def _run_marker(
+        self, pdf_path: Path, page_range: Optional[tuple]
+    ) -> EngineResult:
+        """执行 Marker 引擎。"""
+        try:
+            from .marker_engine import MarkerEngine
+
+            if not MarkerEngine.is_available():
+                return EngineResult(
+                    engine="marker", success=False, error="Marker 未安装"
+                )
+
+            output_dir_str = str(self._output_dir) if self._output_dir else None
+            engine = MarkerEngine(output_dir=output_dir_str)
+            result = await asyncio.to_thread(engine.convert)(
+                str(pdf_path), embed_images=False
+            )
+            if not result or not result.markdown:
+                return EngineResult(
+                    engine="marker", success=False, error="Marker 返回空结果"
+                )
+
+            quality = _extract_quality_signals(result.markdown)
+
+            # 构建 enhanced_assets
+            enhanced_assets: Dict[str, Any] = {}
+            if result.images:
+                enhanced_assets["images"] = {
+                    "count": len(result.images),
+                    "items": [
+                        {
+                            "caption": img.caption or "",
+                            "page": img.page_number,
+                            "filename": img.filename,
+                            "local_path": img.local_path,
+                        }
+                        for img in result.images
+                    ],
+                }
+            if result.tables:
+                enhanced_assets["tables"] = {
+                    "count": len(result.tables),
+                    "items": [
+                        {
+                            "rows": t.rows,
+                            "columns": t.columns,
+                            "caption": t.caption or "",
+                            "page": t.page_number,
+                        }
+                        for t in result.tables
+                    ],
+                }
+            if result.formulas:
+                enhanced_assets["formulas"] = {
+                    "count": len(result.formulas),
+                    "block_count": sum(
+                        1 for f in result.formulas if f.formula_type == "block"
+                    ),
+                    "inline_count": sum(
+                        1 for f in result.formulas if f.formula_type == "inline"
+                    ),
+                }
+            if result.code_blocks:
+                enhanced_assets["code_blocks"] = {
+                    "count": len(result.code_blocks),
+                    "languages": list(
+                        {cb.language for cb in result.code_blocks if cb.language}
+                    ),
+                }
+
+            return EngineResult(
+                engine="marker",
+                success=True,
+                content=result.markdown,
+                metadata={
+                    "page_count": result.page_count,
+                    "enhanced_assets": enhanced_assets,
+                    "marker_metadata": result.metadata,
+                },
+                quality_signals=quality,
+            )
+        except Exception as e:
+            logger.warning("Marker 引擎执行失败: %s", e)
+            return EngineResult(engine="marker", success=False, error=str(e))
 
     async def _run_pypdf(
         self, pdf_path: Path, page_range: Optional[tuple]
