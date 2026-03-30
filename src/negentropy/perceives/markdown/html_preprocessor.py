@@ -69,6 +69,10 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
                 if id(element) not in protected_ids:
                     element.decompose()
 
+        # 确保块级元素之间有换行，以便 MarkItDown 正确识别段落边界。
+        # MarkItDown 在无空白分隔的连续 <p> 标签间会将内容合并为同一行。
+        _ensure_block_whitespace(soup)
+
         # Convert relative URLs to absolute if base_url is provided
         if base_url:
             # Convert relative links
@@ -90,6 +94,31 @@ def preprocess_html(html_content: str, base_url: Optional[str] = None) -> str:
     except Exception as e:
         logger.warning(f"Error preprocessing HTML: {str(e)}")
         return html_content
+
+
+_BLOCK_TAGS = frozenset([
+    "p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
+    "blockquote", "pre", "ul", "ol", "table", "hr",
+    "section", "article", "figure", "figcaption", "details",
+])
+
+
+def _ensure_block_whitespace(soup: BeautifulSoup) -> None:
+    """在块级元素之间插入换行符，确保 MarkItDown 能正确识别段落边界。
+
+    MarkItDown 在处理 ``<p>A</p><p>B</p>`` 这种无空白分隔的 HTML 时，
+    会将内容合并为 ``A B``（单行）。通过在块级闭合标签后插入 ``\\n``，
+    使其输出为独立段落。
+    """
+    for tag_name in _BLOCK_TAGS:
+        for element in soup.find_all(tag_name):
+            # 在元素后插入换行（如果后继不是已有空白）
+            next_sib = element.next_sibling
+            if next_sib is None:
+                continue
+            if isinstance(next_sib, str) and next_sib.strip() == "":
+                continue
+            element.insert_after("\n")
 
 
 def extract_content_area(html_content: str) -> str:

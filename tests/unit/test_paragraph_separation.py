@@ -9,6 +9,8 @@
 6. 学术 PDF 文本结构 — 标题/摘要/正文段落的模拟
 7. build_html_from_text 启发式段落检测 — WebPage text-only 场景
 8. 实际 PDF 集成测试 — 使用 assets 中的 PDF 文件端到端验证
+9. MarkdownFormatter 段落间距归一化 — Web 页面 Markdown 转换后段落 \\n\\n 分隔
+10. HTML→Markdown 端到端段落分隔 — 通过 MarkdownConverter 验证
 """
 
 import pytest
@@ -21,6 +23,7 @@ from negentropy.perceives.markdown.html_preprocessor import (
     build_html_from_text,
     _heuristic_split_paragraphs,
 )
+from negentropy.perceives.markdown.formatter import MarkdownFormatter
 
 
 @pytest.fixture
@@ -547,3 +550,276 @@ class TestRealPDFIntegration:
 
         finally:
             processor.cleanup()
+
+
+# ---------------------------------------------------------------------------
+# 9. MarkdownFormatter 段落间距归一化 (WebPage)
+# ---------------------------------------------------------------------------
+class TestWebPageParagraphNormalization:
+    """验证 MarkdownFormatter._normalize_paragraph_breaks 段落间距归一化逻辑。"""
+
+    @pytest.fixture(autouse=True)
+    def setup_formatter(self):
+        self.formatter = MarkdownFormatter()
+
+    def test_plain_text_paragraphs_get_double_newline(self):
+        """连续纯文本行应以 \\n\\n 分隔。"""
+        text = "Paragraph one.\nParagraph two."
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "Paragraph one.\n\nParagraph two."
+
+    def test_multiple_plain_text_paragraphs(self):
+        """多个连续纯文本行均应以 \\n\\n 分隔。"""
+        text = "First.\nSecond.\nThird."
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "First.\n\nSecond.\n\nThird."
+
+    def test_already_separated_paragraphs_unchanged(self):
+        """已有 \\n\\n 的段落不应产生多余空行。"""
+        text = "Para one.\n\nPara two."
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "Para one.\n\nPara two."
+
+    def test_list_items_keep_single_newline(self):
+        """列表项序列保持 \\n 不插入空行。"""
+        text = "- Item 1\n- Item 2\n- Item 3"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "- Item 1\n- Item 2\n- Item 3"
+
+    def test_ordered_list_items_keep_single_newline(self):
+        """有序列表项序列保持 \\n。"""
+        text = "1. First\n2. Second\n3. Third"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "1. First\n2. Second\n3. Third"
+
+    def test_table_rows_keep_single_newline(self):
+        """表格行序列保持 \\n。"""
+        text = "| A | B |\n| --- | --- |\n| 1 | 2 |"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "| A | B |\n| --- | --- |\n| 1 | 2 |"
+
+    def test_blockquote_lines_keep_single_newline(self):
+        """引用行序列保持 \\n。"""
+        text = "> Line 1\n> Line 2\n> Line 3"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "> Line 1\n> Line 2\n> Line 3"
+
+    def test_code_block_content_untouched(self):
+        """代码块内容完全不修改。"""
+        text = "```\nline1\nline2\nline3\n```"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "```\nline1\nline2\nline3\n```"
+
+    def test_tagged_code_block_untouched(self):
+        """带语言标签的代码块内容不修改。"""
+        text = "```python\ndef f():\n    pass\n```"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "```python\ndef f():\n    pass\n```"
+
+    def test_transition_text_to_list(self):
+        """纯文本到列表的切换应有 \\n\\n。"""
+        text = "Some text.\n- Item 1\n- Item 2"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "Some text.\n\n- Item 1\n- Item 2"
+
+    def test_transition_list_to_text(self):
+        """列表到纯文本的切换应有 \\n\\n。"""
+        text = "- Item 1\n- Item 2\nSome text."
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "- Item 1\n- Item 2\n\nSome text."
+
+    def test_transition_text_to_table(self):
+        """纯文本到表格的切换应有 \\n\\n。"""
+        text = "Description:\n| A | B |\n| --- | --- |"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert "Description:\n\n| A | B |" in result
+
+    def test_hr_gets_blank_lines(self):
+        """HR 前后应有 \\n\\n。"""
+        text = "Text above\n---\nText below"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "Text above\n\n---\n\nText below"
+
+    def test_indented_list_continuation_preserved(self):
+        """列表项缩进续行保持紧凑。"""
+        text = "- Item one\n  continuation text\n- Item two"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "- Item one\n  continuation text\n- Item two"
+
+    def test_heading_to_text_transition(self):
+        """标题到文本的切换应有 \\n\\n。"""
+        text = "# Title\nContent paragraph."
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "# Title\n\nContent paragraph."
+
+    def test_text_to_heading_transition(self):
+        """文本到标题的切换应有 \\n\\n。"""
+        text = "Content paragraph.\n## Section"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "Content paragraph.\n\n## Section"
+
+    def test_code_block_adjacent_text(self):
+        """代码块前后与文本的分隔。"""
+        text = "Text before.\n```\ncode\n```\nText after."
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert "Text before.\n\n```" in result
+        assert "```\n\nText after." in result
+
+    def test_empty_input(self):
+        """空输入返回空字符串。"""
+        assert self.formatter._normalize_paragraph_breaks("") == ""
+
+    def test_single_line(self):
+        """单行输入原样返回。"""
+        assert self.formatter._normalize_paragraph_breaks("Hello") == "Hello"
+
+    def test_codeblock_placeholder_treated_as_block(self):
+        """代码块占位符视为独立块元素。"""
+        text = "%%CODEBLOCK_abc123def%%\nText after."
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "%%CODEBLOCK_abc123def%%\n\nText after."
+
+    def test_fix_spacing_disabled(self):
+        """fix_spacing=False 时跳过段落归一化。"""
+        formatter = MarkdownFormatter({"fix_spacing": False})
+        text = "Para one.\nPara two."
+        result = formatter.format(text)
+        # 不应插入额外空行（归一化被跳过）
+        assert "Para one.\n\nPara two." not in result
+
+    def test_mixed_content_full_pipeline(self):
+        """混合内容通过完整 format() 管线后段落正确分隔。"""
+        text = (
+            "# Title\n"
+            "First paragraph.\n"
+            "Second paragraph.\n"
+            "- Item 1\n"
+            "- Item 2\n"
+            "Third paragraph.\n"
+            "| A | B |\n"
+            "| --- | --- |\n"
+            "| 1 | 2 |\n"
+            "Fourth paragraph."
+        )
+        result = self.formatter.format(text)
+
+        # 段落间应有 \n\n
+        assert "First paragraph.\n\nSecond paragraph." in result
+        # 列表项保持紧凑
+        assert "- Item 1\n- Item 2" in result
+        # 表格行保持紧凑
+        assert "| A | B |\n| --- | --- |\n| 1 | 2 |" in result
+
+    def test_nested_blockquote_preserved(self):
+        """嵌套引用行保持紧凑。"""
+        text = "> > Nested line 1\n> > Nested line 2"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "> > Nested line 1\n> > Nested line 2"
+
+    def test_transition_between_different_block_types(self):
+        """不同块类型之间切换应有 \\n\\n。"""
+        text = "- List item\n> Blockquote"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert result == "- List item\n\n> Blockquote"
+
+    def test_transition_table_to_list(self):
+        """表格到列表的切换应有 \\n\\n。"""
+        text = "| A | B |\n| --- | --- |\n- Item"
+        result = self.formatter._normalize_paragraph_breaks(text)
+        assert "| --- | --- |\n\n- Item" in result
+
+
+# ---------------------------------------------------------------------------
+# 10. HTML→Markdown 端到端段落分隔 (WebPage)
+# ---------------------------------------------------------------------------
+class TestWebPageHTMLConversion:
+    """验证 HTML→Markdown 端到端转换中段落正确以 \\n\\n 分隔。"""
+
+    @pytest.fixture(autouse=True)
+    def setup_converter(self):
+        try:
+            from negentropy.perceives.markdown.converter import MarkdownConverter
+            self.converter = MarkdownConverter()
+        except ImportError:
+            pytest.skip("MarkItDown not available")
+
+    def test_html_p_tags_produce_double_newline(self):
+        """多个 <p> 标签应产生 \\n\\n 分隔的段落。"""
+        html = "<html><body><p>First paragraph.</p><p>Second paragraph.</p></body></html>"
+        result = self.converter.html_to_markdown(html)
+
+        assert "First paragraph." in result
+        assert "Second paragraph." in result
+        # 两个段落之间应有 \n\n
+        first_idx = result.index("First paragraph.")
+        second_idx = result.index("Second paragraph.")
+        between = result[first_idx + len("First paragraph."):second_idx]
+        assert "\n\n" in between, (
+            f"Expected \\n\\n between paragraphs, got: {repr(between)}"
+        )
+
+    def test_html_mixed_elements_correct_spacing(self):
+        """HTML 混合元素（标题+段落+列表）转换后间距正确。"""
+        html = """
+        <html><body>
+            <h1>Title</h1>
+            <p>First paragraph.</p>
+            <p>Second paragraph.</p>
+            <ul>
+                <li>Item 1</li>
+                <li>Item 2</li>
+            </ul>
+            <p>Third paragraph.</p>
+        </body></html>
+        """
+        result = self.converter.html_to_markdown(html)
+
+        assert "# Title" in result
+        assert "First paragraph." in result
+        assert "Third paragraph." in result
+
+        # 验证段落间有 \n\n
+        paragraphs = [p.strip() for p in result.split("\n\n") if p.strip()]
+        assert len(paragraphs) >= 4, (
+            f"Expected >=4 paragraphs, got {len(paragraphs)}: {paragraphs}"
+        )
+
+    def test_large_html_paragraph_separation(self):
+        """大量 <p> 标签应全部正确分隔。"""
+        html = "<html><body>"
+        for i in range(20):
+            html += f"<p>Paragraph {i} content.</p>"
+        html += "</body></html>"
+
+        result = self.converter.html_to_markdown(html)
+
+        paragraphs = [p.strip() for p in result.split("\n\n") if p.strip()]
+        assert len(paragraphs) >= 20, (
+            f"Expected >=20 paragraphs, got {len(paragraphs)}. "
+            f"Paragraphs may not be properly separated with \\n\\n."
+        )
+
+    def test_webpage_conversion_paragraph_separation(self):
+        """通过 convert_webpage_to_markdown 验证段落分隔。"""
+        scrape_result = {
+            "url": "https://example.com",
+            "title": "Test Page",
+            "content": {
+                "html": (
+                    "<html><body>"
+                    "<p>First paragraph of the article.</p>"
+                    "<p>Second paragraph with more details.</p>"
+                    "<p>Third paragraph concluding the article.</p>"
+                    "</body></html>"
+                )
+            },
+        }
+
+        result = self.converter.convert_webpage_to_markdown(scrape_result)
+        assert result["success"] is True
+        markdown = result["markdown"]
+
+        paragraphs = [p.strip() for p in markdown.split("\n\n") if p.strip()]
+        assert len(paragraphs) >= 3, (
+            f"Expected >=3 paragraphs, got {len(paragraphs)}: {paragraphs}"
+        )
