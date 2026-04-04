@@ -9,14 +9,6 @@
 
 测试退避延迟计算 (1s, 2s, 4s, 8s...)、失败后重试成功场景、最大重试次数耗尽处理、不同异常的重试策略。
 
-### CacheManager 缓存管理器测试
-
-测试键值对存储和读取、TTL 过期清理、不存在键的处理、全局缓存清理功能、URL 和参数的哈希键生成。
-
-### MetricsCollector 指标收集器测试
-
-测试 HTTP 方法、状态码、响应时间记录、错误类型和数量统计、成功率、平均响应时间计算、统计数据重置功能。
-
 ### 工具函数测试
 
 测试 URL 格式验证 (http/https)、HTML 标签移除和空白符处理、数据提取配置格式验证、异步函数执行时间测量。
@@ -29,8 +21,6 @@ from unittest.mock import patch, AsyncMock
 
 from negentropy.perceives.infra import RateLimiter, rate_limiter
 from negentropy.perceives.infra import RetryManager, retry_manager
-from negentropy.perceives.infra import CacheManager, cache_manager
-from negentropy.perceives.infra import MetricsCollector, metrics_collector
 from negentropy.perceives.infra import URLValidator, TextCleaner
 from negentropy.perceives.tools._registry import normalize_extract_config
 
@@ -159,140 +149,6 @@ class TestRetryManager:
 
         assert delay_1 == 2.0
         assert delay_2 == 4.0
-
-
-class TestCacheManager:
-    """Test the CacheManager class."""
-
-    def test_cache_manager_initialization(self):
-        """Test CacheManager initializes correctly."""
-        manager = CacheManager(max_size=100, ttl_seconds=60)
-        assert manager.max_size == 100
-        assert manager.ttl_seconds == 60
-        assert len(manager.cache) == 0
-
-    def test_cache_set_and_get(self):
-        """Test setting and getting cache values."""
-        manager = CacheManager()
-
-        test_data = {"key": "value", "number": 42}
-        manager.set("test_url", "simple", test_data)
-
-        retrieved_data = manager.get("test_url", "simple")
-        assert retrieved_data == test_data
-
-    def test_cache_expiration(self):
-        """Test cache expiration."""
-        manager = CacheManager(ttl_seconds=1)
-
-        test_data = {"value": "test"}
-        manager.set("expire_url", "simple", test_data)
-
-        # Should be available immediately
-        assert manager.get("expire_url", "simple") == test_data
-
-        # Wait for expiration
-        time.sleep(1.1)
-
-        # Should be None after expiration
-        assert manager.get("expire_url", "simple") is None
-
-    def test_cache_miss(self):
-        """Test cache miss behavior."""
-        manager = CacheManager()
-
-        result = manager.get("nonexistent_url", "simple")
-        assert result is None
-
-    def test_cache_clear(self):
-        """Test cache clearing."""
-        manager = CacheManager()
-
-        test_data1 = {"value": "value1"}
-        test_data2 = {"value": "value2"}
-        manager.set("url1", "simple", test_data1)
-        manager.set("url2", "scrapy", test_data2)
-
-        manager.clear()
-
-        assert manager.get("url1", "simple") is None
-        assert manager.get("url2", "scrapy") is None
-
-    def test_generate_cache_key(self):
-        """Test cache key generation."""
-        manager = CacheManager()
-
-        key1 = manager._generate_key(
-            "https://example.com", "simple", {"param": "value"}
-        )
-        key2 = manager._generate_key(
-            "https://example.com", "simple", {"param": "different"}
-        )
-
-        assert key1 != key2
-        assert len(key1) == 32  # MD5 hash length
-
-
-class TestMetricsCollector:
-    """Test the MetricsCollector class."""
-
-    def test_metrics_collector_initialization(self):
-        """Test MetricsCollector initializes correctly."""
-        collector = MetricsCollector()
-        # Check that metrics dict is initialized with expected structure
-        assert "total_requests" in collector.metrics
-        assert "successful_requests" in collector.metrics
-        assert "failed_requests" in collector.metrics
-
-    def test_record_request(self):
-        """Test recording request metrics."""
-        collector = MetricsCollector()
-
-        collector.record_request("https://example.com", True, 1500, "simple")
-
-        stats = collector.get_stats()
-        assert stats["total_requests"] == 1
-        assert stats["successful_requests"] == 1
-        assert stats["failed_requests"] == 0
-
-    def test_record_error(self):
-        """Test recording error metrics."""
-        collector = MetricsCollector()
-
-        collector.record_request(
-            "https://example.com", False, 1000, "simple", "timeout"
-        )
-
-        stats = collector.get_stats()
-        assert stats["total_requests"] == 1
-        assert stats["failed_requests"] == 1
-        assert stats["error_categories"]["timeout"] == 1
-
-    def test_get_summary_statistics(self):
-        """Test summary statistics calculation."""
-        collector = MetricsCollector()
-
-        collector.record_request("https://example.com", True, 1000, "simple")
-        collector.record_request("https://test.com", False, 2000, "scrapy", "timeout")
-
-        stats = collector.get_stats()
-
-        assert stats["total_requests"] == 2
-        assert stats["successful_requests"] == 1
-        assert stats["failed_requests"] == 1
-        assert stats["success_rate"] == 0.5
-
-    def test_reset_metrics(self):
-        """Test resetting metrics."""
-        collector = MetricsCollector()
-
-        collector.record_request("https://example.com", True, 1000, "simple")
-        collector.reset()
-
-        stats = collector.get_stats()
-        assert stats["total_requests"] == 0
-
-
 class TestUtilityFunctions:
     """Test standalone utility functions."""
 
@@ -345,63 +201,4 @@ class TestUtilityFunctions:
         """Test global utility instances are properly initialized."""
         assert rate_limiter is not None
         assert retry_manager is not None
-        assert cache_manager is not None
-        assert metrics_collector is not None
 
-
-class TestCacheInterface:
-    """cache.py 接口补充测试（步骤 3 新增）。"""
-
-    def test_cache_clear_returns_count(self):
-        """clear() 应返回被清除的条目数。"""
-        cm = CacheManager()
-        cm.set("url1", "m1", {"data": 1}, {})
-        cm.set("url2", "m2", {"data": 2}, {})
-        count = cm.clear()
-        assert count == 2
-        assert cm.size() == 0
-
-    def test_cache_clear_empty(self):
-        """空缓存 clear() 返回 0。"""
-        cm = CacheManager()
-        assert cm.clear() == 0
-
-    def test_cache_size(self):
-        """size() 应返回当前缓存条目数。"""
-        cm = CacheManager()
-        assert cm.size() == 0
-        cm.set("url", "method", {"data": 1}, {})
-        assert cm.size() == 1
-        cm.clear()
-        assert cm.size() == 0
-
-
-class TestMetricsFieldMapping:
-    """metrics.py 字段映射测试（步骤 4 新增）。"""
-
-    def test_get_stats_field_mapping(self):
-        """get_stats() 应包含 MetricsResponse 兼容字段。"""
-        mc = MetricsCollector()
-        mc.record_request("https://example.com", True, 500, "simple")
-        mc.record_request("https://example.com", True, 300, "simple")
-        stats = mc.get_stats()
-
-        # 兼容字段
-        assert "average_response_time" in stats
-        assert "method_usage" in stats
-
-        # average_response_time 应为秒
-        assert stats["average_response_time"] == stats["average_duration_ms"] / 1000.0
-
-        # method_usage 应与 methods_used 同源
-        assert stats["method_usage"] is stats["methods_used"]
-        assert stats["method_usage"]["simple"] == 2
-
-    def test_get_stats_success_rate(self):
-        """success_rate 计算准确。"""
-        mc = MetricsCollector()
-        mc.record_request("https://a.com", True, 100, "simple")
-        mc.record_request("https://b.com", False, 200, "simple", "timeout")
-        stats = mc.get_stats()
-        assert stats["success_rate"] == 0.5
-        assert stats["error_categories"]["timeout"] == 1

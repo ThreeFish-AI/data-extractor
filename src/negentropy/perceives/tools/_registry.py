@@ -6,10 +6,9 @@ from typing import Optional
 from fastmcp import FastMCP
 
 from ..config import settings
-from ..infra import metrics_collector
 from ..markdown.converter import MarkdownConverter
 from ..scraping import AntiDetectionScraper, WebScraper
-from . import _observability
+from ._observability import elapsed_ms
 from ._support import (
     BrowserMethod,
     PDFMethod,
@@ -42,9 +41,7 @@ __all__ = [
     "validate_url",
     "validate_page_range",
     "normalize_extract_config",
-    "record_error",
     "elapsed_ms",
-    "ToolTimer",
 ]
 
 # FastMCP application instance
@@ -71,32 +68,3 @@ def create_pdf_processor(
 validate_url = _validate_url
 validate_page_range = _validate_page_range
 normalize_extract_config = _normalize_extract_config
-
-
-def record_error(e: Exception, url: str, method: str, duration_ms: int) -> str:
-    """记录失败指标并返回原始错误消息（绑定共享 metrics_collector 与 logger）。"""
-    return _observability.record_error(
-        e,
-        url,
-        method,
-        duration_ms,
-        metrics=metrics_collector,
-        log=logger,
-    )
-
-
-def elapsed_ms(start_time: float) -> int:
-    """计算开始时间到当前的毫秒耗时。"""
-    return _observability.elapsed_ms(start_time)
-
-
-class ToolTimer(_observability.ToolTimer):
-    """基于共享指标记录的工具执行计时器。"""
-
-    def __init__(self, url: str, method: str) -> None:
-        super().__init__(
-            url,
-            method,
-            metrics=metrics_collector,
-            record_error_func=record_error,
-        )

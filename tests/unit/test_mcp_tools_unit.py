@@ -1,6 +1,6 @@
 """
 单元测试：MCP 工具函数
-测试所有 14 个 @app.tool() 装饰器的 MCP 工具函数
+测试所有 12 个 @app.tool() 装饰器的 MCP 工具函数
 """
 
 from unittest.mock import AsyncMock, Mock, patch
@@ -16,7 +16,6 @@ from negentropy.perceives.tools.extraction import (
 )
 from negentropy.perceives.tools.stealth import scrape_with_stealth
 from negentropy.perceives.tools.form import fill_and_submit_form
-from negentropy.perceives.tools.service import get_server_metrics, clear_cache
 from negentropy.perceives.tools.markdown import (
     convert_webpage_to_markdown,
     batch_convert_webpages_to_markdown,
@@ -217,11 +216,9 @@ class TestMCPToolsAdvanced:
         with (
             patch("negentropy.perceives.tools.stealth.anti_detection_scraper"),
             patch("negentropy.perceives.tools.stealth.rate_limiter") as mock_limiter,
-            patch("negentropy.perceives.tools.stealth.cache_manager") as mock_cache,
             patch("negentropy.perceives.tools.stealth.retry_manager") as mock_retry,
         ):
             mock_limiter.wait = AsyncMock()
-            mock_cache.get.return_value = None
 
             mock_result = {
                 "url": "https://example.com",
@@ -240,34 +237,6 @@ class TestMCPToolsAdvanced:
 
             assert result.success is True
             assert result.data == mock_result
-
-    @pytest.mark.asyncio
-    async def test_scrape_with_stealth_cache_returns_response(self):
-        """缓存命中时应返回 ScrapeResponse 而非 raw dict（步骤 6 新增）。"""
-        from negentropy.perceives.schemas import ScrapeResponse
-
-        with (
-            patch("negentropy.perceives.tools.stealth.rate_limiter") as mock_limiter,
-            patch("negentropy.perceives.tools.stealth.cache_manager") as mock_cache,
-        ):
-            mock_limiter.wait = AsyncMock()
-            cached_data = {
-                "content": {"text": "Cached content"},
-                "status_code": 200,
-            }
-            mock_cache.get.return_value = cached_data
-
-            result = await scrape_with_stealth(
-                url="https://example.com",
-                method="selenium",
-                extract_config=None,
-                wait_for_element=None,
-                scroll_page=False,
-            )
-
-            assert isinstance(result, ScrapeResponse)
-            assert result.success is True
-            assert result.data == cached_data
 
     @pytest.mark.asyncio
     async def test_fill_and_submit_form_success(self):
@@ -331,44 +300,6 @@ class TestMCPToolsAdvanced:
             assert result.success is True
             assert result.extracted_data is not None
             assert result.data_type == "contact"
-
-
-class TestMCPToolsServer:
-    """测试服务器管理 MCP 工具"""
-
-    @pytest.mark.asyncio
-    async def test_get_server_metrics_success(self):
-        """测试服务器指标获取成功"""
-        with (
-            patch("negentropy.perceives.tools.service.metrics_collector") as mock_metrics,
-            patch("negentropy.perceives.tools.service.cache_manager") as mock_cache,
-        ):
-            mock_metrics.get_stats.return_value = {
-                "total_requests": 100,
-                "successful_requests": 95,
-                "failed_requests": 5,
-            }
-            mock_cache.stats.return_value = {"cache_hits": 50, "cache_misses": 50}
-
-            result = await get_server_metrics()
-
-            assert result.success is True
-            assert result.total_requests == 100
-            assert result.successful_requests == 95
-            assert result.failed_requests == 5
-
-    @pytest.mark.asyncio
-    async def test_clear_cache_success(self):
-        """测试缓存清理成功"""
-        with patch("negentropy.perceives.tools.service.cache_manager") as mock_cache:
-            mock_cache.clear.return_value = 5
-            mock_cache.size.return_value = 5
-
-            result = await clear_cache()
-
-            assert result.success is True
-            assert "Cache cleared successfully" in result.message
-            mock_cache.clear.assert_called_once()
 
 
 class TestMCPToolsMarkdown:

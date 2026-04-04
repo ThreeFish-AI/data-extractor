@@ -2,7 +2,7 @@
 id: user-guide
 sidebar_position: 6
 title: User Guide
-description: Negentropy Perceives MCP Server 终端用户使用指南，涵盖 MCP Server 部署配置、14 个 MCP 工具参考、API 编程接口及高级使用场景。
+description: Negentropy Perceives MCP Server 终端用户使用指南，涵盖 MCP Server 部署配置、12 个 MCP 工具参考、API 编程接口及高级使用场景。
 last_update:
   author: Aurelius
   date: 2026-03-22
@@ -19,7 +19,7 @@ Negentropy Perceives 是一个基于 FastMCP 和 Scrapy、markdownify、pypdf、
 
 **核心特性**
 
-- **14 个专业 MCP 工具**：涵盖网页抓取、PDF 转换、链接提取、表单自动化等
+- **12 个专业 MCP 工具**：涵盖网页抓取、PDF 转换、链接提取、表单自动化等
 - **多种抓取方法**：支持 simple、scrapy、selenium、playwright 等方法，智能选择最佳策略
 - **反检测能力**：隐身抓取和表单自动化功能，绕过反爬虫检测
 - **智能内容处理**：自动识别主要内容、格式化 Markdown，支持 8 种格式化选项
@@ -239,7 +239,6 @@ transport = StreamableHttpTransport(
 | `LinksResponse`       | 链接提取      | `total_links`, `links`, `internal_links_count`  |
 | `MarkdownResponse`    | Markdown 转换 | `markdown_content`, `word_count`, `metadata`    |
 | `PDFResponse`         | PDF 转换      | `content`, `page_count`, `word_count`           |
-| `MetricsResponse`     | 性能指标      | `total_requests`, `success_rate`, `cache_stats` |
 
 ### 1. scrape_webpage - 基础网页抓取
 
@@ -1029,103 +1028,6 @@ _Source: Page 3_
 }
 ```
 
-### 13. get_server_metrics - 服务器性能监控
-
-**功能描述**：获取服务器的性能指标和运行统计信息
-
-**参数**：无
-
-**返回值类型:** `MetricsResponse`
-
-| 字段名                  | 类型             | 描述               |
-| ----------------------- | ---------------- | ------------------ |
-| `success`               | `bool`           | 操作是否成功       |
-| `total_requests`        | `int`            | 总请求数           |
-| `successful_requests`   | `int`            | 成功请求数         |
-| `failed_requests`       | `int`            | 失败请求数         |
-| `success_rate`          | `float`          | 成功率             |
-| `average_response_time` | `float`          | 平均响应时间（秒） |
-| `uptime_seconds`        | `float`          | 运行时间（秒）     |
-| `cache_stats`           | `Dict[str, Any]` | 缓存统计           |
-
-**使用示例**：
-
-```json
-{}
-```
-
-**返回结果**：
-
-```json
-{
-  "success": true,
-  "data": {
-    "total_requests": 1250,
-    "successful_requests": 1180,
-    "failed_requests": 70,
-    "success_rate": 0.944,
-    "average_response_time": 2.34,
-    "uptime_seconds": 86400,
-    "cache_stats": {
-      "cache_size": 156,
-      "cache_hits": 890,
-      "cache_misses": 360,
-      "hit_rate": 0.712
-    },
-    "method_usage": {
-      "simple": 450,
-      "scrapy": 320,
-      "selenium": 280,
-      "auto": 200
-    },
-    "error_distribution": {
-      "timeout": 25,
-      "connection": 20,
-      "parsing": 15,
-      "other": 10
-    }
-  }
-}
-```
-
-### 14. clear_cache - 缓存管理
-
-**功能描述**：清空服务器的缓存数据
-
-**参数**：无
-
-**返回值类型:** `CacheOperationResponse`
-
-| 字段名              | 类型    | 描述             |
-| ------------------- | ------- | ---------------- |
-| `success`           | `bool`  | 操作是否成功     |
-| `cleared_items`     | `int`   | 清理的缓存项数量 |
-| `cache_size_before` | `int`   | 清理前缓存大小   |
-| `cache_size_after`  | `int`   | 清理后缓存大小   |
-| `operation_time`    | `float` | 操作耗时（秒）   |
-| `message`           | `str`   | 操作结果消息     |
-
-**使用示例**：
-
-```json
-{}
-```
-
-**返回结果**：
-
-```json
-{
-  "success": true,
-  "data": {
-    "cleared_items": 156,
-    "cache_size_before": 156,
-    "cache_size_after": 0,
-    "operation_time": 0.123,
-    "message": "Successfully cleared all cache items"
-  }
-}
-```
-
 ## API 编程接口
 
 虽然主要通过 MCP 协议使用，但也支持直接 Python 调用：
@@ -1191,16 +1093,9 @@ result = await scraper.scrape_url(url, extract_config=extract_config)
 ```python
 from negentropy.perceives.infra import rate_limiter
 from negentropy.perceives.infra import retry_manager
-from negentropy.perceives.infra import cache_manager
-from negentropy.perceives.infra import metrics_collector
 
 # 集成完整功能的抓取流程
 async def enterprise_scrape(url: str):
-    # 检查缓存
-    cached_result = cache_manager.get(url)
-    if cached_result:
-        return cached_result
-
     # 速率限制
     await rate_limiter.wait()
 
@@ -1209,12 +1104,6 @@ async def enterprise_scrape(url: str):
         result = await retry_manager.retry_async(
             scraper.scrape_url, url, method="auto"
         )
-
-        # 记录指标
-        metrics_collector.record_request("GET", True, 1500, "scraper")
-
-        # 缓存结果
-        cache_manager.set(url, result, ttl=3600)
 
         return result
 
@@ -1469,14 +1358,10 @@ async def compliance_check_workflow(target_url: str):
         }
     )
 
-    # 4. 检查服务器性能影响
-    metrics = await get_server_metrics()
-
     return {
         "compliance_check": robots_result,
         "page_info": page_info,
-        "extracted_data": scrape_result,
-        "performance_metrics": metrics
+        "extracted_data": scrape_result
     }
 ```
 

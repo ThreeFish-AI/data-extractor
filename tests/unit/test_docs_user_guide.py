@@ -120,7 +120,7 @@ class TestOrthogonalityConstraints:
 class TestMcpToolCompleteness:
     """MCP 工具文档完整性验证。"""
 
-    EXPECTED_TOOL_COUNT = 14
+    EXPECTED_TOOL_COUNT = 12
     TOOL_HEADING_PATTERN = re.compile(r"^### (\d+)\. ", re.MULTILINE)
 
     def test_all_tools_documented(self, doc_content: str):
@@ -134,7 +134,7 @@ class TestMcpToolCompleteness:
         )
 
     def test_tool_numbers_continuous(self, doc_content: str):
-        """工具编号从 1 到 14 连续无遗漏。"""
+        """工具编号从 1 到 12 连续无遗漏。"""
         tool_numbers = sorted(
             int(n) for n in self.TOOL_HEADING_PATTERN.findall(doc_content)
         )

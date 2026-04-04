@@ -5,10 +5,12 @@ from typing import Annotated, Any, Dict, Optional
 
 from pydantic import Field
 
-from ..infra import rate_limiter, trace_event
+import time
+
+from ..infra import rate_limiter
 from ..schemas import ScrapeResponse
 from ..scraping import FormHandler, playwright_session, selenium_session
-from ._registry import BrowserMethod, app, validate_url, ToolTimer
+from ._registry import BrowserMethod, app, elapsed_ms, validate_url
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ async def fill_and_submit_form(
         Supports complex form automation workflows.
     """
     method_key = f"form_{method}"
-    timer = ToolTimer(url, method_key)
+    _start = time.time()
     try:
         # Validate inputs
         url_error = validate_url(url)
@@ -87,18 +89,9 @@ async def fill_and_submit_form(
             )
 
         logger.info(f"Form interaction for: {url}")
-        trace_event(
-            "fill_and_submit_form",
-            "interaction_started",
-            url=url,
-            method=method,
-            submit=submit,
-            field_count=len(form_data),
-        )
 
         # Apply rate limiting
         await rate_limiter.wait()
-        trace_event("fill_and_submit_form", "rate_limit_wait_completed")
 
         # Setup browser based on method
         if method == "selenium":
@@ -111,12 +104,6 @@ async def fill_and_submit_form(
                 )
                 final_url = driver.current_url
                 final_title = driver.title
-                trace_event(
-                    "fill_and_submit_form",
-                    "selenium_form_completed",
-                    success=bool(result.get("success")),
-                    final_url=final_url,
-                )
 
         elif method == "playwright":
             async with playwright_session(
@@ -130,15 +117,8 @@ async def fill_and_submit_form(
                 )
                 final_url = page.url
                 final_title = await page.title()
-                trace_event(
-                    "fill_and_submit_form",
-                    "playwright_form_completed",
-                    success=bool(result.get("success")),
-                    final_url=final_url,
-                )
 
         if result.get("success"):
-            timer.record_success()
             return ScrapeResponse(
                 success=True,
                 url=url,
@@ -155,16 +135,14 @@ async def fill_and_submit_form(
                 success=False,
                 url=url,
                 method=method_key,
-                error=timer.record_failure(
-                    Exception(result.get("error", "Form interaction failed"))
-                ),
+                error=result.get("error", "Form interaction failed"),
             )
 
     except Exception as e:
-        trace_event("fill_and_submit_form", "interaction_failed", error=str(e))
+        logger.error(f"Error in form interaction for {url}: {str(e)}")
         return ScrapeResponse(
             success=False,
             url=url,
             method=method_key,
-            error=timer.record_failure(e),
+            error=str(e),
         )

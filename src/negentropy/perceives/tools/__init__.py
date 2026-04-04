@@ -15,4 +15,3 @@ from . import extraction  # noqa: F401
 from . import form  # noqa: F401
 from . import markdown  # noqa: F401
 from . import pdf  # noqa: F401
-from . import service  # noqa: F401

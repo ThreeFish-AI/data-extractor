@@ -77,14 +77,6 @@ Negentropy Perceives 采用基于 [pydantic-settings](https://docs.pydantic.dev/
 | `NEGENTROPY_PERCEIVES_MAX_RETRIES` | `int` | `3` | `>= 0` | 失败重试最大次数 |
 | `NEGENTROPY_PERCEIVES_RETRY_DELAY` | `float` | `1.0` | `>= 0` | 重试间隔（秒） |
 
-### 缓存系统
-
-| 环境变量 | 类型 | 默认值 | 约束 | 说明 |
-| --- | --- | --- | --- | --- |
-| `NEGENTROPY_PERCEIVES_ENABLE_CACHING` | `bool` | `true` | - | 启用响应缓存 |
-| `NEGENTROPY_PERCEIVES_CACHE_TTL_HOURS` | `int` | `24` | `> 0` | 缓存生存时间（小时） |
-| `NEGENTROPY_PERCEIVES_CACHE_MAX_SIZE` | `int?` | `null` | - | 缓存最大条目数（`null` 不限） |
-
 ### 日志系统
 
 | 环境变量 | 类型 | 默认值 | 约束 | 说明 |
@@ -264,7 +256,6 @@ NEGENTROPY_PERCEIVES_LOG_LEVEL=DEBUG
 NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT=true
 NEGENTROPY_PERCEIVES_BROWSER_HEADLESS=false
 NEGENTROPY_PERCEIVES_CONCURRENT_REQUESTS=4
-NEGENTROPY_PERCEIVES_CACHE_TTL_HOURS=1
 ```
 
 ### 生产环境
@@ -278,7 +269,6 @@ NEGENTROPY_PERCEIVES_LOG_LEVEL=INFO
 NEGENTROPY_PERCEIVES_ENABLE_JAVASCRIPT=true
 NEGENTROPY_PERCEIVES_BROWSER_HEADLESS=true
 NEGENTROPY_PERCEIVES_CONCURRENT_REQUESTS=32
-NEGENTROPY_PERCEIVES_CACHE_TTL_HOURS=72
 NEGENTROPY_PERCEIVES_USE_RANDOM_USER_AGENT=true
 ```
 

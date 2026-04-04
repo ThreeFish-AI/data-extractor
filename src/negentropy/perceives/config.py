@@ -114,13 +114,6 @@ class NegentropyPerceivesSettings(BaseSettings):
     max_retries: int = Field(default=3, ge=0, description="失败重试最大次数")
     retry_delay: float = Field(default=1.0, ge=0.0, description="重试间隔（秒）")
 
-    # ── 缓存系统 ──────────────────────────────────────────────
-    enable_caching: bool = Field(default=True, description="启用响应缓存")
-    cache_ttl_hours: int = Field(default=24, gt=0, description="缓存生存时间（小时）")
-    cache_max_size: Optional[int] = Field(
-        default=None, description="缓存最大条目数（null 不限）"
-    )
-
     # ── 日志系统 ──────────────────────────────────────────────
     log_level: str = Field(
         default="INFO",

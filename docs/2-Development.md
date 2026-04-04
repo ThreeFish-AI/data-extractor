@@ -74,7 +74,6 @@ negentropy-perceives/
 │   ├── browser_utils.py          # 浏览器工具
 │   ├── form_handler.py           # 表单处理
 │   │
-│   ├── cache.py                  # 缓存管理
 │   ├── rate_limiter.py           # 速率限制
 │   ├── retry.py                  # 重试机制
 │   ├── error_handler.py          # 错误处理
@@ -223,7 +222,7 @@ async def scrape_webpage(
 ### 开发最佳实践
 
 - **错误处理**：验证输入参数，使用 `_registry.py` 中的 `validate_url()` 和 `record_error()` 辅助函数，返回结构化错误信息
-- **性能优化**：使用异步编程（`async/await`），利用 `cache.py` 缓存、`rate_limiter.py` 限速、`timing.py` 计时装饰器
+- **性能优化**：使用异步编程（`async/await`），利用 `rate_limiter.py` 限速、`timing.py` 计时装饰器
 - **架构参考**：系统性能设计详见 [架构设计](./1-Framework.md)
 
 ## 编码规范

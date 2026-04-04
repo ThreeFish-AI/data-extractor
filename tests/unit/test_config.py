@@ -37,7 +37,6 @@ class TestNegentropyPerceivesSettings:
         assert config.rate_limit_requests_per_minute == 60
         assert config.max_retries == 3
         assert config.retry_delay == 1.0
-        assert config.cache_ttl_hours == 24
         assert config.browser_timeout == 30
         assert config.browser_headless is True
 
@@ -146,16 +145,6 @@ class TestNegentropyPerceivesSettings:
         )
         assert config.use_random_user_agent is False
         assert config.default_user_agent == custom_ua
-
-    def test_cache_configuration(self):
-        """测试缓存配置"""
-        config = NegentropyPerceivesSettings(
-            enable_caching=True, cache_ttl_hours=48, cache_max_size=200
-        )
-
-        assert config.enable_caching is True
-        assert config.cache_ttl_hours == 48
-        assert config.cache_max_size == 200
 
     def test_logging_configuration(self):
         """测试日志配置"""
@@ -314,16 +303,6 @@ class TestConfigurationIntegration:
         if config.use_proxy:
             assert config.proxy_url is not None
             assert config.proxy_url.startswith("http")
-
-    def test_cache_settings_integration(self):
-        """测试缓存设置集成"""
-        config = NegentropyPerceivesSettings(
-            enable_caching=True, cache_ttl_hours=12, cache_max_size=150
-        )
-
-        if config.enable_caching:
-            assert config.cache_ttl_hours > 0
-            assert config.cache_max_size > 0
 
     def test_logging_settings_integration(self):
         """测试日志设置集成"""

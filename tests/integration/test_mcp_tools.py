@@ -1,7 +1,7 @@
 """
 MCP 工具集成测试 — 正交结构
 
-按关注点正交分解为 7 个测试类，覆盖 14 个核心 MCP 工具的注册、参数、
+按关注点正交分解为 7 个测试类，覆盖 12 个核心 MCP 工具的注册、参数、
 深度集成、工作流、健壮性与性能维度。
 """
 
@@ -24,12 +24,12 @@ class TestMCPToolRegistration:
     """测试 MCP 工具注册、Schema 完整性与应用属性"""
 
     @pytest.mark.asyncio
-    async def test_all_14_mcp_tools_registered(self):
-        """测试所有14个MCP工具都已注册"""
+    async def test_all_12_mcp_tools_registered(self):
+        """测试所有12个MCP工具都已注册"""
         tools = await app.list_tools()
         tool_names = [t.name for t in tools]
 
-        # 当前项目中的14个MCP工具
+        # 当前项目中的12个MCP工具
         expected_tools = [
             "scrape_webpage",  # 1. 基本网页爬取
             "scrape_multiple_webpages",  # 2. 批量网页爬取
@@ -38,16 +38,14 @@ class TestMCPToolRegistration:
             "check_robots_txt",  # 5. robots.txt检查
             "scrape_with_stealth",  # 6. 隐身爬取
             "fill_and_submit_form",  # 7. 表单填充和提交
-            "get_server_metrics",  # 8. 服务器指标获取
-            "clear_cache",  # 9. 缓存清理
-            "extract_structured_data",  # 10. 结构化数据提取
-            "convert_webpage_to_markdown",  # 11. 网页转Markdown
-            "batch_convert_webpages_to_markdown",  # 12. 批量网页转Markdown
-            "convert_pdf_to_markdown",  # 13. PDF转Markdown
-            "batch_convert_pdfs_to_markdown",  # 14. 批量PDF转Markdown
+            "extract_structured_data",  # 8. 结构化数据提取
+            "convert_webpage_to_markdown",  # 9. 网页转Markdown
+            "batch_convert_webpages_to_markdown",  # 10. 批量网页转Markdown
+            "convert_pdf_to_markdown",  # 11. PDF转Markdown
+            "batch_convert_pdfs_to_markdown",  # 12. 批量PDF转Markdown
         ]
 
-        assert len(expected_tools) == 14, "预期工具数量应为14个"
+        assert len(expected_tools) == 12, "预期工具数量应为12个"
 
         for expected_tool in expected_tools:
             assert expected_tool in tool_names, (
@@ -55,7 +53,7 @@ class TestMCPToolRegistration:
             )
 
         # 确保没有额外的未预期工具
-        assert len(tool_names) >= 14, f"注册工具数量 {len(tool_names)} 少于预期的14个"
+        assert len(tool_names) >= 12, f"注册工具数量 {len(tool_names)} 少于预期的12个"
 
     @pytest.mark.asyncio
     async def test_tool_schema_completeness(self):
@@ -508,17 +506,6 @@ class TestMCPToolWorkflows:
             pdf_tool = await app.get_tool("convert_pdf_to_markdown")
             assert pdf_tool is not None
 
-    @pytest.mark.asyncio
-    async def test_server_management_workflow(self):
-        """测试服务器管理工作流"""
-        # 测试指标获取后清理缓存的工作流
-        metrics_tool = await app.get_tool("get_server_metrics")
-        cache_tool = await app.get_tool("clear_cache")
-
-        assert metrics_tool is not None
-        assert cache_tool is not None
-
-
 # ---------------------------------------------------------------------------
 # 6. 健壮性 + 错误处理
 # ---------------------------------------------------------------------------
@@ -564,7 +551,7 @@ class TestMCPToolRobustness:
         tool_names = [
             "scrape_webpage",
             "convert_webpage_to_markdown",
-            "get_server_metrics",
+            "convert_pdf_to_markdown",
         ]
 
         tasks = [get_tool_concurrent(name) for name in tool_names]
@@ -629,7 +616,7 @@ class TestMCPToolPerformance:
 
         registration_time = end_time - start_time
 
-        assert len(tools) == 14, "应该注册14个工具"
+        assert len(tools) == 12, "应该注册12个工具"
         assert registration_time < 1.0, f"工具注册时间 {registration_time:.2f}s 过长"
 
     @pytest.mark.asyncio

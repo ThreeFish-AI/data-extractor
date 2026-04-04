@@ -25,8 +25,6 @@ def scenario_tools(e2e_tools):
         "convert_pdf_to_markdown",
         "batch_convert_pdfs_to_markdown",
         "extract_links",
-        "get_server_metrics",
-        "clear_cache",
     )
 
 
@@ -261,87 +259,6 @@ class TestCrossToolIntegration:
             assert pdf_response.total_pdfs == 2
             assert pdf_response.successful_count == 2
             assert pdf_response.total_word_count == 4000
-
-    @pytest.mark.asyncio
-    async def test_metrics_collection_across_multiple_tools(
-        self, all_tools, pdf_processor
-    ):
-        """Test that metrics are collected properly across different tool usage."""
-        scrape_tool = all_tools["scrape_webpage"]
-        pdf_tool = all_tools["convert_pdf_to_markdown"]
-        markdown_tool = all_tools["convert_webpage_to_markdown"]
-        metrics_tool = all_tools["get_server_metrics"]
-
-        # Mock responses for different tools
-        scrape_result = {
-            "url": "https://test.com",
-            "title": "Test Page",
-            "content": {"html": "<html><body><h1>Test</h1></body></html>"},
-        }
-
-        pdf_result = {
-            "success": True,
-            "text": "PDF content",
-            "markdown": "# PDF Document\n\nContent",
-            "source": "/test.pdf",
-            "word_count": 100,
-        }
-
-        _ = {
-            "success": True,
-            "markdown": "# Webpage\n\nConverted content",
-            "metadata": {"title": "Test Page", "word_count": 50},
-        }
-
-        with (
-            patch.object(web_scraper, "scrape_url") as mock_scrape,
-            patch("negentropy.perceives.tools.pdf.create_pdf_processor", return_value=pdf_processor),
-            patch.object(pdf_processor, "process_pdf") as mock_pdf,
-        ):
-            mock_scrape.return_value = scrape_result
-            mock_pdf.return_value = pdf_result
-
-            # Use multiple tools to generate metrics
-            await scrape_tool.fn(
-                url="https://test.com",
-                method="auto",
-                extract_config=None,
-                wait_for_element=None,
-            )
-            await pdf_tool.fn(
-                pdf_source="/test.pdf",
-                method="auto",
-                include_metadata=True,
-                page_range=None,
-                output_format="markdown",
-                extract_images=True,
-                extract_tables=True,
-                extract_formulas=True,
-                embed_images=False,
-                enhanced_options=None,
-            )
-            await markdown_tool.fn(
-                url="https://test.com",
-                method="auto",
-                extract_main_content=True,
-                include_metadata=True,
-                custom_options=None,
-                wait_for_element=None,
-                formatting_options=None,
-                embed_images=False,
-                embed_options=None,
-            )
-
-            # Check metrics collection
-            metrics_response = await metrics_tool.fn()
-
-            assert metrics_response.success is True
-            # Verify metrics contain information about different operations
-            # MetricsResponse has individual attributes, not a metrics dict
-            assert hasattr(metrics_response, "total_requests")
-            assert hasattr(metrics_response, "successful_requests")
-            assert hasattr(metrics_response, "cache_stats")
-            assert hasattr(metrics_response, "method_usage")
 
     @pytest.mark.asyncio
     async def test_error_propagation_across_tools(self, all_tools, pdf_processor):
@@ -705,11 +622,6 @@ class TestRealWorldIntegrationScenarios:
             assert markdown_response.success is True
             assert "Research Overview" in markdown_response.markdown_content
 
-        # Step 4: Check final metrics
-        metrics_tool = scenario_tools["get_server_metrics"]
-        metrics_response = await metrics_tool.fn()
-        assert metrics_response.success is True
-
     @pytest.mark.asyncio
     async def test_website_documentation_backup_scenario(
         self, scenario_tools, pdf_processor
@@ -941,14 +853,3 @@ class TestRealWorldIntegrationScenarios:
 
             assert pdf_response.success is True
             assert pdf_response.total_word_count == 3000
-
-        # Step 4: Generate final metrics for the analysis
-        metrics_tool = scenario_tools["get_server_metrics"]
-        clear_cache_tool = scenario_tools["clear_cache"]
-
-        # Clear cache and get final metrics
-        await clear_cache_tool.fn()
-        metrics_response = await metrics_tool.fn()
-
-        assert metrics_response.success is True
-        # In a real scenario, metrics would show the analysis activity

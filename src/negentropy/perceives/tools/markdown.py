@@ -6,14 +6,14 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from pydantic import Field
 
-from ..infra import metrics_collector, rate_limiter, trace_event
+from ..infra import rate_limiter
 from ..schemas import BatchMarkdownResponse, MarkdownResponse
 from ._registry import (
     ScrapeMethod,
     app,
+    elapsed_ms,
     markdown_converter,
     validate_url,
-    ToolTimer,
     web_scraper,
 )
 
@@ -107,7 +107,7 @@ async def convert_webpage_to_markdown(
         and optional image embedding statistics.
     """
     method_key = f"markdown_{method}"
-    timer = ToolTimer(url, method_key)
+    _start = time.time()
     try:
         # Validate inputs
         url_error = validate_url(url)
@@ -121,17 +121,9 @@ async def convert_webpage_to_markdown(
             )
 
         logger.info(f"Converting webpage to Markdown: {url} with method: {method}")
-        trace_event(
-            "convert_webpage_to_markdown",
-            "conversion_started",
-            url=url,
-            method=method,
-            extract_main_content=extract_main_content,
-        )
 
         # Apply rate limiting
         await rate_limiter.wait()
-        trace_event("convert_webpage_to_markdown", "rate_limit_wait_completed")
 
         # Scrape the webpage first
         scrape_result = await web_scraper.scrape_url(
@@ -140,11 +132,6 @@ async def convert_webpage_to_markdown(
             extract_config=None,
             wait_for_element=wait_for_element,
         )
-        trace_event(
-            "convert_webpage_to_markdown",
-            "webpage_scraped",
-            has_error="error" in scrape_result,
-        )
 
         if "error" in scrape_result:
             return MarkdownResponse(
@@ -152,7 +139,7 @@ async def convert_webpage_to_markdown(
                 url=url,
                 method=method,
                 error=scrape_result["error"],
-                conversion_time=timer.elapsed() / 1000.0,
+                conversion_time=elapsed_ms(_start) / 1000.0,
             )
 
         # Convert to Markdown
@@ -163,13 +150,6 @@ async def convert_webpage_to_markdown(
             custom_options=custom_options,
             embed_images=embed_images,
             embed_options=embed_options,
-        )
-        trace_event(
-            "convert_webpage_to_markdown",
-            "markdown_generated",
-            success=bool(conversion_result.get("success")),
-            word_count=conversion_result.get("word_count", 0),
-            images_embedded=conversion_result.get("images_embedded", 0),
         )
 
         if conversion_result.get("success"):
@@ -183,29 +163,25 @@ async def convert_webpage_to_markdown(
                 metadata=conversion_result.get("metadata", {}),
                 word_count=conversion_result.get("word_count", 0),
                 images_embedded=conversion_result.get("images_embedded", 0),
-                conversion_time=timer.record_success() / 1000.0,
+                conversion_time=elapsed_ms(_start) / 1000.0,
             )
         else:
             return MarkdownResponse(
                 success=False,
                 url=url,
                 method=method_key,
-                error=timer.record_failure(
-                    Exception(
-                        conversion_result.get("error", "Markdown conversion failed")
-                    )
-                ),
-                conversion_time=timer.duration_ms,
+                error=conversion_result.get("error", "Markdown conversion failed"),
+                conversion_time=elapsed_ms(_start) / 1000.0,
             )
 
     except Exception as e:
-        trace_event("convert_webpage_to_markdown", "conversion_failed", error=str(e))
+        logger.error(f"Error converting webpage {url} to Markdown: {str(e)}")
         return MarkdownResponse(
             success=False,
             url=url,
             method=method_key,
-            error=timer.record_failure(e),
-            conversion_time=timer.duration_ms,
+            error=str(e),
+            conversion_time=elapsed_ms(_start) / 1000.0,
         )
 
 
@@ -329,21 +305,6 @@ async def batch_convert_webpages_to_markdown(
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
-
-        # Record metrics for each URL
-        for i, url in enumerate(urls):
-            result = (
-                conversion_result["results"][i]
-                if i < len(conversion_result["results"])
-                else {"success": False}
-            )
-            success = result.get("success", False)
-            metrics_collector.record_request(
-                url,
-                success,
-                duration_ms // len(urls),
-                f"batch_markdown_{method}",
-            )
 
         # Convert the conversion results to MarkdownResponse objects
         markdown_responses = []
