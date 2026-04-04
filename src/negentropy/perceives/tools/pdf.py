@@ -6,14 +6,14 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from pydantic import Field
 
-from ..infra import metrics_collector, rate_limiter, trace_event
+from ..infra import rate_limiter
 from ..schemas import BatchPDFResponse, PDFResponse
 from ._registry import (
     PDFMethod,
     PDFOutputFormat,
     app,
     create_pdf_processor,
-    ToolTimer,
+    elapsed_ms,
     validate_page_range,
 )
 
@@ -106,7 +106,7 @@ async def convert_pdf_to_markdown(
         enhanced assets summary, and page/word count statistics.
     """
     method_key = f"pdf_{method}"
-    timer = ToolTimer(pdf_source, method_key)
+    _start = time.time()
     try:
         # Validate page range using shared helper
         page_range_tuple, page_range_error = validate_page_range(page_range)
@@ -123,17 +123,9 @@ async def convert_pdf_to_markdown(
         logger.info(
             f"Converting PDF to {output_format}: {pdf_source} with method: {method}"
         )
-        trace_event(
-            "convert_pdf_to_markdown",
-            "conversion_started",
-            pdf_source=pdf_source,
-            method=method,
-            output_format=output_format,
-        )
 
         # Apply rate limiting
         await rate_limiter.wait()
-        trace_event("convert_pdf_to_markdown", "rate_limit_wait_completed")
 
         # Determine output directory for enhanced assets
         output_dir = None
@@ -147,12 +139,6 @@ async def convert_pdf_to_markdown(
         pdf_processor = create_pdf_processor(
             enable_enhanced_features=enable_enhanced, output_dir=output_dir
         )
-        trace_event(
-            "convert_pdf_to_markdown",
-            "processor_created",
-            enhanced=enable_enhanced,
-            output_dir=output_dir or "",
-        )
         result = await pdf_processor.process_pdf(
             pdf_source=pdf_source,
             method=method,
@@ -164,12 +150,6 @@ async def convert_pdf_to_markdown(
             extract_formulas=extract_formulas,
             embed_images=embed_images,
             enhanced_options=enhanced_options,
-        )
-        trace_event(
-            "convert_pdf_to_markdown",
-            "processor_completed",
-            success=bool(result.get("success")),
-            word_count=result.get("word_count", 0),
         )
 
         if result.get("success"):
@@ -184,7 +164,7 @@ async def convert_pdf_to_markdown(
                     "page_count", result.get("pages_processed", result.get("pages", 0))
                 ),
                 word_count=result.get("word_count", 0),
-                conversion_time=timer.record_success() / 1000.0,
+                conversion_time=elapsed_ms(_start) / 1000.0,
                 enhanced_assets=result.get("enhanced_assets"),
                 orchestration_info=result.get("orchestration_info"),
             )
@@ -194,21 +174,19 @@ async def convert_pdf_to_markdown(
                 pdf_source=pdf_source,
                 method=method,
                 output_format=output_format,
-                error=timer.record_failure(
-                    Exception(result.get("error", "PDF conversion failed"))
-                ),
-                conversion_time=timer.duration_ms / 1000.0,
+                error=result.get("error", "PDF conversion failed"),
+                conversion_time=elapsed_ms(_start) / 1000.0,
             )
 
     except Exception as e:
-        trace_event("convert_pdf_to_markdown", "conversion_failed", error=str(e))
+        logger.error(f"Error converting PDF {pdf_source}: {str(e)}")
         return PDFResponse(
             success=False,
             pdf_source=pdf_source,
             method=method,
             output_format=output_format,
-            error=timer.record_failure(e),
-            conversion_time=timer.duration_ms / 1000.0,
+            error=str(e),
+            conversion_time=elapsed_ms(_start) / 1000.0,
         )
 
 
@@ -355,21 +333,6 @@ async def batch_convert_pdfs_to_markdown(
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
-
-        # Record metrics for each PDF
-        for i, pdf_source in enumerate(pdf_sources):
-            pdf_result = (
-                result["results"][i]
-                if i < len(result["results"])
-                else {"success": False}
-            )
-            success = pdf_result.get("success", False)
-            metrics_collector.record_request(
-                pdf_source,
-                success,
-                duration_ms // len(pdf_sources),
-                f"batch_pdf_{method}",
-            )
 
         # Convert results to PDFResponse objects
         pdf_responses = []

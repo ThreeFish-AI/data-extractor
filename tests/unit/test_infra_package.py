@@ -6,18 +6,6 @@ import pytest
 class TestInfraPackageExports:
     """验证 infra/ 子包的 __init__.py 导出完整性。"""
 
-    def test_import_cache_manager(self):
-        from negentropy.perceives.infra import CacheManager, cache_manager
-
-        assert CacheManager is not None
-        assert cache_manager is not None
-
-    def test_import_metrics_collector(self):
-        from negentropy.perceives.infra import MetricsCollector, metrics_collector
-
-        assert MetricsCollector is not None
-        assert metrics_collector is not None
-
     def test_import_rate_limiter(self):
         from negentropy.perceives.infra import RateLimiter, rate_limiter
 
@@ -53,19 +41,5 @@ class TestInfraPackageExports:
         assert TextCleaner is not None
         assert URLValidator is not None
 
-    def test_import_trace_types(self):
-        from negentropy.perceives.infra import (
-            TraceEventRecord,
-            TraceRecorder,
-            active_trace,
-            get_recorder,
-            trace_event,
-        )
-
-        assert TraceEventRecord is not None
-        assert TraceRecorder is not None
-        assert callable(active_trace)
-        assert callable(get_recorder)
-        assert callable(trace_event)
 
 

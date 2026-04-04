@@ -663,59 +663,6 @@ class TestSystemHealth:
     """系统健康与指标测试"""
 
     @pytest.mark.asyncio
-    async def test_metrics_collection_integration(self):
-        """Test that metrics are collected properly during operations."""
-        tools = await get_tool_map()
-        metrics_tool = tools["get_server_metrics"]
-        convert_tool = tools["convert_webpage_to_markdown"]
-
-        # Perform some operations first
-        mock_result = {
-            "url": "https://metrics-test.com",
-            "title": "Metrics Test",
-            "content": {"html": "<html><body><h1>Test</h1></body></html>"},
-        }
-
-        with patch("negentropy.perceives.tools.markdown.web_scraper") as mock_scraper:
-            mock_scraper.scrape_url = AsyncMock(return_value=mock_result)
-
-            # Perform several operations
-            for i in range(3):
-                await convert_tool.fn(
-                    url=f"https://metrics-test.com/page-{i}",
-                    method="auto",
-                    extract_main_content=True,
-                    include_metadata=True,
-                    custom_options=None,
-                    formatting_options=None,
-                    wait_for_element=None,
-                    embed_images=False,
-                    embed_options=None,
-                )
-
-        # Check metrics
-        metrics_result = await metrics_tool.fn()
-
-        assert metrics_result.success is True
-        # Check that we have some metrics data (the exact keys may vary)
-        # Check for expected metrics fields based on actual MetricsResponse structure
-        assert hasattr(metrics_result, "total_requests")
-        assert hasattr(metrics_result, "method_usage")
-        assert hasattr(metrics_result, "cache_stats")
-
-    @pytest.mark.asyncio
-    async def test_cache_integration(self):
-        """Test cache functionality integration."""
-        tools = await get_tool_map()
-        clear_cache_tool = tools["clear_cache"]
-
-        # Clear cache
-        result = await clear_cache_tool.fn()
-
-        assert result.success is True
-        assert hasattr(result, "message")
-
-    @pytest.mark.asyncio
     async def test_configuration_validation(self):
         """测试配置验证"""
         # 验证关键配置项
@@ -727,7 +674,7 @@ class TestSystemHealth:
 
         # 验证工具能够使用这些配置
         tools = await get_tool_map()
-        assert len(tools) == 14
+        assert len(tools) == 12
 
 
 # ---------------------------------------------------------------------------

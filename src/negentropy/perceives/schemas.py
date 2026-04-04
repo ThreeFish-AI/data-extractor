@@ -149,27 +149,3 @@ class BatchPDFResponse(BaseModel):
     total_conversion_time: float = Field(..., description="总转换时间（秒）")
 
 
-class MetricsResponse(BaseModel):
-    """服务器指标的响应模型。"""
-
-    success: bool = Field(..., description="操作是否成功")
-    total_requests: int = Field(..., description="总请求数")
-    successful_requests: int = Field(..., description="成功请求数")
-    failed_requests: int = Field(..., description="失败请求数")
-    success_rate: float = Field(..., description="成功率")
-    average_response_time: float = Field(..., description="平均响应时间（秒）")
-    uptime_seconds: float = Field(..., description="运行时间（秒）")
-    cache_stats: Dict[str, Any] = Field(..., description="缓存统计")
-    method_usage: Dict[str, int] = Field(..., description="方法使用统计")
-    error_categories: Dict[str, int] = Field(..., description="错误分类统计")
-
-
-class CacheOperationResponse(BaseModel):
-    """缓存清理操作的响应模型。"""
-
-    success: bool = Field(..., description="操作是否成功")
-    cleared_items: int = Field(..., description="清理的缓存项数量")
-    cache_size_before: int = Field(..., description="清理前缓存大小")
-    cache_size_after: int = Field(..., description="清理后缓存大小")
-    operation_time: float = Field(..., description="操作耗时（秒）")
-    message: str = Field(..., description="操作结果消息")

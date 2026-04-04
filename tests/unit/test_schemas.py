@@ -14,8 +14,6 @@ from negentropy.perceives.schemas import (
     BatchMarkdownResponse,
     PDFResponse,
     BatchPDFResponse,
-    MetricsResponse,
-    CacheOperationResponse,
 )
 
 
@@ -287,55 +285,13 @@ class TestBatchPDFResponse:
         )
         assert resp.total_pages == 0
         assert resp.total_word_count == 0
-
-
-class TestMetricsResponse:
-    """MetricsResponse 模型测试。"""
-
-    def test_required_fields(self):
-        """必填字段校验。"""
-        resp = MetricsResponse(
-            success=True,
-            total_requests=100,
-            successful_requests=95,
-            failed_requests=5,
-            success_rate=0.95,
-            average_response_time=1.5,
-            uptime_seconds=3600.0,
-            cache_stats={"hits": 50, "misses": 20},
-            method_usage={"simple": 60, "selenium": 40},
-            error_categories={"timeout": 3, "connection": 2},
-        )
-        assert resp.success_rate == 0.95
-        assert resp.cache_stats["hits"] == 50
-
-
-class TestCacheOperationResponse:
-    """CacheOperationResponse 模型测试。"""
-
-    def test_required_fields(self):
-        """必填字段校验。"""
-        resp = CacheOperationResponse(
-            success=True,
-            cleared_items=10,
-            cache_size_before=10,
-            cache_size_after=0,
-            operation_time=0.01,
-            message="Cache cleared successfully",
-        )
-        assert resp.cleared_items == 10
-        assert resp.cache_size_after == 0
-
-
 class TestBackwardCompatibility:
     """向后兼容性测试：确认所有模型可通过垫片路径导入。"""
 
     def test_all_models_importable(self):
-        """所有 13 个模型均可正常导入。"""
+        """所有模型均可正常导入。"""
         from negentropy.perceives.schemas import (
             ScrapeResponse,
-            CacheOperationResponse,
         )
 
         assert ScrapeResponse is not None
-        assert CacheOperationResponse is not None

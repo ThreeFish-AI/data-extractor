@@ -5,10 +5,11 @@ from typing import Annotated, Any, Dict, Optional
 
 from pydantic import Field
 
+import time
+
 from ..infra import (
     TextCleaner,
     URLValidator,
-    cache_manager,
     rate_limiter,
     retry_manager,
 )
@@ -17,9 +18,9 @@ from ._registry import (
     BrowserMethod,
     app,
     anti_detection_scraper,
+    elapsed_ms,
     normalize_extract_config,
     validate_url,
-    ToolTimer,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ async def scrape_with_stealth(
         Designed for bypassing sophisticated bot detection systems.
     """
     method_key = f"stealth_{method}"
-    timer = ToolTimer(url, method_key)
+    _start = time.time()
     try:
         # Validate inputs
         url_error = validate_url(url)
@@ -102,23 +103,6 @@ async def scrape_with_stealth(
 
         # Normalize URL
         normalized_url = URLValidator.normalize_url(url)
-        timer.url = normalized_url
-
-        # Check cache first
-        cache_key_data = {
-            "extract_config": extract_config,
-            "wait_for_element": wait_for_element,
-            "scroll_page": scroll_page,
-        }
-        cached_result = cache_manager.get(normalized_url, method_key, cache_key_data)
-        if cached_result:
-            logger.info(f"Returning cached result for {normalized_url}")
-            return ScrapeResponse(
-                success=True,
-                url=url,
-                method=method_key,
-                data=cached_result,
-            )
 
         # Validate and normalize extract config
         if extract_config:
@@ -141,10 +125,6 @@ async def scrape_with_stealth(
                     result["content"]["text"]
                 )
 
-            # Cache successful result
-            cache_manager.set(normalized_url, method_key, result, cache_key_data)
-
-            timer.record_success()
             return ScrapeResponse(
                 success=True,
                 url=url,
@@ -156,15 +136,14 @@ async def scrape_with_stealth(
                 success=False,
                 url=url,
                 method=method_key,
-                error=timer.record_failure(
-                    Exception(result.get("error", "Unknown error"))
-                ),
+                error=result.get("error", "Unknown error"),
             )
 
     except Exception as e:
+        logger.error(f"Error in stealth scraping {url}: {str(e)}")
         return ScrapeResponse(
             success=False,
             url=url,
             method=method_key,
-            error=timer.record_failure(e),
+            error=str(e),
         )
