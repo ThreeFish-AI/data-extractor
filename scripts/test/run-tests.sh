@@ -98,17 +98,21 @@ show_help() {
     echo "选项:"
     echo "  unit          运行单元测试"
     echo "  integration   运行集成测试"
-    echo "  full          运行完整测试套件 (默认)"
+    echo "  full          运行优化版测试套件 (默认，排除 network/browser/llm)"
     echo "  quick         运行快速测试 (排除慢速测试)"
     echo "  performance   运行性能测试"
+    echo "  llm           运行需要 LLM API 的测试 (smart 模式、编排)"
+    echo "  ci            运行全量测试套件 (包含所有标记，用于 CI)"
     echo "  coverage      仅生成覆盖率报告"
     echo "  clean         清理测试结果"
     echo "  help          显示此帮助信息"
     echo ""
     echo "示例:"
     echo "  $0 unit       # 仅运行单元测试"
-    echo "  $0 quick      # 快速测试，适用于开发阶段"
-    echo "  $0 full       # 完整测试，适用于CI/CD"
+    echo "  $0 quick      # 快速测试，适用于开发阶段 (< 3min 目标)"
+    echo "  $0 full       # 优化版完整测试，适用于本地开发 (< 3min 目标)"
+    echo "  $0 ci         # 全量测试（含 LLM/网络），适用于 CI/CD"
+    echo "  $0 llm        # 仅运行 LLM 相关集成测试"
     echo ""
 }
 
@@ -135,6 +139,7 @@ main() {
                          -n auto --cov-append -m "integration or not unit" ;;
         full)        run_pytest "tests/" "full-test" \
                          -n auto \
+                         -m "not (requires_network or requires_browser or requires_llm)" \
                          --cov-report=html:tests/reports/htmlcov \
                          --cov-report=xml:tests/reports/coverage.xml \
                          --cov-report=json:tests/reports/coverage.json ;;
@@ -142,6 +147,13 @@ main() {
                          -n auto -m "not slow" -x ;;
         performance) run_pytest "tests/integration/test_comprehensive_integration.py::TestPerformanceAndLoad" \
                          "performance-test" ;;
+        llm)         run_pytest "tests/" "llm-test" \
+                         -n auto -m "requires_llm" ;;
+        ci)          run_pytest "tests/" "ci-test" \
+                         -n auto \
+                         --cov-report=html:tests/reports/htmlcov \
+                         --cov-report=xml:tests/reports/coverage.xml \
+                         --cov-report=json:tests/reports/coverage.json ;;
         *)           log_error "未知选项: $mode"
                      show_help
                      exit 1 ;;

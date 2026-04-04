@@ -104,12 +104,13 @@ markers = [
     "unit: marks tests as unit tests", 
     "requires_network: marks tests that require network access",
     "requires_browser: marks tests that require browser setup",
-    "requires_gpu: marks tests that require GPU acceleration (MPS/CUDA/XPU)"
+    "requires_gpu: marks tests that require GPU acceleration (MPS/CUDA/XPU)",
+    "requires_llm: marks tests that require LLM API access (smart mode, orchestration)",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 log_cli = true
-log_cli_level = "INFO"
+log_cli_level = "WARNING"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 

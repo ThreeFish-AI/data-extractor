@@ -7,6 +7,7 @@ from negentropy.perceives.scraping import WebScraper
 from negentropy.perceives.markdown.converter import MarkdownConverter
 
 
+@pytest.mark.requires_network
 @pytest.mark.asyncio
 async def test_langchain_blog_conversion():
     """Test conversion of the LangChain blog with different methods."""

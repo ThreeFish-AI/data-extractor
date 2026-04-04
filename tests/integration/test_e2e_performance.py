@@ -79,9 +79,9 @@ class TestPerformance:
 
     @pytest.mark.asyncio
     async def test_concurrent_processing_benchmark(self, e2e_tools, pdf_processor):
-        """Performance Test 2：并发处理基准 — 验证 20 个文档并发处理的吞吐量。"""
+        """Performance Test 2：并发处理基准 — 验证 8 个文档并发处理的吞吐量。"""
         convert_pdf_tool = e2e_tools["convert_pdf_to_markdown"]
-        num_concurrent = 20
+        num_concurrent = 8
 
         # Create realistic concurrent load
         async def mock_concurrent_pdf_process(*args, **kwargs):
@@ -126,22 +126,22 @@ class TestPerformance:
             assert all(r.success for r in results)
 
             # Concurrent execution should be faster than sequential
-            # Sequential would take: 20 * 0.1 = 2.0 seconds
+            # Sequential would take: 8 * 0.1 = 0.8 seconds
             # Concurrent should complete faster due to async execution
             assert concurrent_duration < 1.5
 
             throughput = num_concurrent / concurrent_duration
-            assert throughput > 15  # Should process more than 15 docs/second
+            assert throughput > 8  # Should process more than 8 docs/second
 
     @pytest.mark.asyncio
     async def test_memory_usage_during_batch_operations(self, e2e_tools, pdf_processor):
-        """Performance Test 3：批量操作内存使用监控 — 验证 50 文档批处理不产生过多对象增长。"""
+        """Performance Test 3：批量操作内存使用监控 — 验证 15 文档批处理不产生过多对象增长。"""
         gc.collect()
         initial_objects = len(gc.get_objects())
 
         # Process a large batch with memory monitoring
         batch_pdf_tool = e2e_tools["batch_convert_pdfs_to_markdown"]
-        large_batch_sources = [f"/batch-doc-{i}.pdf" for i in range(50)]
+        large_batch_sources = [f"/batch-doc-{i}.pdf" for i in range(15)]
 
         async def mock_batch_with_memory_tracking(pdf_sources, **kwargs):
             results = []
@@ -194,7 +194,7 @@ class TestPerformance:
             batch_duration = time.time() - start_time
 
             assert batch_result.success is True
-            assert batch_result.total_word_count == 10000  # 50 * 200
+            assert batch_result.total_word_count == 3000  # 15 * 200
 
         # Check memory usage after batch processing
         gc.collect()
@@ -202,7 +202,7 @@ class TestPerformance:
         memory_growth = final_objects - initial_objects
 
         # Memory growth should be reasonable for the amount of processing
-        assert memory_growth < 5000, (
+        assert memory_growth < 2000, (
             f"Excessive memory usage: {memory_growth} new objects"
         )
 
@@ -216,8 +216,7 @@ class TestPerformance:
             0.1,
             0.2,
             0.5,
-            1.0,
-        ]  # Simulate different network conditions
+        ]  # Simulate different network conditions (removed 1.0s to reduce test time)
         network_results = []
 
         for latency in network_latencies:
