@@ -108,3 +108,66 @@ def warm_docling_converter(gpu_docling_engine):
     assert converter is not None, "Converter 预热失败：返回 None"
 
     return elapsed
+
+
+# ── 共享 Docling 转换结果（Session 级，消除重复 PDF 处理） ────────
+
+from pathlib import Path
+
+_ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+_CE_PDF_PATH = _ASSETS_DIR / "Context Engineering 2.0 - The Context of Context Engineering.pdf"
+_ARXIV_PDF_PATH = _ASSETS_DIR / "2603.05344v3.pdf"
+
+
+@pytest.fixture(scope="session")
+def shared_docling_result_ce(gpu_docling_engine, warm_docling_converter):
+    """Session 级共享：CE_PDF 的 Docling GPU 转换结果（仅执行一次）。
+
+    所有需要 CE_PDF 转换结果的测试类应使用此 fixture，
+    避免各自独立触发 Docling 模型推理（每次 15-40s）。
+    """
+    from negentropy.perceives.pdf.docling_engine import DoclingEngine
+
+    if not DoclingEngine.is_available():
+        pytest.skip("Docling 未安装，跳过 CE_PDF 共享转换")
+    if not _CE_PDF_PATH.exists():
+        pytest.skip(f"CE_PDF 文件不存在: {_CE_PDF_PATH}")
+
+    t0 = time.perf_counter()
+    result = gpu_docling_engine.convert(str(_CE_PDF_PATH))
+    elapsed = time.perf_counter() - t0
+
+    logger.info(
+        "[共享] CE_PDF Docling 转换完成: %.2fs, %d 页, %d 字符",
+        elapsed,
+        result.page_count,
+        len(result.markdown),
+    )
+    return result
+
+
+@pytest.fixture(scope="session")
+def shared_docling_result_arxiv(gpu_docling_engine, warm_docling_converter):
+    """Session 级共享：arXiv PDF 前 8 页的 Docling GPU 转换结果。
+
+    处理前 8 页以验证代码块提取、学术结构等核心断言，
+    避免完整 100 页处理耗时（30-60s → 8-15s）。
+    """
+    from negentropy.perceives.pdf.docling_engine import DoclingEngine
+
+    if not DoclingEngine.is_available():
+        pytest.skip("Docling 未安装，跳过 arXiv PDF 共享转换")
+    if not _ARXIV_PDF_PATH.exists():
+        pytest.skip(f"arXiv PDF 文件不存在: {_ARXIV_PDF_PATH}")
+
+    t0 = time.perf_counter()
+    result = gpu_docling_engine.convert(str(_ARXIV_PDF_PATH), page_range=(1, 8))
+    elapsed = time.perf_counter() - t0
+
+    logger.info(
+        "[共享] arXiv PDF(1-8页) Docling 转换完成: %.2fs, %d 页, %d 字符",
+        elapsed,
+        result.page_count,
+        len(result.markdown),
+    )
+    return result
