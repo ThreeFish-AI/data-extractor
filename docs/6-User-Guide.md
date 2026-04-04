@@ -1539,7 +1539,6 @@ NEGENTROPY_PERCEIVES_HTTP_CORS_ORIGINS="http://localhost:3000,https://yourdomain
 |------|------|---------|
 | [架构设计](./1-Framework.md) | 系统架构与设计原则 | 架构师 / 贡献者 |
 | [开发指南](./2-Development.md) | 环境搭建、编码规范、性能优化 | 开发者 |
-| [GitHub Actions 工作流](./2.1-Workflows.md) | CI/CD 流水线 | DevOps / 贡献者 |
 | [测试指南](./3-Testing.md) | 测试体系与执行方法 | 开发者 / QA |
 | [配置系统](./4-Configuration.md) | 环境变量与配置管理 | 运维 / 开发者 |
 | [常用命令](./5-Commands.md) | 命令速查 | 所有用户 |

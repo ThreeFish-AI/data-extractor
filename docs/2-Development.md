@@ -2,18 +2,20 @@
 id: development
 sidebar_position: 2
 title: Development
-description: Development Guide and Best Practices
+description: 开发环境配置、项目结构、MCP 工具开发规范、CI/CD 工作流与编码最佳实践
 last_update:
   author: Aurelius
-  date: 2026-03-22
+  date: 2026-04-04
 tags:
   - Development
   - Guide
   - Best Practices
   - Workflow
+  - CI/CD
+  - GitHub Actions
 ---
 
-Negentropy Perceives 采用现代化的 Python 开发工具链，基于 uv 包管理器构建高效的开发环境。本文档提供开发环境配置、项目结构总览、MCP 工具开发规范与编码最佳实践。
+Negentropy Perceives 采用现代化的 Python 开发工具链，基于 [uv](https://docs.astral.sh/uv/) 包管理器构建高效的开发环境。本文档提供开发环境配置、项目结构总览、MCP 工具开发规范、CI/CD 工作流与编码最佳实践。
 
 ## 环境配置
 
@@ -63,43 +65,63 @@ uv run playwright install chromium
 ```
 negentropy-perceives/
 ├── src/negentropy/perceives/                    # 核心包
-│   ├── apps/
-│   │   ├── __init__.py           # 应用入口包
-│   │   └── app.py                # MCP 服务器入口（main()）
-│   ├── config.py                 # 配置系统 + 配置验证（NegentropyPerceivesSettings, ConfigValidator）
-│   ├── schemas.py                # 响应模型 + 数据传输对象（Pydantic BaseModel, ScrapingResult）
+│   ├── __init__.py              # 版本信息（动态读取 pyproject.toml）
+│   ├── __main__.py              # python -m 入口
+│   ├── _logging.py              # 日志配置
+│   ├── config.py                # 配置系统 + 配置验证（NegentropyPerceivesSettings, ConfigValidator）
+│   ├── schemas.py               # 响应模型 + 数据传输对象（Pydantic BaseModel）
+│   ├── sdk.py                   # Python SDK 封装（NegentropyPerceivesClient）
 │   │
-│   ├── scraper.py                # 网页抓取引擎（WebScraper）
-│   ├── anti_detection.py         # 反检测隐身抓取（AntiDetectionScraper）
-│   ├── browser_utils.py          # 浏览器工具
-│   ├── form_handler.py           # 表单处理
+│   ├── apps/                    # 应用入口子包
+│   │   └── app.py               # MCP 服务器入口（main()）
 │   │
-│   ├── rate_limiter.py           # 速率限制
-│   ├── retry.py                  # 重试机制
-│   ├── error_handler.py          # 错误处理
-│   ├── metrics.py                # 指标收集
-│   ├── timing.py                 # 计时装饰器
+│   ├── scraping/                # 网页抓取引擎子包
+│   │   ├── engine.py            # 核心抓取引擎（WebScraper）
+│   │   ├── anti_detection.py    # 反检测隐身抓取（AntiDetectionScraper）
+│   │   ├── browser.py           # 浏览器工具
+│   │   ├── form_handler.py      # 表单处理
+│   │   └── content_extraction/  # 内容提取（selectors.py, pages.py）
 │   │
-│   ├── url_utils.py              # URL 验证工具
-│   ├── text_utils.py             # 文本清理工具
+│   ├── pdf/                     # PDF 处理引擎子包（5 级降级链）
+│   │   ├── processor.py         # 核心 PDF 处理器（多引擎调度）
+│   │   ├── enhanced.py          # 增强 PDF 处理器（PyMuPDF）
+│   │   ├── docling_engine.py    # Docling 引擎（GPU 加速）
+│   │   ├── marker_engine.py     # Marker 引擎
+│   │   ├── mineru_engine.py     # MineRU 引擎
+│   │   ├── llm_orchestrator.py  # LLM 编排器
+│   │   ├── llm_client.py        # LLM 客户端
+│   │   ├── math_formula.py      # 数学公式处理
+│   │   ├── device_config.py     # 设备配置
+│   │   ├── hardware.py          # 硬件检测
+│   │   ├── figure_text_filter.py # 图文过滤
+│   │   ├── _imports.py / _sources.py  # 内部导入管理
 │   │
-│   ├── pdf_processor.py          # PDF 处理器入口（兼容层）
-│   ├── enhanced_pdf_processor.py # 增强 PDF（兼容层）
+│   ├── markdown/                # Markdown 转换子包
+│   │   ├── converter.py         # Markdown 转换器核心
+│   │   ├── formatter.py         # 格式化器
+│   │   ├── html_preprocessor.py # HTML 预处理
+│   │   ├── algorithm_detector.py # 算法检测
+│   │   ├── formula_placeholder_resolver.py # 公式占位符解析
+│   │   ├── image_embedder.py    # 图片嵌入
+│   │   └── image_ref_normalizer.py # 图片引用规范化
 │   │
-│   ├── tools/                    # MCP 工具注册子包
-│   │   ├── _registry.py          # app 实例 + 共享服务 + 辅助函数
-│   │   ├── scraping.py           # 网页抓取工具（6 个 tool）
-│   │   ├── pdf.py                # PDF 处理工具（2 个 tool）
-│   │   ├── markdown.py           # Markdown 转换工具（2 个 tool）
-│   │   ├── form.py               # 表单工具（1 个 tool）
-│   │   ├── utility.py            # 实用工具（1 个 tool）
-│   │   └── service.py            # 服务管理工具（2 个 tool）
+│   ├── tools/                   # MCP 工具注册子包（12 个 tool）
+│   │   ├── __init__.py          # 包初始化 + 触发注册
+│   │   ├── _registry.py         # FastMCP app 实例 + 共享服务 + 辅助函数导出
+│   │   ├── _observability.py    # 可观测性辅助（elapsed_ms 等）
+│   │   ├── _support.py          # 支撑工具（validate_url, 类型别名等）
+│   │   ├── extraction.py        # 数据提取工具（4 个 tool）
+│   │   ├── form.py              # 表单交互工具（1 个 tool）
+│   │   ├── markdown.py          # Markdown 转换工具（2 个 tool）
+│   │   ├── pdf.py               # PDF 处理工具（2 个 tool）
+│   │   ├── scraping.py          # 网页抓取工具（2 个 tool）
+│   │   └── stealth.py           # 隐身抓取工具（1 个 tool）
 │   │
-│   ├── pdf/                      # PDF 处理引擎子包
-│   │   ├── processor.py          # 核心 PDF 处理器
-│   │   └── enhanced.py           # 增强 PDF 处理器（PyMuPDF）
+│   ├── infra/                   # 基础设施层
+│   │   ├── parsing.py           # 解析工具
+│   │   └── resilience.py        # 弹性策略（重试、限速等）
 │   │
-│   └── examples/                 # 示例与配置模板（随包分发）
+│   └── examples/                # 示例与模板（随包分发）
 │       ├── configs/
 │       │   └── extraction_configs.py  # 领域提取配置模板
 │       ├── mcp/
@@ -109,8 +131,8 @@ negentropy-perceives/
 │
 ├── tests/                        # 测试套件
 │   ├── conftest.py               # 共享 Fixtures
-│   ├── unit/                     # 单元测试（16 个文件）
-│   └── integration/              # 集成测试（9 个文件）
+│   ├── unit/                     # 单元测试
+│   └── integration/              # 集成测试
 │
 ├── scripts/                      # 仓库维护脚本
 │   ├── dev/
@@ -119,7 +141,9 @@ negentropy-perceives/
 │       └── run-tests.sh          # 测试执行（支持 unit/integration/full/coverage 等模式）
 │
 ├── docs/                         # 项目文档
-├── .github/workflows/            # CI/CD 配置
+├── .github/workflows/            # CI/CD 配置（ci/publish/dependencies/review）
+├── .github/actions/              # 可复用 Composite Action
+│   └── setup-python-uv/action.yml
 └── pyproject.toml                # 项目配置
 ```
 
@@ -131,19 +155,22 @@ negentropy-perceives/
 
 ```
 tools/_registry.py          定义 FastMCP app 实例 + 共享服务
+       ↓                       （web_scraper, anti_detection_scraper,
+tools/_support.py                markdown_converter, create_pdf_processor 工厂）
+tools/_observability.py      导出 validate_url、elapsed_ms 等辅助函数
        ↓
-tools/scraping.py 等        用 @app.tool() 装饰器注册工具函数
-       ↓
-tools/__init__.py           导入各子模块，触发装饰器注册
+tools/extraction.py 等       用 @app.tool() 装饰器注册工具函数
+       ↓                       （12 个 tool 分布于 6 个模块）
+tools/__init__.py           导入各子模块 + _registry 公共 API，触发装饰器注册
        ↓
 apps/app.py                 应用入口 main()，从 tools 导入 app 实例
 ```
 
-`_registry.py` 是中枢，提供 `app` 实例和共享服务（`web_scraper`、`anti_detection_scraper`、`markdown_converter`）以及通用辅助函数（`validate_url`、`record_error`、`elapsed_ms` 等）。
+`_registry.py` 是中枢，提供 `app` 实例和共享服务，以及通用辅助函数。`_support.py` 导出类型别名和输入验证工具，`_observability.py` 提供计时和指标收集能力。
 
 ### 开发新工具步骤
 
-以 `check_robots_txt`（[tools/utility.py](../src/negentropy/perceives/tools/utility.py)）为例，这是项目中最简单的 MCP 工具：
+以 `check_robots_txt`（[tools/extraction.py](../src/negentropy/perceives/tools/extraction.py)）为例：
 
 #### 1. 定义响应模型
 
@@ -198,7 +225,7 @@ async def check_robots_txt(url: str) -> RobotsResponse:
 在 [tools/\_\_init\_\_.py](../src/negentropy/perceives/tools/__init__.py) 中导入新模块：
 
 ```python
-from . import utility  # noqa: F401  # 触发 @app.tool() 注册
+from . import extraction  # noqa: F401  # 触发 @app.tool() 注册
 ```
 
 工具函数统一通过 `tools/` 包导入，无需额外 re-export。
@@ -221,13 +248,13 @@ async def scrape_webpage(
 
 ### 开发最佳实践
 
-- **错误处理**：验证输入参数，使用 `_registry.py` 中的 `validate_url()` 和 `record_error()` 辅助函数，返回结构化错误信息
-- **性能优化**：使用异步编程（`async/await`），利用 `rate_limiter.py` 限速、`timing.py` 计时装饰器
+- **错误处理**：验证输入参数，使用 `_registry.py` 中的 `validate_url()` 和 `_support.py` 中的辅助函数，返回结构化错误信息
+- **性能优化**：使用异步编程（`async/await`），利用 `infra/resilience.py` 限速、`_observability.py` 计时装饰器
 - **架构参考**：系统性能设计详见 [架构设计](./1-Framework.md)
 
 ## 编码规范
 
-遵循 PEP 8 和 PEP 257 标准。代码质量工具（Ruff、MyPy、Pre-commit）的使用详见 [常用指令](./5-Commands.md)。
+遵循 PEP 8 和 PEP 257 标准。代码质量工具的使用详见 [常用指令](./5-Commands.md)。
 
 ### 类型注解与文档字符串
 
@@ -257,9 +284,198 @@ async def scrape_webpage(
     pass
 ```
 
+### 代码质量保障
+
+项目使用以下工具链保障代码质量，详见 [常用指令 > 代码质量检查](./5-Commands.md#代码质量检查)：
+
+| 工具 | 用途 | 配置位置 |
+|------|------|---------|
+| Ruff | Lint + Format | `pyproject.toml` `[tool.ruff]` |
+| MyPy | 静态类型检查 | `pyproject.toml` `[tool.mypy]` |
+| Bandit | 安全扫描 | CI `security` job |
+| pip-audit | 依赖漏洞扫描 | CI `security` job |
+
 ## CI/CD 与版本管理
 
-详见 [GitHub Actions 工作流](./2.1-Workflows.md) 和 [构建与发布流程](./5-Commands.md#构建与发布流程)。
+### 架构概览
+
+```mermaid
+graph TD
+    subgraph "触发源"
+        A["推送 master/main/develop"]
+        B0["PR → master/main/develop"]
+        C["标签 v*.*.*"]
+        C2["Release published"]
+        G["计划 / 手动"]
+    end
+
+    subgraph "CI 流水线"
+        B[ci.yml]
+        B1[跨平台测试]
+        B2[Lint & 类型检查]
+        B3[安全审计]
+        B4[构建验证]
+        B5[覆盖率报告]
+        B --> B1 & B2 & B3 & B4 & B5
+    end
+
+    subgraph "发布流水线"
+        D[publish.yml]
+        D0[CI 验证]
+        D1[构建分发包]
+        D2[GitHub Release]
+        D3[TestPyPI]
+        D4[PyPI]
+        D5[更新 Changelog]
+        D --> D0 --> D1
+        D1 --> D2
+        D1 --> D3
+        D1 --> D4 --> D5
+    end
+
+    subgraph "辅助流水线"
+        H[dependencies.yml]
+        K[review.yml]
+    end
+
+    A --> B
+    B0 --> B
+    C --> D
+    C2 --> D
+    G -->|"每周依赖更新"| H
+    B0 -->|"代码审查"| K
+
+    style B fill:#2196F3,color:#fff
+    style D fill:#4CAF50,color:#fff
+    style H fill:#FF9800,color:#000
+    style K fill:#9C27B0,color:#fff
+```
+
+### 🔄 CI — [`ci.yml`](../.github/workflows/ci.yml)
+
+**触发条件：** 推送到 master/main/develop、PR → master/main/develop、`workflow_call`、手动触发
+
+| Job | 职责 |
+|-----|------|
+| `test` | 在 Ubuntu / Windows / macOS 上运行 pytest |
+| `lint` | ruff lint + format check + mypy 类型检查 |
+| `security` | bandit 静态安全扫描 + pip-audit 依赖漏洞扫描 |
+| `build` | 构建 wheel 并验证安装 |
+| `coverage` | 覆盖率报告 + Codecov 上传 |
+
+支持 `workflow_call`，可被 publish.yml 作为验证步骤调用。
+
+### 🚀 发布 — [`publish.yml`](../.github/workflows/publish.yml)
+
+**触发条件：** `v*.*.*` 标签推送、Release published、手动触发（需指定 version）
+
+| Job | 职责 | 触发条件 |
+|-----|------|----------|
+| `validate` | 调用 ci.yml 执行完整验证 | 始终 |
+| `build` | 构建分发包 + twine check | 始终 |
+| `github-release` | 从 CHANGELOG 提取 notes，创建 Release | 标签推送 |
+| `testpypi` | 发布到 TestPyPI | 标签推送 / 手动 |
+| `pypi` | 发布到 PyPI（OIDC 可信发布） | Release published |
+| `changelog-update` | 发布后更新 CHANGELOG | Release published |
+
+### 📋 依赖管理 — [`dependencies.yml`](../.github/workflows/dependencies.yml)
+
+**触发条件：** 每周一 9:00 UTC、手动触发
+
+| Job | 职责 |
+|-----|------|
+| `update` | `uv lock --upgrade` → 测试 → 创建 PR |
+
+### 🤖 代码审查 — [`review.yml`](../.github/workflows/review.yml)
+
+**触发条件：** PR opened/synchronize/reopened、推送到 master/main、手动触发
+
+| Job | 职责 |
+|-----|------|
+| `pr-review` | 审查 PR 变更文件，发布 PR 评论 |
+| `push-review` | 审查推送到主分支的变更，发布 commit 评论或告警摘要 |
+
+**实现方式：**
+- 基于官方 `anthropics/claude-code-action@v1`
+- PR 审查启用 `track_progress` 与 sticky comment
+- 审查异常采用"告警但不中断"策略，避免辅助流程将主交付链路打红
+
+### 可复用组件
+
+#### Composite Action: [`setup-python-uv`](../.github/actions/setup-python-uv/action.yml)
+
+所有工作流共享的 Python 环境初始化 action。
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `python-version` | `3.13` | Python 版本 |
+| `install-dev` | `true` | 是否安装开发依赖 |
+| `enable-cache` | `true` | 是否启用 uv 缓存 |
+
+### 环境配置
+
+> 版本创建与发布操作步骤详见 [发布流程](#发布流程)。
+
+**仓库密钥：**
+
+| Secret | 用途 | 必需 |
+|--------|------|------|
+| `ANTHROPIC_API_KEY` | 代码审查 | 仅 review.yml |
+| `ANTHROPIC_BASE_URL` | API 端点 | 可选 |
+
+**关键 Action 版本：**
+
+- `actions/checkout@v6`
+- `astral-sh/setup-uv@v7`
+- `actions/setup-node@v6`
+- `actions/github-script@v8`
+- `actions/upload-artifact@v7`
+- `actions/download-artifact@v8`
+- `codecov/codecov-action@v5`
+- `peter-evans/create-pull-request@v8`
+- `anthropics/claude-code-action@v1`
+
+**PyPI 可信发布：**
+
+1. PyPI 账户 → 发布 → 添加待发布者
+2. 填写：所有者、仓库名、工作流 `publish.yml`、环境 `pypi`
+
+**GitHub 环境：**
+
+- `pypi` — 生产环境 PyPI 发布
+- `testpypi` — TestPyPI 发布（可选）
+
+### 发布流程
+
+> 本节描述手动执行版本发布的完整操作步骤。自动化发布由 [`publish.yml`](../.github/workflows/publish.yml) 在标签推送或 Release 发布时自动触发。
+
+#### 前置条件
+
+1. 所有 CI 检查通过（test, lint, security, build）
+2. CHANGELOG.md 已更新，包含当前版本的变更记录
+3. 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范
+
+#### 发布步骤
+
+```bash
+# 1. 更新版本号（pyproject.toml 中的 version 字段）
+# 2. 更新 CHANGELOG.md
+# 3. 创建 git tag
+git tag v<VERSION>
+git push origin v<VERSION>
+# → 自动触发 publish.yml：CI 验证 → 构建 → GitHub Release → TestPyPI → PyPI
+
+# 4. 在 GitHub 上发布 Release（触发 PyPI 生产发布）
+# → 自动触发 changelog-update job
+```
+
+#### 版本号查询
+
+```bash
+uv run python -c "from negentropy.perceives import __version__; print(__version__)"
+```
+
+更多构建与发布命令详见 [常用指令 > 构建与发布](./5-Commands.md#构建与发布)。
 
 ## 调试与故障排除
 
@@ -341,6 +557,17 @@ uv run mypy src/negentropy/perceives/ --ignore-missing-imports
 uv run mypy src/negentropy/perceives/ --disable-error-code=var-annotated
 ```
 
+#### CI/CD 相关
+
+| 问题 | 解决方案 |
+|------|---------|
+| 构建失败 | 检查 CI 日志中的测试/lint 失败 |
+| 发布失败 | 验证 PyPI 可信发布配置与环境设置 |
+| 依赖 PR 创建失败 | 检查 Actions 权限（Settings → Actions → Workflow permissions） |
+| 代码审查未执行 | 验证 `ANTHROPIC_API_KEY` 已配置 |
+| 代码审查告警但未阻塞 | 查看 `review.yml` 中 Claude 步骤日志，通常是模型限流、超时或外部服务异常 |
+| 覆盖率下降 | 为新代码添加测试 |
+
 更多调试命令详见 [常用指令](./5-Commands.md)，测试故障排除详见 [测试指南](./3-Testing.md#故障排除)。
 
 ## 开发资源
@@ -351,6 +578,8 @@ uv run mypy src/negentropy/perceives/ --disable-error-code=var-annotated
 - [pytest 文档](https://docs.pytest.org/)
 - [Ruff 文档](https://docs.astral.sh/ruff/)
 - [MyPy 文档](https://mypy.readthedocs.io/)
+- [GitHub Actions 文档](https://docs.github.com/zh/actions)
+- [PyPI Trusted Publishers](https://docs.pypi.org/trusted-publishers/)
 
 ### 工具推荐
 
@@ -362,7 +591,6 @@ uv run mypy src/negentropy/perceives/ --disable-error-code=var-annotated
 | 文档 | 说明 |
 |------|------|
 | [架构设计](./1-Framework.md) | 系统架构、设计模式、性能策略 |
-| [CI/CD 工作流](./2.1-Workflows.md) | GitHub Actions、发布流程 |
 | [测试指南](./3-Testing.md) | 测试架构、执行方法、质量保障 |
 | [配置系统](./4-Configuration.md) | 环境变量、配置模板 |
 | [常用指令](./5-Commands.md) | 命令速查手册 |
