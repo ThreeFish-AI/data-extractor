@@ -18,6 +18,10 @@ permissions:
   id-token: write
 
 jobs:
+  # ==========================================================================
+  # Phase 0: 共享基础（验证 + 构建）
+  # ==========================================================================
+
   validate:
     name: Validate
     uses: ./.github/workflows/ci.yml
@@ -49,8 +53,13 @@ jobs:
           name: dist
           path: dist/
 
-  github-release:
-    name: Create GitHub Release
+  # ==========================================================================
+  # Phase 1: Pre-Release（预发布阶段）
+  # 创建 prerelease Release + 发布到 TestPyPI，等待人工审批
+  # ==========================================================================
+
+  pre-release-github:
+    name: Create Pre-Release
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
@@ -71,14 +80,14 @@ jobs:
           echo "Release notes:"
           cat release_notes.md
 
-      - name: Create Release
+      - name: Create Pre-Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
+          name: Pre-Release ${{ steps.version.outputs.tag }}
           body_path: release_notes.md
           draft: false
-          prerelease: false
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -96,11 +105,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Pre-Release summary
+        run: |
+          echo "## ✅ Pre-Release Created" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Version**: ${{ steps.version.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status**: Pre-Release (prerelease=true)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Next Steps" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Verify the pre-release on TestPyPI:" >> "$GITHUB_STEP_SUMMARY"
+          echo '   `pip install --index-url https://test.pypi.org/simple/ negentropy-perceives==${{ steps.version.outputs.version }}`' >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Approve the \`production\` environment to proceed to PyPI" >> "$GITHUB_STEP_SUMMARY"
+
   testpypi:
     name: Publish to TestPyPI
     runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+    needs: [build, pre-release-github]
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+
     environment:
       name: testpypi
       url: https://test.pypi.org/p/negentropy-perceives
@@ -122,11 +146,82 @@ jobs:
           verbose: true
           skip-existing: true
 
+  # ==========================================================================
+  # Gate: 人工审批门禁（Phase 1 → Phase 2 的守门人）
+  # 利用 GitHub Environment Protection Rules 实现人工确认
+  # 需在仓库 Settings → Environments 中配置 production 环境
+  # ==========================================================================
+
+  approval:
+    name: Production Approval Gate
+    runs-on: ubuntu-latest
+    needs: [pre-release-github, testpypi]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+
+    environment:
+      name: production
+      url: https://pypi.org/p/negentropy-perceives
+
+    steps:
+      - name: Approval summary
+        run: |
+          echo "## 🛑 Production Approval Required" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This gate ensures pre-release quality before publishing to PyPI." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Checklist Before Approving" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [ ] Verify pre-release on GitHub Releases page" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [ ] Install from TestPyPI and run smoke tests" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [ ] Review release notes for accuracy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- [ ] Confirm no critical issues in CI logs" >> "$GITHUB_STEP_SUMMARY"
+
+  # ==========================================================================
+  # Phase 2: Release（正式发布阶段）
+  # 审批通过后：提升为正式 Release → PyPI → 更新 CHANGELOG
+  # ==========================================================================
+
+  promote-release:
+    name: Promote to Official Release
+    runs-on: ubuntu-latest
+    needs: approval
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Promote to Official Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        run: |
+          echo "## 🎉 Official Release Published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Version**: ${{ steps.version.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status**: Official Release (prerelease=false)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **PyPI**: Publishing..." >> "$GITHUB_STEP_SUMMARY"
+
   pypi:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'release' && github.event.action == 'published'
+    needs: promote-release
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && needs.promote-release.result == 'success') ||
+      (github.event_name == 'release' && github.event.action == 'published')
+
     environment:
       name: pypi
       url: https://pypi.org/p/negentropy-perceives
@@ -150,7 +245,9 @@ jobs:
     name: Update Changelog
     runs-on: ubuntu-latest
     needs: pypi
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && needs.pypi.result == 'success') ||
+      (github.event_name == 'release' && github.event.action == 'published')
 
     steps:
       - uses: actions/checkout@v6
