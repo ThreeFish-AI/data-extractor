@@ -141,7 +141,7 @@ negentropy-perceives/
 │       └── run-tests.sh          # 测试执行（支持 unit/integration/full/coverage 等模式）
 │
 ├── docs/                         # 项目文档
-├── .github/workflows/            # CI/CD 配置（ci/publish/dependencies/review）
+├── .github/workflows/            # CI/CD 配置（ci/release/dependencies/review）
 ├── .github/actions/              # 可复用 Composite Action
 │   └── setup-python-uv/action.yml
 └── pyproject.toml                # 项目配置
@@ -320,7 +320,7 @@ graph TD
     end
 
     subgraph "发布流水线"
-        D[publish.yml]
+        D[release.yml]
         D0[CI 验证]
         D1[构建分发包]
         D2[GitHub Release]
@@ -363,9 +363,9 @@ graph TD
 | `build` | 构建 wheel 并验证安装 |
 | `coverage` | 覆盖率报告 + Codecov 上传 |
 
-支持 `workflow_call`，可被 publish.yml 作为验证步骤调用。
+支持 `workflow_call`，可被 release.yml 作为验证步骤调用。
 
-### 🚀 发布 — [`publish.yml`](../.github/workflows/publish.yml)
+### 🚀 发布 — [`release.yml`](../.github/workflows/release.yml)
 
 **触发条件：** `v*.*.*` 标签推送、Release published、手动触发（需指定 version）
 
@@ -438,7 +438,7 @@ graph TD
 **PyPI 可信发布：**
 
 1. PyPI 账户 → 发布 → 添加待发布者
-2. 填写：所有者、仓库名、工作流 `publish.yml`、环境 `pypi`
+2. 填写：所有者、仓库名、工作流 `release.yml`、环境 `pypi`
 
 **GitHub 环境：**
 
@@ -447,7 +447,7 @@ graph TD
 
 ### 发布流程
 
-> 本节描述手动执行版本发布的完整操作步骤。自动化发布由 [`publish.yml`](../.github/workflows/publish.yml) 在标签推送或 Release 发布时自动触发。
+> 本节描述手动执行版本发布的完整操作步骤。自动化发布由 [`release.yml`](../.github/workflows/release.yml) 在标签推送或 Release 发布时自动触发。
 
 #### 前置条件
 
@@ -463,7 +463,7 @@ graph TD
 # 3. 创建 git tag
 git tag v<VERSION>
 git push origin v<VERSION>
-# → 自动触发 publish.yml：CI 验证 → 构建 → GitHub Release → TestPyPI → PyPI
+# → 自动触发 release.yml：CI 验证 → 构建 → GitHub Release → TestPyPI → PyPI
 
 # 4. 在 GitHub 上发布 Release（触发 PyPI 生产发布）
 # → 自动触发 changelog-update job

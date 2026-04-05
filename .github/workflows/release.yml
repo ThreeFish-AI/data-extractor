@@ -1,4 +1,4 @@
-name: Publish
+name: Release
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to publish (without v prefix)"
+        description: "Version to release (without v prefix)"
         required: true
         type: string
 
