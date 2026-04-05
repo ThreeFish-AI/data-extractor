@@ -304,8 +304,7 @@ graph TD
     subgraph "触发源"
         A["推送 master/main/develop"]
         B0["PR → master/main/develop"]
-        C["标签 v*.*.*"]
-        C2["Release published"]
+        C["🏷️ 标签 v*.*.*"]
         G["计划 / 手动"]
     end
 
@@ -319,18 +318,23 @@ graph TD
         B --> B1 & B2 & B3 & B4 & B5
     end
 
-    subgraph "发布流水线"
+    subgraph "发布流水线（两阶段）"
         D[release.yml]
         D0[CI 验证]
         D1[构建分发包]
-        D2[GitHub Release]
-        D3[TestPyPI]
-        D4[PyPI]
-        D5[更新 Changelog]
+        D2["Pre-Release GitHub<br/>(prerelease: true)"]
+        D3[TestPyPI 发布]
+        D4["🛑 人工审批门禁<br/>(Environment: production)"]
+        D5["Promote 正式 Release<br/>(prerelease: false)"]
+        D6[PyPI 发布 OIDC]
+        D7[更新 Changelog]
         D --> D0 --> D1
         D1 --> D2
         D1 --> D3
-        D1 --> D4 --> D5
+        D2 --> D4
+        D3 --> D4
+        D4 --> D5
+        D5 --> D6 --> D7
     end
 
     subgraph "辅助流水线"
@@ -341,12 +345,12 @@ graph TD
     A --> B
     B0 --> B
     C --> D
-    C2 --> D
     G -->|"每周依赖更新"| H
     B0 -->|"代码审查"| K
 
     style B fill:#2196F3,color:#fff
     style D fill:#4CAF50,color:#fff
+    style D4 fill:#f44336,color:#fff,stroke-dasharray: 5 5
     style H fill:#FF9800,color:#000
     style K fill:#9C27B0,color:#fff
 ```
@@ -365,18 +369,22 @@ graph TD
 
 支持 `workflow_call`，可被 release.yml 作为验证步骤调用。
 
-### 🚀 发布 — [`release.yml`](../.github/workflows/release.yml)
+### 🚀 发布 — [`release.yml`](../.github/workflows/release.yml)（两阶段流程）
 
-**触发条件：** `v*.*.*` 标签推送、Release published、手动触发（需指定 version）
+**触发条件：** `v*.*.*` 标签推送、Release published（fallback）、手动触发（需指定 version）
 
-| Job | 职责 | 触发条件 |
-|-----|------|----------|
-| `validate` | 调用 ci.yml 执行完整验证 | 始终 |
-| `build` | 构建分发包 + twine check | 始终 |
-| `github-release` | 从 CHANGELOG 提取 notes，创建 Release | 标签推送 |
-| `testpypi` | 发布到 TestPyPI | 标签推送 / 手动 |
-| `pypi` | 发布到 PyPI（OIDC 可信发布） | Release published |
-| `changelog-update` | 发布后更新 CHANGELOG | Release published |
+**整体流程：** Pre-Release（预发布）→ 人工审批 → Release（正式发布）
+
+| Job | 职责 | 阶段 | 触发条件 |
+|-----|------|------|----------|
+| `validate` | 调用 ci.yml 执行完整验证 | 共享 | 始终 |
+| `build` | 构建分发包 + twine check | 共享 | 始终 |
+| `pre-release-github` | 创建 prerelease Release + 上传 assets | Phase 1 | 标签推送 |
+| `testpypi` | 发布到 TestPyPI | Phase 1 | 标签推送 / 手动 |
+| `approval` | 人工审批门禁（Environment Protection Rules） | Gate | 标签推送（需 pre-release + testpypi 完成） |
+| `promote-release` | 将 prerelease 提升为正式 Release | Phase 2 | 审批通过 |
+| `pypi` | 发布到 PyPI（OIDC 可信发布） | Phase 2 | promote-release 成功 / release published（fallback） |
+| `changelog-update` | 发布后更新 CHANGELOG | Phase 2 | PyPI 发布成功 / release published（fallback） |
 
 ### 📋 依赖管理 — [`dependencies.yml`](../.github/workflows/dependencies.yml)
 
@@ -442,32 +450,73 @@ graph TD
 
 **GitHub 环境：**
 
-- `pypi` — 生产环境 PyPI 发布
-- `testpypi` — TestPyPI 发布（可选）
+| Environment | 用途 | Protection Rules |
+|-------------|------|------------------|
+| `pypi` | 生产环境 PyPI 发布 | （可选配置 reviewers） |
+| `testpypi` | TestPyPI 预发布 | （可选） |
+| **`production`** | **Pre-Release → Release 审批门禁** | **Required Reviewers（必须配置）** |
 
-### 发布流程
+> **⚠️ production 环境配置（首次发布前必须完成）：**
+> 1. 进入仓库 Settings → Environments → New environment
+> 2. 名称填 `production`，URL 填 `https://pypi.org/p/negentropy-perceives`
+> 3. 在 Protection rules 中添加 Required reviewers（至少 1 位维护者）
+> 4. 可选：设置等待超时时间（建议 72 小时）、限制 deployment branches
 
-> 本节描述手动执行版本发布的完整操作步骤。自动化发布由 [`release.yml`](../.github/workflows/release.yml) 在标签推送或 Release 发布时自动触发。
+### 发布流程（两阶段：Pre-Release → Release）
+
+> 本节描述手动执行版本发布的完整操作步骤。自动化发布由 [`release.yml`](../.github/workflows/release.yml) 在标签推送时自动触发，采用 **Pre-Release → 人工审批 → Release** 两阶段模式。
 
 #### 前置条件
 
 1. 所有 CI 检查通过（test, lint, security, build）
 2. CHANGELOG.md 已更新，包含当前版本的变更记录
 3. 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范
+4. GitHub 仓库已配置 `production` 环境（Settings → Environments）并设置 Required Reviewers
 
-#### 发布步骤
+#### Phase 1: Pre-Release（预发布）
 
 ```bash
 # 1. 更新版本号（pyproject.toml 中的 version 字段）
 # 2. 更新 CHANGELOG.md
-# 3. 创建 git tag
+# 3. 创建 git tag 并推送
 git tag v<VERSION>
 git push origin v<VERSION>
-# → 自动触发 release.yml：CI 验证 → 构建 → GitHub Release → TestPyPI → PyPI
-
-# 4. 在 GitHub 上发布 Release（触发 PyPI 生产发布）
-# → 自动触发 changelog-update job
+# → 自动触发 release.yml Phase 1:
+#   CI 验证 → 构建 → Pre-Release GitHub (prerelease=true) → TestPyPI 发布
+# → 暂停在人工审批门禁
 ```
+
+**Phase 1 完成后，在 GitHub Actions 页面会看到 workflow 暂停在 `approval` job，等待人工审批。**
+
+#### 人工验证与审批
+
+```bash
+# 4. 在 TestPyPI 上验证预发布版本
+pip install --index-url https://test.pypi.org/simple/ negentropy-perceives==<VERSION>
+
+# 5. 运行冒烟测试确认功能正常
+uv run negentropy-perceives --help
+
+# 6. 在 GitHub Releases 页面检查 Pre-Release 内容和 release notes
+
+# 7. 在 GitHub Actions 页面审批 production 环境
+#    Settings → Environments → production → Approve
+```
+
+**审批前检查清单：**
+- [ ] Pre-Release 在 GitHub Releases 页面显示正确
+- [ ] 从 TestPyPI 安装并通过冒烟测试
+- [ ] Release notes 准确无误
+- [ ] CI 日志无关键错误
+
+#### Phase 2: Release（正式发布）
+
+```bash
+# 审批通过后自动执行 release.yml Phase 2:
+#   Promote 正式 Release (prerelease=false) → PyPI 发布 (OIDC) → 更新 CHANGELOG
+```
+
+**无需额外操作——审批通过后全流程自动完成。**
 
 #### 版本号查询
 
@@ -567,6 +616,9 @@ uv run mypy src/negentropy/perceives/ --disable-error-code=var-annotated
 | 代码审查未执行 | 验证 `ANTHROPIC_API_KEY` 已配置 |
 | 代码审查告警但未阻塞 | 查看 `review.yml` 中 Claude 步骤日志，通常是模型限流、超时或外部服务异常 |
 | 覆盖率下降 | 为新代码添加测试 |
+| 审批门禁报错 | 确认仓库 Settings → Environments → production 已创建并配置 Required Reviewers |
+| Pre-Release 后 workflow 停滞 | 正常行为——需在 GitHub Actions 页面手动审批 production 环境 |
+| PyPI 发布失败（Phase 2） | Pre-Release 已转为正式 Release；可手动 re-run pypi job 或联系 PyPI support |
 
 更多调试命令详见 [常用指令](./5-Commands.md)，测试故障排除详见 [测试指南](./3-Testing.md#故障排除)。
 
